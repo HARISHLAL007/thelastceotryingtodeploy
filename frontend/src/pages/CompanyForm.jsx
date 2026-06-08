@@ -31,7 +31,7 @@ const CompanyForm = () => {
     setLoading(true);
     try {
       // In a real app, URL should be env var
-      const response = await axios.post('http://localhost:8000/predict', formData);
+      const response = await axios.post('/api/predict', formData);
       navigate('/dashboard', { state: { input: formData, results: response.data } });
     } catch (error) {
       console.error('Prediction failed:', error);

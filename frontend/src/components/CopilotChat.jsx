@@ -28,7 +28,7 @@ const CopilotChat = ({ context }) => {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:8000/copilot', {
+      const response = await axios.post('/api/copilot', {
         context: context,
         question: userMessage
       });

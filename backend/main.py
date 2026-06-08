@@ -46,7 +46,7 @@ class CopilotInput(BaseModel):
     context: dict
     question: str
 
-@app.post("/predict")
+@app.post("/api/predict")
 def predict(data: PredictionInput):
     # Encode categorical features
     industry_enc = encoders["industry"].transform([data.industry])[0] if data.industry in encoders["industry"].classes_ else 0
@@ -99,7 +99,7 @@ def predict(data: PredictionInput):
         "readiness_score": readiness
     }
 
-@app.post("/copilot")
+@app.post("/api/copilot")
 def copilot(data: CopilotInput):
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
