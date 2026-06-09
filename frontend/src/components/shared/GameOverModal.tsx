@@ -1,7 +1,7 @@
 import { useGameStore } from '@/store/gameStore';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Trophy, AlertOctagon, RotateCcw } from 'lucide-react';
+import { Trophy, AlertOctagon, RotateCcw, ArrowRight, BarChart2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const GameOverModal = () => {
@@ -62,7 +62,7 @@ export const GameOverModal = () => {
               <h1 className="text-4xl font-black font-orbitron tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-rose-500 via-pink-400 to-red-600 text-glow-magenta">
                 💸 DEBT BANKRUPTCY
               </h1>
-              <p className="text-sm text-slate-350 max-w-md mx-auto leading-relaxed font-space">
+              <p className="text-sm text-slate-300 max-w-md mx-auto leading-relaxed font-space">
                 Critical financial depletion! <span className="text-rose-400 font-bold font-orbitron">{company?.name.toUpperCase()}</span> has exhausted all operating capital reserves and filed for bankruptcy in <span className="text-rose-500 font-bold font-orbitron">Year {state.currentYear} // Quarter Q{state.currentQuarter}</span>.
               </p>
             </div>
@@ -95,14 +95,29 @@ export const GameOverModal = () => {
           </div>
 
           {/* Action buttons */}
-          <div className="flex justify-center pt-6 w-full">
+          <div className="flex flex-col sm:flex-row gap-3 pt-6 w-full justify-center">
             
             <Button
               onClick={handleRestart}
-              className="py-5 px-8 font-orbitron font-bold text-xs tracking-wider bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-200 hover:text-white flex items-center justify-center gap-2 hover:scale-[1.02] transition-all"
+              className="py-5 px-6 font-orbitron font-bold text-xs tracking-wider bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-200 hover:text-white flex items-center justify-center gap-2 hover:scale-[1.02] transition-all"
             >
               <RotateCcw className="h-4 w-4" />
               NEW FOUNDER TICKET //
+            </Button>
+
+            <Button
+              onClick={() => {
+                navigate('/outcome');
+              }}
+              className={`py-5 px-6 font-orbitron font-black text-xs tracking-widest flex items-center justify-center gap-2 hover:scale-[1.02] transition-all ${
+                isVictory 
+                  ? 'bg-yellow-500 text-slate-950 hover:bg-yellow-400 shadow-[0_0_12px_rgba(234,179,8,0.3)]' 
+                  : 'bg-rose-500 text-slate-950 hover:bg-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.3)]'
+              }`}
+            >
+              <BarChart2 className="h-4 w-4" />
+              VIEW ANALYTICS GRAPH
+              <ArrowRight className="h-4 w-4" />
             </Button>
 
           </div>

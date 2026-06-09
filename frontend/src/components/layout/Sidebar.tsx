@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, BarChart3 } from 'lucide-react';
+import { Home, BarChart3, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 export const Sidebar = () => {
@@ -8,6 +8,7 @@ export const Sidebar = () => {
   const navItems = [
     { path: '/', icon: Home, label: 'Home' },
     { path: '/engine', icon: BarChart3, label: 'Dashboard' },
+    { path: '/outcome', icon: Trophy, label: 'Results' },
   ];
 
   return (
