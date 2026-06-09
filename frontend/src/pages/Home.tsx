@@ -75,7 +75,7 @@ export const Home = () => {
         {/* Title HUD */}
         <div className="text-center space-y-4">
           <span className="font-orbitron text-xs font-black tracking-widest text-cyan-400 bg-cyan-500/5 border border-cyan-500/20 px-3 py-1 rounded-full text-glow-cyan">
-            RPG BUSINESS SIMULATION V1.0
+            THE LAST CEO V1.0
           </span>
           <h1 className="text-5xl font-black font-orbitron tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-400 to-rose-400">
             BUILD YOUR STARTUP TO 2035

@@ -21,7 +21,7 @@ export const Navbar = () => {
         <Link to="/" className="flex items-center space-x-2 group">
           <Terminal className="h-6 w-6 text-cyan-400 group-hover:rotate-12 transition-transform duration-200" />
           <span className="font-bold text-xl font-orbitron tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-400 to-magenta-400">
-            BIZ_RPG //
+            THE LAST CEO //
           </span>
         </Link>
 
