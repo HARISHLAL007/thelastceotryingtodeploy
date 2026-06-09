@@ -3,6 +3,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Home } from '@/pages/Home';
 import { Engine } from '@/pages/Engine';
+import { Outcome } from '@/pages/Outcome';
 import { useGameStore } from '@/store/gameStore';
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/engine" element={<Engine />} />
+            <Route path="/outcome" element={<Outcome />} />
           </Routes>
         </main>
       </div>
