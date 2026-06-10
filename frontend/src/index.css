@@ -1,92 +1,164 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Grotesk:wght@400;500;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 224 71% 4%;
     --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
+    --card: 224 71% 4%;
     --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
+    --primary: 190 90% 50%;
+    --primary-foreground: 224 71% 4%;
+    --secondary: 260 80% 60%;
     --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
+    --muted: 224 30% 12%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 320 85% 60%;
     --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 350 90% 60%;
     --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 224 30% 15%;
+    --input: 224 30% 15%;
+    --ring: 190 90% 50%;
+    --radius: 0.75rem;
   }
 }
 
 @layer base {
   * {
     @apply border-border;
+    cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2306b6d4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 3h12'/><path d='M6 8h12'/><path d='M6 13h8.5l-5 8'/><path d='M6 13h3c3.314 0 6-2.686 6-6s-2.686-6-6-6'/></svg>") 12 12, auto;
   }
+  
   body {
-    @apply bg-background text-foreground;
+    @apply bg-[#040610] text-foreground antialiased relative;
+    font-family: 'Space Grotesk', sans-serif;
+    background-image: url('/bg.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+  }
+  
+  button, a {
+    cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f43f5e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 3h12'/><path d='M6 8h12'/><path d='M6 13h8.5l-5 8'/><path d='M6 13h3c3.314 0 6-2.686 6-6s-2.686-6-6-6'/></svg>") 12 12, pointer !important;
   }
 }
 
-@layer utilities {
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
+/* Custom UI Fonts */
+.font-orbitron {
+  font-family: 'Orbitron', sans-serif;
+}
+
+.font-space {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Cyber Glassmorphism */
+.cyber-glass {
+  background: rgba(8, 11, 24, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  z-index: 10;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cyber-glass:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 40px -10px rgba(6, 182, 212, 0.3);
+  border-color: rgba(6, 182, 212, 0.5);
+}
+
+/* Neon Borders & Shadows */
+.cyber-border-cyan {
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.1), inset 0 0 15px rgba(6, 182, 212, 0.03);
+}
+
+.cyber-border-magenta {
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  box-shadow: 0 0 20px rgba(244, 63, 94, 0.1), inset 0 0 15px rgba(244, 63, 94, 0.03);
+}
+
+.cyber-border-purple {
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.1), inset 0 0 15px rgba(168, 85, 247, 0.03);
+}
+
+.cyber-border-gold {
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  box-shadow: 0 0 20px rgba(234, 179, 8, 0.1), inset 0 0 15px rgba(234, 179, 8, 0.03);
+}
+
+/* Text glow */
+.text-glow-cyan {
+  text-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
+}
+
+.text-glow-magenta {
+  text-shadow: 0 0 8px rgba(244, 63, 94, 0.6);
+}
+
+.text-glow-gold {
+  text-shadow: 0 0 8px rgba(234, 179, 8, 0.6);
+}
+
+.text-glow-purple {
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+}
+
+/* Scanlines Effect */
+.scanlines {
+  position: relative;
+  overflow: hidden;
+}
+
+.scanlines::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(6, 182, 212, 0.04), rgba(244, 63, 94, 0.01), rgba(168, 85, 247, 0.04));
+  z-index: 2;
+  background-size: 100% 4px, 6px 100%;
+  pointer-events: none;
+  opacity: 0.35;
+}
+
+/* Removed sweep line animation as per user request */
+.cyber-sweep-overlay {
+  display: none;
+}
+
+/* Slow Pulsing Glows */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(6, 182, 212, 0.1);
   }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
+  50% {
+    box-shadow: 0 0 25px rgba(6, 182, 212, 0.45);
   }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #334155;
-    border-radius: 10px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #475569;
-  }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 4s infinite alternate;
+}
+
+/* Loading spinner */
+.spinner {
+  border: 3px solid rgba(6, 182, 212, 0.1);
+  border-radius: 50%;
+  border-top: 3px solid rgb(6, 182, 212);
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

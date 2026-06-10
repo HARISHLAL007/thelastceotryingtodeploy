@@ -1,8 +1,0 @@
-fastapi
-uvicorn
-pandas
-numpy
-xgboost
-scikit-learn
-google-genai
-pydantic
