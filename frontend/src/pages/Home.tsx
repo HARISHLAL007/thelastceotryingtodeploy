@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { useGameStore } from '@/store/gameStore';
 import type { CompanyProfile } from '@/types';
-import { Building2, Users, TrendingUp, Shield, HelpCircle, Coins, BrainCircuit, Cpu } from 'lucide-react';
+import { BrainCircuit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const Home = () => {
@@ -29,48 +29,7 @@ export const Home = () => {
     founderClass: 'engineer'
   });
 
-  const founderClasses = [
-    {
-      id: 'engineer',
-      title: 'ENGINEER',
-      bonus: '+15% Automation',
-      icon: <Cpu className="w-4 h-4" />,
-      color: 'text-indigo-400',
-      border: 'border-indigo-500/30'
-    },
-    {
-      id: 'mba',
-      title: 'MBA',
-      bonus: '+10% Starting ROI',
-      icon: <TrendingUp className="w-4 h-4" />,
-      color: 'text-emerald-400',
-      border: 'border-emerald-500/30'
-    },
-    {
-      id: 'researcher',
-      title: 'RESEARCHER',
-      bonus: '+20 AI Maturity',
-      icon: <BrainCircuit className="w-4 h-4" />,
-      color: 'text-purple-400',
-      border: 'border-purple-500/30'
-    },
-    {
-      id: 'sales',
-      title: 'SALES LEADER',
-      bonus: '+25% Base Revenue',
-      icon: <Coins className="w-4 h-4" />,
-      color: 'text-yellow-400',
-      border: 'border-yellow-500/30'
-    },
-    {
-      id: 'grit',
-      title: 'GRIT FOUNDER',
-      bonus: 'High Risk Resistance',
-      icon: <Shield className="w-4 h-4" />,
-      color: 'text-rose-400',
-      border: 'border-rose-500/30'
-    }
-  ];
+
 
   const fundingTiers = [
     {

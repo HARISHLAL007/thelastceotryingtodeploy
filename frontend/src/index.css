@@ -30,7 +30,7 @@
 @layer base {
   * {
     @apply border-border;
-    cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2306b6d4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='12' y1='2' x2='12' y2='22'/><path d='M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'/></svg>") 12 12, auto;
+    cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'><path d='M2,2 L2,15.5 L5.5,12 L9,17.5 L10.5,16.5 L7,11 L12.5,11 Z' fill='%2306b6d4' stroke='white' stroke-width='1.5' stroke-linejoin='round'/></svg>") 2 2, auto;
   }
   
   body {
@@ -42,8 +42,8 @@
     background-attachment: fixed;
   }
   
-  button, a {
-    cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f43f5e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='12' y1='2' x2='12' y2='22'/><path d='M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'/></svg>") 12 12, pointer !important;
+  button, a, [role="button"], .cursor-pointer {
+    cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'><path d='M2,2 L2,15.5 L5.5,12 L9,17.5 L10.5,16.5 L7,11 L12.5,11 Z' fill='%23f43f5e' stroke='white' stroke-width='1.5' stroke-linejoin='round'/></svg>") 2 2, pointer !important;
   }
 }
 
