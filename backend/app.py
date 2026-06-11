@@ -79,6 +79,7 @@ class PredictionRequest(BaseModel):
     employee_ai_training_hours: float = 120.0
     ai_maturity_score: float = 75.0
     deployment_count: int = 10
+    save_to_db: bool = False
 
 def engineer_features(df):
     df["investment_per_deployment"] = df["ai_investment_usd"] / (df["deployment_count"]+1)
@@ -111,8 +112,7 @@ def predict_scenario(sample_data, investment_multiplier):
     
     return float(rev_impact), float(roi)
 
-@app.post("/api/predict")
-def predict(request: PredictionRequest, db: Session = Depends(get_db)):
+def process_prediction(request: PredictionRequest):
     req_dict = request.dict()
     
     df_sample = pd.DataFrame([req_dict])
@@ -155,30 +155,6 @@ def predict(request: PredictionRequest, db: Session = Depends(get_db)):
         recommendation = "Maintain the current investment strategy. Focus on improving AI maturity, automation efficiency, and workforce training before scaling AI spending further. Additional capital investment currently shows diminishing returns."
         board_decision = "DELAY EXPANSION"
         
-    # Database save
-    db_record = PredictionRecord(
-        industry=request.industry,
-        country=request.country,
-        year=request.year,
-        ai_adoption_level=request.ai_adoption_level,
-        ai_investment_usd=request.ai_investment_usd,
-        automation_rate=request.automation_rate,
-        employee_ai_training_hours=request.employee_ai_training_hours,
-        ai_maturity_score=request.ai_maturity_score,
-        deployment_count=request.deployment_count,
-        revenue_prediction=rev_A,
-        productivity_prediction=prod_gain,
-        roi=roi_A,
-        ai_transformation_score=transform_score,
-        risk_score=risk_percentage,
-        readiness_level=readiness_level,
-        board_decision=board_decision,
-        recommendation=recommendation
-    )
-    db.add(db_record)
-    db.commit()
-    db.refresh(db_record)
-    
     return {
         "metrics": {
             "revenue_impact": rev_A,
@@ -196,6 +172,66 @@ def predict(request: PredictionRequest, db: Session = Depends(get_db)):
             "C": {"multiplier": 1.5, "revenue": rev_C, "roi": roi_C}
         }
     }
+
+@app.post("/api/predict")
+def predict(request: PredictionRequest, db: Session = Depends(get_db)):
+    result = process_prediction(request)
+    
+    if request.save_to_db:
+        db_record = PredictionRecord(
+            industry=request.industry,
+            country=request.country,
+            year=request.year,
+            ai_adoption_level=request.ai_adoption_level,
+            ai_investment_usd=request.ai_investment_usd,
+            automation_rate=request.automation_rate,
+            employee_ai_training_hours=request.employee_ai_training_hours,
+            ai_maturity_score=request.ai_maturity_score,
+            deployment_count=request.deployment_count,
+            revenue_prediction=result["metrics"]["revenue_impact"],
+            productivity_prediction=result["metrics"]["productivity_gain"],
+            roi=result["metrics"]["roi"],
+            ai_transformation_score=result["metrics"]["ai_transformation_score"],
+            risk_score=result["metrics"]["risk_score"],
+            readiness_level=result["metrics"]["readiness_level"],
+            board_decision=result["metrics"]["board_decision"],
+            recommendation=result["metrics"]["recommendation"]
+        )
+        db.add(db_record)
+        db.commit()
+        db.refresh(db_record)
+        
+    return result
+
+class GameHistoryRequest(BaseModel):
+    history: list[PredictionRequest]
+
+@app.post("/api/save_game_history")
+def save_game_history(request: GameHistoryRequest, db: Session = Depends(get_db)):
+    for req in request.history:
+        result = process_prediction(req)
+        db_record = PredictionRecord(
+            industry=req.industry,
+            country=req.country,
+            year=req.year,
+            ai_adoption_level=req.ai_adoption_level,
+            ai_investment_usd=req.ai_investment_usd,
+            automation_rate=req.automation_rate,
+            employee_ai_training_hours=req.employee_ai_training_hours,
+            ai_maturity_score=req.ai_maturity_score,
+            deployment_count=req.deployment_count,
+            revenue_prediction=result["metrics"]["revenue_impact"],
+            productivity_prediction=result["metrics"]["productivity_gain"],
+            roi=result["metrics"]["roi"],
+            ai_transformation_score=result["metrics"]["ai_transformation_score"],
+            risk_score=result["metrics"]["risk_score"],
+            readiness_level=result["metrics"]["readiness_level"],
+            board_decision=result["metrics"]["board_decision"],
+            recommendation=result["metrics"]["recommendation"]
+        )
+        db.add(db_record)
+    db.commit()
+    return {"status": "success", "saved_records": len(request.history)}
 
 @app.get("/api/predictions")
 def get_predictions(db: Session = Depends(get_db)):

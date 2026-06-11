@@ -48,6 +48,10 @@ export const api = {
     return apiClient.get('/game/state');
   },
 
+  async saveGameHistory(history: any[]) {
+    return apiClient.post('/save_game_history', { history });
+  },
+
   // Decision endpoints
   async getDecisions() {
     return apiClient.get('/decisions');

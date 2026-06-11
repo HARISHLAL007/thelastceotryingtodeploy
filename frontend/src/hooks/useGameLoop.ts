@@ -56,10 +56,15 @@ export const useGameLoop = () => {
         automation_rate: freshCompany?.automationRate || 45.0,
         employee_ai_training_hours: freshCompany?.trainingHours || 120.0,
         ai_maturity_score: freshCompany?.aiMaturityScore || 75.0,
-        deployment_count: freshCompany?.deploymentCount || 10
+        deployment_count: freshCompany?.deploymentCount || 10,
+        save_to_db: false
       };
 
       const response = await api.getQuarterReport(payload);
+      
+      const newPayloads = [...freshState.quarterlyPayloads, payload];
+      actions.updateGameState({ quarterlyPayloads: newPayloads });
+
       const metrics = response.data.metrics;
       const scenarios = response.data.scenarios;
       
@@ -240,6 +245,14 @@ export const useGameLoop = () => {
         isGameOver,
         gameResult
       });
+
+      if (isGameOver) {
+        try {
+          await api.saveGameHistory(useGameStore.getState().state.quarterlyPayloads);
+        } catch (e) {
+          console.error("Failed to save game history", e);
+        }
+      }
 
       // 4. Roll new decision cards for next quarter using updated XP/level
       rollDecisions();

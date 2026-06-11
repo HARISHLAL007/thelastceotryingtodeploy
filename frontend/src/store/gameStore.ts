@@ -14,7 +14,7 @@ export interface DecisionOutcome {
   deploymentGain?: number;
 }
 
-const initialState: GameState = {
+const initialState: GameState & { quarterlyPayloads: any[] } = {
   currentYear: 2024,
   currentQuarter: 1,
   budget: 1000000,
@@ -29,10 +29,11 @@ const initialState: GameState = {
   isGameOver: false,
   gameResult: null,
   history: [],
+  quarterlyPayloads: [],
 };
 
 export const useGameStore = create<{
-  state: GameState;
+  state: GameState & { quarterlyPayloads: any[] };
   company: CompanyProfile | null;
   currentReport: LLMReport | null;
   lastDecisionOutcome: DecisionOutcome | null;
@@ -41,7 +42,7 @@ export const useGameStore = create<{
     initializeGame: (company: CompanyProfile) => void;
     nextQuarter: () => void;
     makeDecision: (decisionId: string) => void;
-    updateGameState: (state: Partial<GameState>) => void;
+    updateGameState: (state: Partial<GameState & { quarterlyPayloads: any[] }>) => void;
     updateCompany: (updates: Partial<CompanyProfile>) => void;
     setReport: (report: LLMReport) => void;
     setLastDecisionOutcome: (outcome: DecisionOutcome | null) => void;

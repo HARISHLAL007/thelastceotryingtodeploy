@@ -193,34 +193,7 @@ export const Home = () => {
               </CardContent>
             </Card>
 
-            <Card className="cyber-glass border-slate-800 shadow-[0_0_30px_rgba(6,182,212,0.05)] transition-all hover:shadow-[0_0_40px_rgba(6,182,212,0.1)] hover:border-slate-700">
-              <CardContent className="p-6">
-                <h2 className="text-sm font-space font-bold text-cyan-400 tracking-wider mb-4">FOUNDER BACKGROUND</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {founderClasses.map((cls) => {
-                    const isSelected = formData.founderClass === cls.id;
-                    return (
-                      <div 
-                        key={cls.id} 
-                        onClick={() => setFormData({ ...formData, founderClass: cls.id })}
-                        className={cn(
-                          "p-3 rounded-xl cursor-pointer transition-all border relative overflow-hidden flex flex-col items-center text-center gap-2",
-                          isSelected ? `border-cyan-400 bg-slate-900 shadow-[0_0_15px_rgba(6,182,212,0.2)]` : `border-slate-800/60 bg-slate-950/40 hover:${cls.border}`
-                        )}
-                      >
-                        <div className={cn("p-2 rounded-full bg-slate-900 border border-slate-800", cls.color)}>
-                          {cls.icon}
-                        </div>
-                        <div>
-                          <h3 className="font-space font-bold text-[10px] text-slate-200 tracking-widest">{cls.title}</h3>
-                          <span className={cn("text-[9px] font-space font-semibold", cls.color)}>{cls.bonus}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+
           </div>
 
           {/* Right: ML AI Parameters */}
