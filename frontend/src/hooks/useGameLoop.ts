@@ -230,7 +230,8 @@ export const useGameLoop = () => {
           revenue: finalRevenue,
           budget: finalBudget,
           roi: finalRoi,
-          morale: freshState.morale
+          morale: freshState.morale,
+          employees: nextEmployees
         });
       }
 

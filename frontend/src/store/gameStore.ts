@@ -75,7 +75,7 @@ export const useGameStore = create<{
       const startYear = updatedCompany.foundedYear || 2024;
       const initialBudget = updatedCompany.startingBudget || 1000000;
       const mockHistory = [
-        { year: startYear, revenue: 4500000, budget: initialBudget, roi: company.founderClass === 'mba' ? 10 : 0, morale: 75 }
+        { year: startYear, revenue: 4500000, budget: initialBudget, roi: company.founderClass === 'mba' ? 10 : 0, morale: 75, employees: 10 }
       ];
       set({
         company: updatedCompany,

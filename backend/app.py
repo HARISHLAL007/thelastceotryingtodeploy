@@ -86,6 +86,12 @@ def engineer_features(df):
     df["investment_maturity"] = df["ai_investment_usd"] * df["ai_maturity_score"]
     df["automation_maturity"] = df["automation_rate"] * df["ai_maturity_score"]
     df["training_adoption"] = df["employee_ai_training_hours"] * df["ai_adoption_level"]
+    
+    # New interaction features required by the tuned Revenue Model
+    df["investment_training"] = df["ai_investment_usd"] * df["employee_ai_training_hours"]
+    df["automation_investment"] = df["automation_rate"] * df["ai_investment_usd"]
+    df["deployment_training"] = df["deployment_count"] * df["employee_ai_training_hours"]
+    
     return df
 
 def predict_scenario(sample_data, investment_multiplier):

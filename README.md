@@ -110,6 +110,33 @@ graph TD;
 
 ---
 
+## 📂 Architecture Structure
+
+```text
+The-Last-CEO/
+├── backend/                  # FastAPI Application
+│   ├── app.py                # Main server, endpoints, and ML inference logic
+│   ├── database.db           # SQLite database storing prediction history
+│   └── requirements.txt      # Backend dependencies
+├── frontend/                 # React Console Dashboard
+│   ├── public/               # Static vector assets
+│   └── src/
+│       ├── components/       # Telemetry graphs, HUD metric cards, timeline, modals
+│       ├── hooks/            # Custom hook handlers (game loops and API drivers)
+│       ├── lib/              # API client axios instance and styling utils
+│       ├── pages/            # Primary route view entrypoints (Home, Engine, Outcome)
+│       └── store/            # Zustand state store
+├── models/                   # Pre-trained ML Models
+│   ├── productivity_model.joblib
+│   └── revenue_model.joblib
+├── scripts/                  # Data & ML Scripts
+│   ├── train_models.py       # Script to train XGBoost models using the dataset
+│   └── train_revenue_tuned.py # Script for hyperparameter tuning & advanced feature engineering
+└── corporate_ai_adoption_dataset.csv # The dataset used for training
+```
+
+---
+
 ## 💻 Tech Stack
 
 ### Frontend
@@ -140,3 +167,68 @@ graph TD;
 ## 🌟 Unique Selling Point
 
 **The Last CEO** is not just a dashboard or prediction model. It combines **business simulation**, **machine learning forecasting**, **dynamic event generation**, **strategic decision-making**, and **AI-generated executive intelligence** into a single interactive experience that challenges players to successfully lead a company through the AI revolution and survive until 2035.
+
+---
+
+## 💻 Setup & Development
+
+### Prerequisites
+*   Node.js (v18+)
+*   Python 3.9+
+*   Git
+
+### 1. Backend Setup & Run
+Open a terminal and navigate to the project root:
+
+```bash
+# Optional: Create a virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies (assuming you have a requirements.txt or install manually)
+pip install fastapi uvicorn pandas scikit-learn xgboost joblib sqlalchemy pydantic
+
+# Run the FastAPI server
+cd backend
+uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+```
+The backend API will be available at `http://localhost:8000`. You can view the API documentation at `http://localhost:8000/docs`.
+
+### 2. Frontend Setup & Run
+Open a new terminal and navigate to the `frontend` directory:
+
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start the Vite development server
+npm run dev
+```
+The React frontend will be available at `http://localhost:5173`.
+
+### 3. (Optional) Re-training the ML Models
+If you wish to update the dataset or tweak the machine learning features:
+```bash
+# From the project root
+python scripts/train_revenue_tuned.py
+```
+This will automatically parse `corporate_ai_adoption_dataset.csv`, apply feature engineering, train new XGBoost regressors, and save them to the `models/` directory for the backend to consume.
+
+---
+
+## 🎮 The Endings Matrix
+
+The simulation features 8 distinct endings depending on your leadership style and financial performance by Year 2035:
+
+1.  **🦄 Unicorn Exit:** Survive to 2035 with >$3M budget or >150% ROI
+2.  **🔔 IPO Public Listing:** Survive with >=30 staff and >=$2M budget
+3.  **💼 Megacorp Acquisition:** Exit with >$1.5M budget or >100% ROI
+4.  **👑 Bootstrap Legend:** Complete simulation starting with $100K bootstrapper capital
+5.  **☕ Sustainable Lifestyle:** Prioritize life balance over hype scaling (<15 staff, <=$1.5M budget)
+6.  **🤖 Rogue AI Singularity:** Technology sector startup with >200% ROI
+7.  **🤝 Talent Acquisition:** Face bankruptcy but maintain high ROI (>50%) or morale (>80%)
+8.  **💥 Crash & Burn:** Run out of budget capital before Year 2035
+
+Good luck, CEO. The board is waiting.

@@ -40,6 +40,7 @@ export interface YearHistory {
   budget: number;
   roi: number;
   morale: number;
+  employees?: number;
 }
 
 // LLM Report structure
