@@ -1,7 +1,3 @@
-<div align="center">
-  <img src="https://raw.githubusercontent.com/shreyascode11/The-Last-CEO/main/assets/banner.png" alt="The Last CEO Banner" width="100%" />
-</div>
-
 <h1 align="center">The Last CEO</h1>
 <h3 align="center">One CEO. Twenty Years. Infinite Consequences.</h3>
 
