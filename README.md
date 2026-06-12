@@ -43,18 +43,19 @@ The Last CEO provides an interactive simulation where players act as CEOs respon
 
 ## ✨ Key Features
 
-1. **🏢 Conversational Company Setup:** A cinematic boardroom interview defines your founder, company, industry, budget, and initial AI posture. Free-form answers — no character-count limits.
-2. **🎭 CEO Avatar Skins:** Pick how your CEO looks from 6 purely cosmetic skins — Cyberpunk Executive, AI Researcher, Quant Trader, Stealth Agent, Space Entrepreneur, and Hacker. Skins are appearance-only and grant **no** stats, bonuses, or abilities.
-3. **🕹️ 3D Playable Office:** Walk your voxel CEO around an isometric office and step up to HR, ML, or Boardroom stations to review and commit each quarter's initiative.
-4. **🎬 Story-Driven Board Meetings:** Each quarter opens with a rotating, escalating "incoming transmission" from your board (Chairman, CFO, CTO, CHRO, CRO) so no two meetings read the same.
-5. **🛠️ Adaptive Decision Engine:** A pool of 21 strategic moves across 9 categories. The hand re-rolls every quarter and is **context-aware** — surfacing morale boosters when the team is unhappy, cheap plays when cash is tight, hiring when headcount is thin, and aggressive growth when you're healthy.
-6. **📈 Executive Dashboard:** Track revenue, ROI, budget, AI maturity, automation, workforce, and risk indicators in a cyber-HUD command console.
-7. **📅 Quarterly Simulation System:** Simulates company evolution quarter by quarter until 2035.
-8. **🤖 Machine Learning Predictions:** XGBoost forecasting for revenue impact and productivity gain.
-9. **🎲 Dynamic Event Generation:** Random events like competitor launches, GPU shortages, regulation, cyberattacks, and viral hits.
-10. **❤️ Survival & Risk Scoring:** Measures long-term sustainability, AI transformation score, and company health.
-11. **📝 Executive Reports:** Per-quarter board decisions, scenario comparisons, and risk/readiness assessments.
-12. **🏆 Multiple Endings:** Unicorn Exit, IPO, Megacorp Acquisition, Bootstrap Legend, Rogue AI Singularity, and more.
+1. **🏢 Guided Onboarding Sequence:** A linear cinematic flow — **Landing → Boardroom Meeting → Design Your Avatar → Active Dashboard**. You answer the board's interview first, then style your CEO, then drop into the live simulation.
+2. **🏛️ Conversational Board Meeting:** A cinematic boardroom interview defines your founder, company, industry, budget, and initial AI posture. Free-form answers — no character-count limits.
+3. **🎭 CEO Avatar Skins:** After the board meeting, pick how your CEO looks from 6 purely cosmetic skins — Cyberpunk Executive, AI Researcher, Quant Trader, Stealth Agent, Space Entrepreneur, and Hacker. Skins are appearance-only and grant **no** stats, bonuses, or abilities.
+4. **🕹️ 3D Playable Office:** Walk your voxel CEO around an isometric office and step up to HR, ML, or Boardroom stations to review and commit each quarter's initiative.
+5. **🎬 Story-Driven Board Meetings:** Each quarter opens with a rotating, escalating "incoming transmission" from your board (Chairman, CFO, CTO, CHRO, CRO) so no two meetings read the same.
+6. **🛠️ Adaptive Decision Engine:** A pool of 21 strategic moves across 9 categories. The hand re-rolls every quarter and is **context-aware** — surfacing morale boosters when the team is unhappy, cheap plays when cash is tight, hiring when headcount is thin, and aggressive growth when you're healthy.
+7. **📈 Executive Dashboard:** Track revenue, ROI, budget, AI maturity, automation, workforce, and risk indicators in a cyber-HUD command console. The sci-fi navigation **sidebar lives only in the dashboard phase** (hidden during the landing and board-meeting flow) and can be **toggled on or off** to reclaim screen space.
+8. **📅 Quarterly Simulation System:** Simulates company evolution quarter by quarter until 2035.
+9. **🤖 Machine Learning Predictions:** XGBoost forecasting for revenue impact and productivity gain.
+10. **🎲 Dynamic Event Generation:** Random events like competitor launches, GPU shortages, regulation, cyberattacks, and viral hits.
+11. **❤️ Survival & Risk Scoring:** Measures long-term sustainability, AI transformation score, and company health.
+12. **📝 Executive Reports:** Per-quarter board decisions, scenario comparisons, and risk/readiness assessments.
+13. **🏆 Multiple Endings:** Unicorn Exit, IPO, Megacorp Acquisition, Bootstrap Legend, Rogue AI Singularity, and more.
 
 ---
 
@@ -75,8 +76,8 @@ These predictions integrate with business rules to update company performance af
 
 ## 🔄 System Workflow
 
-1. **Company Creation:** Player sets up the initial company profile.
-2. **Dashboard Initialization:** Displays current KPIs and financial health.
+1. **Onboarding Flow:** Landing → board meeting interview → avatar design → dashboard. The player sets up the initial company profile during the board meeting, then styles their CEO.
+2. **Dashboard Initialization:** Displays current KPIs and financial health, with a toggleable navigation sidebar.
 3. **Strategic Decisions:** Player selects AI-related actions for the current quarter.
 4. **Feature Engineering:** Decisions and state are formatted for ML models.
 5. **Dynamic Event Engine:** Random market and industry events are applied.
