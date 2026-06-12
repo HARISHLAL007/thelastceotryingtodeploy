@@ -1,11 +1,63 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useRef, useEffect } from 'react';
+import { getAudioCtx } from '@/lib/audio';
 
 type CEOModelProps = {
   archetype?: string;
   mood?: 'default' | 'victory' | 'bankruptcy' | 'singularity';
   playable?: boolean;
   onStationChange?: (station: string) => void;
+};
+
+// Footstep trail tuning
+const FOOT_COUNT = 24;      // pooled footprint meshes
+const STEP_INTERVAL = 0.8;  // world units between strides
+const FOOT_LIFE = 1.7;      // seconds before a print fully fades
+
+// --- Footstep audio (synthesized via Web Audio, no asset files) ---
+const playFootstep = (side: number) => {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') ctx.resume();
+  const t = ctx.currentTime;
+
+  // Master bus for the step
+  const out = ctx.createGain();
+  out.gain.value = 0.9;
+  out.connect(ctx.destination);
+
+  // Mid-range "body" click — pitched so it carries on laptop speakers,
+  // alternating per foot for a natural gait
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'triangle';
+  const base = side > 0 ? 240 : 200;
+  osc.frequency.setValueAtTime(base + Math.random() * 20, t);
+  osc.frequency.exponentialRampToValueAtTime(90, t + 0.08);
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(0.5, t + 0.004);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+  osc.connect(gain).connect(out);
+  osc.start(t);
+  osc.stop(t + 0.13);
+
+  // Bandpassed noise burst for the "scuff" texture
+  const dur = 0.06;
+  const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  const noise = ctx.createBufferSource();
+  noise.buffer = buffer;
+  const nGain = ctx.createGain();
+  nGain.gain.setValueAtTime(0.28, t);
+  nGain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  const bp = ctx.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.frequency.value = 2600;
+  bp.Q.value = 0.8;
+  noise.connect(bp).connect(nGain).connect(out);
+  noise.start(t);
+  noise.stop(t + dur);
 };
 
 // 3D Isometric Camera Controller
@@ -17,9 +69,9 @@ const CameraController = ({ playable }: { playable: boolean }) => {
       camera.position.set(0, 5.2, 5.8);
       camera.lookAt(0, -0.6, -1.8);
     } else {
-      // Standard closeup view of the CEO model
-      camera.position.set(0, 1.4, 3.2);
-      camera.lookAt(0, 0.4, 0);
+      // Standard view of the CEO model — pulled back and centered so the full figure fits the frame
+      camera.position.set(0, 1.3, 4.6);
+      camera.lookAt(0, 0.75, 0);
     }
     camera.updateProjectionMatrix();
   }, [playable, camera]);
@@ -210,6 +262,14 @@ const CEOCharacter = ({
   const lastStation = useRef('none');
   const keysPressed = useRef<Set<string>>(new Set());
 
+  // Footstep trail (refs to avoid re-renders inside the 60fps loop)
+  const footRefs = useRef<any[]>([]);
+  const footMeta = useRef(Array.from({ length: FOOT_COUNT }, () => ({ born: -1e9, x: 0, z: 0, rot: 0 })));
+  const footCursor = useRef(0);
+  const distTravelled = useRef(0);
+  const lastStepDist = useRef(0);
+  const stepSide = useRef(1);
+
   useEffect(() => {
     if (!playable) return;
 
@@ -294,6 +354,23 @@ const CEOCharacter = ({
 
           // Set rotation target direction angle
           playerRot.current = Math.atan2(dx, dz);
+
+          // Drop a glowing footprint every stride, alternating left/right foot
+          distTravelled.current += speed * delta;
+          if (distTravelled.current - lastStepDist.current >= STEP_INTERVAL) {
+            lastStepDist.current = distTravelled.current;
+            const rot = playerRot.current;
+            const fx = Math.sin(rot), fz = Math.cos(rot);  // forward vector
+            const px = Math.cos(rot), pz = -Math.sin(rot); // lateral vector
+            const m = footMeta.current[footCursor.current];
+            m.born = state.clock.getElapsedTime();
+            m.x = playerPos.current.x + px * 0.13 * stepSide.current - fx * 0.05;
+            m.z = playerPos.current.z + pz * 0.13 * stepSide.current - fz * 0.05;
+            m.rot = rot;
+            footCursor.current = (footCursor.current + 1) % FOOT_COUNT;
+            playFootstep(stepSide.current);
+            stepSide.current *= -1;
+          }
         }
 
         // Apply updated absolute coordinates
@@ -320,6 +397,26 @@ const CEOCharacter = ({
           if (leftArmRef.current) leftArmRef.current.rotation.x = 0;
           if (rightArmRef.current) rightArmRef.current.rotation.x = 0;
           if (bodyGroupRef.current) bodyGroupRef.current.position.y = Math.sin(idleTime) * 0.02;
+        }
+
+        // Fade & place the footprint trail
+        const nowT = state.clock.getElapsedTime();
+        for (let i = 0; i < FOOT_COUNT; i++) {
+          const fm = footRefs.current[i];
+          if (!fm) continue;
+          const meta = footMeta.current[i];
+          const age = nowT - meta.born;
+          if (age >= 0 && age < FOOT_LIFE) {
+            const t = 1 - age / FOOT_LIFE;
+            fm.visible = true;
+            fm.position.set(meta.x, -0.39, meta.z);
+            fm.rotation.set(-Math.PI / 2, 0, meta.rot);
+            fm.material.opacity = t * 0.5;
+            const sc = 1.1 - t * 0.2;
+            fm.scale.set(sc, sc, sc);
+          } else if (fm.visible) {
+            fm.visible = false;
+          }
         }
 
         // 2. Station distance logic checks
@@ -432,6 +529,7 @@ const CEOCharacter = ({
   }
 
   return (
+    <>
     <group ref={groupRef} position={[0, -0.4, 0]}>
       {/* Halo for Victory or Singularity */}
       {(mood === 'victory' || mood === 'singularity') && (
@@ -625,11 +723,26 @@ const CEOCharacter = ({
         </group>
       </group>
     </group>
+
+    {/* Footstep trail — pooled glowing prints left on the floor as the CEO walks */}
+    {playable && Array.from({ length: FOOT_COUNT }).map((_, i) => (
+      <mesh
+        key={i}
+        ref={(el) => { footRefs.current[i] = el; }}
+        position={[0, -0.39, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        visible={false}
+      >
+        <planeGeometry args={[0.12, 0.2]} />
+        <meshBasicMaterial color={eyeColor} transparent opacity={0} depthWrite={false} />
+      </mesh>
+    ))}
+    </>
   );
 };
 
-export const CEOModel = ({ 
-  archetype = 'researcher', 
+export const CEOModel = ({
+  archetype = 'researcher',
   mood = 'default',
   playable = false,
   onStationChange

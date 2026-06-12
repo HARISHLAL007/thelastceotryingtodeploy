@@ -37,6 +37,7 @@ export interface GameState {
 
 export interface YearHistory {
   year: number;
+  quarter?: number;
   revenue: number;
   budget: number;
   roi: number;

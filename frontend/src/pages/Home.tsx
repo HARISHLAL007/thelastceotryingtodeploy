@@ -144,10 +144,11 @@ export const Home = () => {
 
   // Typewriter effect & Voice synthesis
   useEffect(() => {
-    if (showIntro || !formData.skin) return;
+    if (showIntro) return;
 
     if (!currentQ) {
-      if (!showReport) {
+      // Boardroom meeting is over. Only advance to the report once the avatar has been designed.
+      if (formData.skin && !showReport) {
         setShowReport(true);
       }
       return;
@@ -419,8 +420,9 @@ export const Home = () => {
     );
   }
 
-  // Skin / Avatar selection — purely cosmetic, grants no bonuses or abilities.
-  if (!formData.skin) {
+  // Skin / Avatar selection — shown AFTER the boardroom meeting concludes.
+  // Purely cosmetic: grants no bonuses or abilities.
+  if (!currentQ && !formData.skin) {
     const activeId = hoveredSkin || pendingSkin;
     const active = SKINS.find((s) => s.id === activeId) || SKINS[0];
     return (
@@ -526,6 +528,9 @@ export const Home = () => {
       </div>
     );
   }
+
+  // Meeting finished and avatar already chosen — hold briefly until the report screen takes over.
+  if (!currentQ) return null;
 
   // Camera math: To center the active speaker, we move the entire room in the OPPOSITE direction of their x,y.
   // We also subtract a bit from Y so they sit at the TOP of the screen, making room for the question card.

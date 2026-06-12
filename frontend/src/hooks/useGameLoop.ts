@@ -313,18 +313,18 @@ export const useGameLoop = () => {
         gameResult = 'victory';
       }
 
-      // History tracking: fix duplicate year bug
+      // History tracking: log a data point for EVERY quarter that just completed
+      // (state.* here is the pre-advance closure, i.e. the quarter we just played)
       const updatedHistory = [...state.history];
-      if (willYearChange) {
-        updatedHistory.push({
-          year: nextYear, // Fixed bug: push the new year, not the old year
-          revenue: finalRevenue,
-          budget: finalBudget,
-          roi: finalRoi,
-          morale: freshState.morale,
-          employees: nextEmployees
-        });
-      }
+      updatedHistory.push({
+        year: state.currentYear,
+        quarter: state.currentQuarter,
+        revenue: finalRevenue,
+        budget: finalBudget,
+        roi: finalRoi,
+        morale: freshState.morale,
+        employees: nextEmployees
+      });
 
       actions.updateGameState({
         history: updatedHistory,

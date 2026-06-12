@@ -1,9 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, BarChart3, Trophy, Database, Target, BrainCircuit, ChevronRight } from 'lucide-react';
+import { Home, BarChart3, Trophy, Database, Target, BrainCircuit, ChevronRight, PanelLeftClose } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/store/gameStore';
 
-export const Sidebar = () => {
+export const Sidebar = ({ onClose }: { onClose?: () => void }) => {
   const location = useLocation();
   const company = useGameStore((s) => s.company);
   const state = useGameStore((s) => s.state);
@@ -40,6 +40,15 @@ export const Sidebar = () => {
             <h1 className="font-bold text-[13px] text-slate-100 tracking-[0.18em] text-glow-cyan">THE LAST CEO</h1>
             <p className="text-[8px] text-cyan-500/70 tracking-[0.3em] uppercase">Enterprise Edition</p>
           </div>
+          {onClose && (
+            <button
+              onClick={onClose}
+              title="Hide sidebar"
+              className="ml-auto p-1.5 rounded-md text-slate-500 hover:text-cyan-300 hover:bg-slate-800/60 transition-all"
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
 

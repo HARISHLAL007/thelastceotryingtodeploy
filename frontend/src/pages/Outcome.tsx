@@ -137,7 +137,7 @@ const ChartTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="cyber-glass cyber-border-cyan p-3 rounded-lg text-[10px] font-orbitron text-white space-y-1">
-        <p className="text-slate-500 font-bold border-b border-slate-800 pb-1 mb-1">// YEAR: {label}</p>
+        <p className="text-slate-500 font-bold border-b border-slate-800 pb-1 mb-1">// {label}</p>
         <p className="text-cyan-400 font-black">ROI: +{payload[0].value}%</p>
         <p className="text-yellow-400 font-black">BUDGET: ${payload[1].value.toLocaleString()}</p>
       </div>
@@ -257,7 +257,7 @@ export const Outcome = () => {
   }
 
   const chartData = state.history.map((entry) => ({
-    year: entry.year,
+    label: entry.quarter ? `Q${entry.quarter} '${String(entry.year).slice(-2)}` : `'${String(entry.year).slice(-2)}`,
     roi: entry.roi,
     budget: entry.budget,
   }));
@@ -570,11 +570,13 @@ export const Outcome = () => {
                           </filter>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#12172a" vertical={false} />
-                        <XAxis 
-                          dataKey="year" 
-                          stroke="#475569" 
+                        <XAxis
+                          dataKey="label"
+                          stroke="#475569"
                           tick={{ fill: '#94a3b8', fontSize: 10, fontFamily: 'Orbitron' }}
                           tickLine={{ stroke: '#1e293b' }}
+                          interval="preserveStartEnd"
+                          minTickGap={18}
                         />
                         <YAxis 
                           stroke="#475569"
