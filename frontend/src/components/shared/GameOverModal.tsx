@@ -1,4 +1,5 @@
 import { useGameStore } from '@/store/gameStore';
+import { createPortal } from 'react-dom';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Trophy, AlertOctagon, RotateCcw, ArrowRight, BarChart2, Download } from 'lucide-react';
@@ -175,7 +176,7 @@ export const GameOverModal = () => {
     });
   };
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
       {/* Background neon pulse glow */}
       <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[120px] pointer-events-none transition-all duration-1000 ${
@@ -263,9 +264,9 @@ export const GameOverModal = () => {
 
             <Button
               onClick={() => {
-                // Keep the isGameOver state but hide the modal by navigating or closing?
-                // The user says "add more pop ups where it is needed like that victory one".
-                // We'll navigate to /outcome which displays the details report.
+                if (document.fullscreenElement) {
+                  document.exitFullscreen();
+                }
                 navigate('/outcome');
               }}
               className={`py-3 px-4 font-orbitron font-black text-[10px] sm:text-xs tracking-widest flex items-center justify-center gap-2 hover:scale-[1.02] transition-all ${
@@ -284,4 +285,7 @@ export const GameOverModal = () => {
       </Card>
     </div>
   );
+
+  const container = document.fullscreenElement || document.body;
+  return createPortal(modalContent, container);
 };

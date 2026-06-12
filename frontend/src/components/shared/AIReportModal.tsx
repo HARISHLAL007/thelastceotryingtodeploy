@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useGameStore } from '@/store/gameStore';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -107,7 +108,7 @@ export const AIReportModal = () => {
     "Re-evaluate next quarter"
   ];
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 overflow-hidden">
       {/* Holographic background */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none animate-pulse duration-[3000ms]" />
@@ -310,4 +311,7 @@ export const AIReportModal = () => {
       </Card>
     </div>
   );
+
+  const container = document.fullscreenElement || document.body;
+  return createPortal(modalContent, container);
 };

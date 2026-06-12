@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useGameLoop } from '@/hooks/useGameLoop';
@@ -15,7 +15,11 @@ import {
   AlertTriangle,
   Terminal,
   Brain,
-  Radio
+  Radio,
+  Maximize2,
+  Minimize2,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -49,6 +53,37 @@ export const QuarterlyDecision = () => {
   const currentEvent = useGameStore((s) => s.currentEvent);
   const { isLoading, makeQuarterDecision, error } = useGameLoop();
   const [selectedDecision, setSelectedDecision] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showBoundaryMessage, setShowBoundaryMessage] = useState(false);
+  const [isMusicOn, setIsMusicOn] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isMusicOn) {
+        audioRef.current.play().catch(err => console.error("Audio playback failed", err));
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [isMusicOn]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    const el = document.getElementById('game-container');
+    if (!document.fullscreenElement && el) {
+      el.requestFullscreen().catch(err => console.error(err));
+    } else if (document.fullscreenElement) {
+      document.exitFullscreen().catch(err => console.error(err));
+    }
+  };
 
   // Filter decisions based on current decisions hand
   const unlockedDecisions = DECISIONS.filter(d => state.currentDecisions.includes(d.id));
@@ -118,44 +153,10 @@ export const QuarterlyDecision = () => {
           </div>
         )}
 
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center h-[400px] space-y-4">
-            <Loader2 className="h-12 w-12 animate-spin text-cyan-500" />
-            <span className="text-cyan-400 font-space font-bold tracking-widest animate-pulse">IMPLEMENTING INITIATIVE...</span>
-          </div>
-        ) : (
-          <div className="grid lg:grid-cols-[2fr,1fr] gap-6">
-            {/* Left side: 3D CEO Game */}
-            <div className="h-[500px] w-full relative rounded-xl overflow-hidden border border-slate-800 cyber-glass">
-              <div className="absolute bottom-4 left-0 right-0 z-10 flex justify-center pointer-events-none">
-                <span className="bg-black/50 px-4 py-1 rounded text-[10px] text-white tracking-widest font-mono">USE ARROW KEYS TO WALK TO A STATION</span>
-              </div>
-
-              <CEOModel
-                playable={true}
-                archetype={company?.skin || 'researcher'}
-                onStationChange={(station) => {
-                  if (isLoading) return;
-                  if (station === 'none') {
-                    setSelectedDecision(null);
-                    return;
-                  }
-                  
-                  let dec = null;
-                  if (station === 'hr' && unlockedDecisions[0]) dec = unlockedDecisions[0].id;
-                  if (station === 'boardroom' && unlockedDecisions[1]) dec = unlockedDecisions[1].id;
-                  if (station === 'ml' && unlockedDecisions[2]) dec = unlockedDecisions[2].id;
-                  
-                  if (dec !== selectedDecision) {
-                    setSelectedDecision(dec);
-                  }
-                }}
-              />
-            </div>
-
-            {/* Right side: Action Confirmation Card */}
-            <div className="flex flex-col">
-              <div className="flex-1 bg-slate-950/80 border border-slate-800 rounded-xl p-6 flex flex-col relative overflow-hidden cyber-glass shadow-xl">
+        {(() => {
+          const actionCard = (
+            <div className={`flex flex-col transition-all duration-300 ${isFullscreen ? 'absolute bottom-6 right-6 w-80 z-40 shadow-2xl' : ''}`}>
+              <div className={`bg-slate-950/90 border border-slate-800 rounded-xl p-6 flex flex-col relative overflow-hidden cyber-glass shadow-xl ${isFullscreen ? 'max-h-[80vh] overflow-y-auto' : 'flex-1'}`}>
                 <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent opacity-40" />
                 
                 <h3 className="text-sm font-space font-bold text-cyan-400 tracking-widest uppercase mb-6 flex items-center gap-2">
@@ -163,7 +164,12 @@ export const QuarterlyDecision = () => {
                   Terminal Uplink
                 </h3>
 
-                {!selectedDecision ? (
+                {isLoading ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
+                    <Loader2 className="h-12 w-12 animate-spin text-cyan-500" />
+                    <span className="text-cyan-400 font-space font-bold tracking-widest animate-pulse text-sm">IMPLEMENTING...</span>
+                  </div>
+                ) : !selectedDecision ? (
                   <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
                     <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center animate-pulse">
                       <Brain className="w-8 h-8 text-slate-600" />
@@ -183,10 +189,6 @@ export const QuarterlyDecision = () => {
                     {(() => {
                       const decision = unlockedDecisions.find(d => d.id === selectedDecision);
                       if (!decision) return null;
-                      
-                      const isHigh = decision.riskLevel === 'HIGH_RISK';
-                      const isMedium = decision.riskLevel === 'MEDIUM_RISK';
-                      const riskGlow = isHigh ? "text-rose-400" : isMedium ? "text-yellow-400" : "text-emerald-400";
                       
                       return (
                         <>
@@ -222,8 +224,94 @@ export const QuarterlyDecision = () => {
                 )}
               </div>
             </div>
-          </div>
-        )}
+          );
+
+          return (
+            <div className={`grid gap-6 ${isFullscreen ? 'block' : 'lg:grid-cols-[2fr,1fr]'}`}>
+              {/* Left side: 3D CEO Game */}
+              <div id="game-container" className={`w-full relative rounded-xl overflow-hidden border border-slate-800 cyber-glass bg-[#020617] ${isFullscreen ? 'h-screen border-none rounded-none' : 'h-[500px]'}`}>
+                
+                {isLoading && (
+                  <div className="absolute inset-0 z-30 bg-slate-950/60 backdrop-blur-sm flex flex-col items-center justify-center">
+                  </div>
+                )}
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsMusicOn(!isMusicOn)}
+                  className="absolute top-4 right-16 z-20 bg-slate-900/50 hover:bg-slate-800/80 border border-slate-700/50 text-slate-400 hover:text-white"
+                >
+                  {isMusicOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleFullscreen}
+                  className="absolute top-4 right-4 z-20 bg-slate-900/50 hover:bg-slate-800/80 border border-slate-700/50 text-slate-400 hover:text-white"
+                >
+                  {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                </Button>
+
+                {/* Hidden Audio Element */}
+                <audio ref={audioRef} src="/gamesound.mp3" loop />
+
+                <div className="absolute bottom-4 left-4 right-0 z-10 flex justify-start pointer-events-none">
+                  <span className="bg-black/50 px-4 py-1 rounded text-[10px] text-white tracking-widest font-mono">USE ARROW KEYS TO WALK TO A STATION{isFullscreen ? ' (ESC TO EXIT FULLSCREEN)' : ''}</span>
+                </div>
+
+                {showBoundaryMessage && (
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-950/95 border border-rose-500 p-6 rounded-xl z-50 animate-in zoom-in-95 duration-200 text-center shadow-[0_0_30px_rgba(244,63,94,0.3)]">
+                    <AlertTriangle className="h-8 w-8 text-rose-500 mx-auto mb-3 animate-pulse" />
+                    <p className="text-rose-400 font-bold font-orbitron tracking-widest text-sm mb-1 uppercase">Restricted Area</p>
+                    <p className="text-slate-300 font-space text-xs">Hey CEO! Lot of work to do.</p>
+                    <p className="text-slate-400 font-space text-[10px] mt-1">Go back and make this company big!</p>
+                  </div>
+                )}
+
+                <CEOModel
+                  playable={true}
+                  archetype={company?.skin || 'researcher'}
+                  selectedStation={selectedDecision ? 
+                    (selectedDecision === unlockedDecisions[0]?.id ? 'hr' : 
+                     selectedDecision === unlockedDecisions[1]?.id ? 'boardroom' : 
+                     selectedDecision === unlockedDecisions[2]?.id ? 'ml' : 'none') 
+                    : 'none'}
+                  onStationChange={(station) => {
+                    if (isLoading) return;
+                    if (station === 'none') {
+                      setSelectedDecision(null);
+                      return;
+                    }
+                    if (station === 'boundary') {
+                      if (!showBoundaryMessage) {
+                        setShowBoundaryMessage(true);
+                        setTimeout(() => setShowBoundaryMessage(false), 2500);
+                      }
+                      return;
+                    }
+                    
+                    let dec = null;
+                    if (station === 'hr' && unlockedDecisions[0]) dec = unlockedDecisions[0].id;
+                    if (station === 'boardroom' && unlockedDecisions[1]) dec = unlockedDecisions[1].id;
+                    if (station === 'ml' && unlockedDecisions[2]) dec = unlockedDecisions[2].id;
+                    
+                    if (dec !== selectedDecision) {
+                      setSelectedDecision(dec);
+                    }
+                  }}
+                />
+                
+                {/* Render action card overlay in fullscreen */}
+                {isFullscreen && actionCard}
+              </div>
+
+              {/* Render normal side action card when not fullscreen */}
+              {!isFullscreen && actionCard}
+            </div>
+          );
+        })()}
       </CardContent>
     </Card>
   );

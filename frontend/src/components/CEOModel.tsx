@@ -1,12 +1,14 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useRef, useEffect } from 'react';
 import { OrbitControls, Text } from '@react-three/drei';
+import * as THREE from 'three';
 import { getAudioCtx } from '@/lib/audio';
 
 type CEOModelProps = {
   archetype?: string;
   mood?: 'default' | 'victory' | 'bankruptcy' | 'singularity';
   playable?: boolean;
+  selectedStation?: string;
   onStationChange?: (station: string) => void;
 };
 
@@ -79,26 +81,100 @@ const CameraController = ({ playable }: { playable: boolean }) => {
   return null;
 };
 
+// Glowing floor tiles randomly lighting up the room
+const GlowingFloorTiles = () => {
+  const count = 20; // Number of glowing tiles
+  const tilesRef = useRef<any[]>([]);
+  
+  // Random starting positions and phases
+  const tileData = useRef(Array.from({ length: count }, () => ({
+    x: Math.floor(Math.random() * 18) - 9 + 0.5,
+    z: Math.floor(Math.random() * 18) - 9 + 0.5,
+    phase: Math.random() * Math.PI * 2,
+    speed: 4.0 + Math.random() * 4.0,
+    color: Math.random() > 0.5 ? '#06b6d4' : '#10b981' // cyan or emerald
+  })));
+
+  useFrame((state) => {
+    const time = state.clock.getElapsedTime();
+    tilesRef.current.forEach((tile, i) => {
+      if (!tile) return;
+      const data = tileData.current[i];
+      // pulsing opacity
+      const opacity = (Math.sin(time * data.speed + data.phase) + 1) / 2; 
+      tile.material.opacity = opacity * 0.3;
+      
+      // Randomly move invisible tiles
+      if (opacity < 0.1 && Math.random() < 0.04) {
+        data.x = Math.floor(Math.random() * 18) - 9 + 0.5;
+        data.z = Math.floor(Math.random() * 18) - 9 + 0.5;
+        tile.position.set(data.x, -0.395, data.z);
+      }
+    });
+  });
+
+  return (
+    <group position={[0, 0, -1.5]}>
+      {Array.from({ length: count }).map((_, i) => (
+        <mesh
+          key={i}
+          ref={(el) => (tilesRef.current[i] = el)}
+          position={[tileData.current[i].x, -0.395, tileData.current[i].z]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          <planeGeometry args={[0.95, 0.95]} />
+          <meshBasicMaterial color={tileData.current[i].color} transparent opacity={0} depthWrite={false} />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
 // 3D Office Environment Stations
-const OfficeRoom = () => {
+const OfficeRoom = ({ selectedStation }: { selectedStation?: string }) => {
   return (
     <group>
       {/* Cyberpunk Neon Floor Grid */}
-      <gridHelper args={[14, 14, '#06b6d4', '#1e293b']} position={[0, -0.4, -1.5]} />
+      <gridHelper args={[18, 18, '#06b6d4', '#1e293b']} position={[0, -0.4, -1.5]} />
+      <GlowingFloorTiles />
+
+      {/* Red Warning Boundary Line */}
+      <group position={[0, -0.39, -2.0]}>
+        {/* Top Edge (Back) */}
+        <mesh position={[0, 0, -6]}>
+          <boxGeometry args={[16, 0.05, 0.1]} />
+          <meshBasicMaterial color="#ef4444" transparent opacity={0.6} />
+        </mesh>
+        {/* Bottom Edge (Front) */}
+        <mesh position={[0, 0, 6]}>
+          <boxGeometry args={[16, 0.05, 0.1]} />
+          <meshBasicMaterial color="#ef4444" transparent opacity={0.6} />
+        </mesh>
+        {/* Left Edge */}
+        <mesh position={[-8, 0, 0]}>
+          <boxGeometry args={[0.1, 0.05, 12]} />
+          <meshBasicMaterial color="#ef4444" transparent opacity={0.6} />
+        </mesh>
+        {/* Right Edge */}
+        <mesh position={[8, 0, 0]}>
+          <boxGeometry args={[0.1, 0.05, 12]} />
+          <meshBasicMaterial color="#ef4444" transparent opacity={0.6} />
+        </mesh>
+      </group>
 
       {/* Office Back Wall */}
-      <mesh position={[0, 1.5, -5.2]}>
-        <planeGeometry args={[14, 4]} />
+      <mesh position={[0, 1.5, -8.2]}>
+        <planeGeometry args={[20, 4]} />
         <meshStandardMaterial color="#020617" roughness={0.9} />
       </mesh>
       
       {/* Neon Back Wall Glowing Trim */}
-      <mesh position={[0, 1.2, -5.15]}>
-        <boxGeometry args={[14, 0.04, 0.04]} />
+      <mesh position={[0, 1.2, -8.15]}>
+        <boxGeometry args={[20, 0.04, 0.04]} />
         <meshBasicMaterial color="#06b6d4" />
       </mesh>
-      <mesh position={[0, 0.1, -5.15]}>
-        <boxGeometry args={[14, 0.04, 0.04]} />
+      <mesh position={[0, 0.1, -8.15]}>
+        <boxGeometry args={[20, 0.04, 0.04]} />
         <meshBasicMaterial color="#1e293b" />
       </mesh>
 
@@ -106,12 +182,12 @@ const OfficeRoom = () => {
       <group position={[-2.8, -0.4, -0.6]}>
         {/* Floor Indicator Ring */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-          <ringGeometry args={[0.9, 1.0, 32]} />
-          <meshBasicMaterial color="#10b981" side={2} transparent opacity={0.7} />
+          <ringGeometry args={selectedStation === 'hr' ? [0.88, 1.02, 32] : [0.92, 1.0, 32]} />
+          <meshBasicMaterial color={selectedStation === 'hr' ? '#6ee7b7' : '#10b981'} side={2} transparent opacity={selectedStation === 'hr' ? 1.0 : 0.3} />
         </mesh>
         
         {/* Spot/Point Light */}
-        <pointLight position={[0, 1, 0]} color="#10b981" intensity={2} distance={3.5} />
+        <pointLight position={[0, 1, 0]} color="#10b981" intensity={selectedStation === 'hr' ? 3.5 : 2} distance={3.5} />
 
         {/* Desk Mesh */}
         <mesh position={[0, 0.4, 0]}>
@@ -146,12 +222,12 @@ const OfficeRoom = () => {
       <group position={[2.8, -0.4, -0.6]}>
         {/* Floor Indicator Ring */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-          <ringGeometry args={[0.9, 1.0, 32]} />
-          <meshBasicMaterial color="#06b6d4" side={2} transparent opacity={0.7} />
+          <ringGeometry args={selectedStation === 'ml' ? [0.88, 1.02, 32] : [0.92, 1.0, 32]} />
+          <meshBasicMaterial color={selectedStation === 'ml' ? '#67e8f9' : '#06b6d4'} side={2} transparent opacity={selectedStation === 'ml' ? 1.0 : 0.3} />
         </mesh>
 
         {/* Spot/Point Light */}
-        <pointLight position={[0, 1.2, 0]} color="#06b6d4" intensity={2} distance={3.5} />
+        <pointLight position={[0, 1.2, 0]} color="#06b6d4" intensity={selectedStation === 'ml' ? 3.5 : 2} distance={3.5} />
 
         {/* Main Server Tower Mesh */}
         <mesh position={[0, 0.8, 0]}>
@@ -198,12 +274,12 @@ const OfficeRoom = () => {
       <group position={[0, -0.4, -3.2]}>
         {/* Floor Indicator Ring */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-          <ringGeometry args={[1.2, 1.3, 32]} />
-          <meshBasicMaterial color="#fbbf24" side={2} transparent opacity={0.7} />
+          <ringGeometry args={selectedStation === 'boardroom' ? [1.18, 1.32, 32] : [1.22, 1.3, 32]} />
+          <meshBasicMaterial color={selectedStation === 'boardroom' ? '#fcd34d' : '#fbbf24'} side={2} transparent opacity={selectedStation === 'boardroom' ? 1.0 : 0.3} />
         </mesh>
 
         {/* Spot/Point Light */}
-        <pointLight position={[0, 1.2, 0]} color="#fbbf24" intensity={2.5} distance={4} />
+        <pointLight position={[0, 1.2, 0]} color="#fbbf24" intensity={selectedStation === 'boardroom' ? 4.0 : 2.5} distance={4} />
 
         {/* Large Table Mesh */}
         <mesh position={[0, 0.3, 0]}>
@@ -261,7 +337,7 @@ const CEOCharacter = ({
   const playerPos = useRef({ x: 0, z: 0 });
   const playerRot = useRef(0);
   const lastStation = useRef('none');
-  const keysPressed = useRef<Set<string>>(new Set());
+  const moveKeys = useRef({ forward: false, backward: false, left: false, right: false });
 
   // Footstep trail (refs to avoid re-renders inside the 60fps loop)
   const footRefs = useRef<any[]>([]);
@@ -285,31 +361,34 @@ const CEOCharacter = ({
       if (isInputActive) return;
 
       const key = e.key.toLowerCase();
-      const code = e.code ? e.code.toLowerCase() : '';
       
-      // Prevent default scrolling or browser actions for movement keys
-      if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key)) {
+      const isForward = key === 'arrowup';
+      const isBackward = key === 'arrowdown';
+      const isLeft = key === 'arrowleft';
+      const isRight = key === 'arrowright';
+
+      if (isForward || isBackward || isLeft || isRight) {
         e.preventDefault();
       }
 
-      keysPressed.current.add(key);
-      if (code) {
-        keysPressed.current.add(code);
-      }
+      if (isForward) moveKeys.current.forward = true;
+      if (isBackward) moveKeys.current.backward = true;
+      if (isLeft) moveKeys.current.left = true;
+      if (isRight) moveKeys.current.right = true;
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
-      const code = e.code ? e.code.toLowerCase() : '';
       
-      if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key)) {
-        e.preventDefault();
-      }
+      const isForward = key === 'arrowup';
+      const isBackward = key === 'arrowdown';
+      const isLeft = key === 'arrowleft';
+      const isRight = key === 'arrowright';
 
-      keysPressed.current.delete(key);
-      if (code) {
-        keysPressed.current.delete(code);
-      }
+      if (isForward) moveKeys.current.forward = false;
+      if (isBackward) moveKeys.current.backward = false;
+      if (isLeft) moveKeys.current.left = false;
+      if (isRight) moveKeys.current.right = false;
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -327,13 +406,10 @@ const CEOCharacter = ({
         let dx = 0;
         let dz = 0;
 
-        const isPressed = (k1: string, k2: string, k3: string) => 
-          keysPressed.current.has(k1) || keysPressed.current.has(k2) || keysPressed.current.has(k3);
-
-        if (isPressed('w', 'arrowup', 'keyw')) dz -= 1;
-        if (isPressed('s', 'arrowdown', 'keys')) dz += 1;
-        if (isPressed('a', 'arrowleft', 'keya')) dx -= 1;
-        if (isPressed('d', 'arrowright', 'keyd')) dx += 1;
+        if (moveKeys.current.forward) dz -= 1;
+        if (moveKeys.current.backward) dz += 1;
+        if (moveKeys.current.left) dx -= 1;
+        if (moveKeys.current.right) dx += 1;
 
         // Diagonal normalization
         if (dx !== 0 && dz !== 0) {
@@ -349,9 +425,19 @@ const CEOCharacter = ({
           playerPos.current.x += dx * speed * delta;
           playerPos.current.z += dz * speed * delta;
 
-          // Limit boundaries within the office grid room bounds
-          playerPos.current.x = Math.max(-4.5, Math.min(4.5, playerPos.current.x));
-          playerPos.current.z = Math.max(-4.6, Math.min(1.2, playerPos.current.z));
+          // Limit boundaries within the expanded office grid room bounds
+          let hitBoundary = false;
+          if (playerPos.current.x <= -8.0 || playerPos.current.x >= 8.0 || playerPos.current.z <= -8.0 || playerPos.current.z >= 4.0) {
+            hitBoundary = true;
+          }
+          playerPos.current.x = Math.max(-8.0, Math.min(8.0, playerPos.current.x));
+          playerPos.current.z = Math.max(-8.0, Math.min(4.0, playerPos.current.z));
+
+          if (hitBoundary && onStationChange) {
+            // We can reuse onStationChange to send a special string, or use a new prop.
+            // A special station string 'boundary' is easiest.
+            onStationChange('boundary');
+          }
 
           // Set rotation target direction angle
           playerRot.current = Math.atan2(dx, dz);
@@ -766,14 +852,15 @@ export const CEOModel = ({
   archetype = 'researcher',
   mood = 'default',
   playable = false,
+  selectedStation = 'none',
   onStationChange
 }: CEOModelProps) => {
   return (
-    <div className={`h-full w-full select-none ${playable ? 'pointer-events-none' : ''}`}>
+    <div className="h-full w-full select-none relative" onContextMenu={(e) => e.preventDefault()}>
       <Canvas
         camera={{ position: [0, 1.4, 3.2], fov: 42 }}
-        className={`h-full w-full ${playable ? 'pointer-events-none' : ''}`}
-        style={{ background: 'transparent', pointerEvents: playable ? 'none' : 'auto' }}
+        className="h-full w-full"
+        style={{ background: 'transparent' }}
       >
         <ambientLight intensity={0.8} />
         <pointLight position={[10, 10, 10]} intensity={1.5} />
@@ -783,8 +870,24 @@ export const CEOModel = ({
         <CameraController playable={playable} />
         
         {!playable && <OrbitControls enableZoom={true} enablePan={false} minDistance={2} maxDistance={6} target={[0, 0.6, 0]} />}
+        {playable && (
+          <OrbitControls 
+            enableRotate={true} 
+            enablePan={true} 
+            enableZoom={true} 
+            minDistance={3} 
+            maxDistance={15} 
+            maxPolarAngle={Math.PI / 2 - 0.05} // Prevent looking from below the floor
+            mouseButtons={{
+              LEFT: THREE.MOUSE.PAN, // Left click to pan/move the view
+              MIDDLE: THREE.MOUSE.DOLLY,
+              RIGHT: THREE.MOUSE.ROTATE // Right click to rotate
+            }}
+            target={[0, -0.6, -1.8]} 
+          />
+        )}
         
-        {playable && <OfficeRoom />}
+        {playable && <OfficeRoom selectedStation={selectedStation} />}
         
         <CEOCharacter 
           archetype={archetype} 
