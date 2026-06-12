@@ -31,12 +31,12 @@ export const GameTimeline = ({ currentYear }: GameTimelineProps) => {
       <div className="flex flex-col space-y-4 relative z-10">
         <div className="flex justify-between items-center">
           <div className="space-y-1">
-            <h3 className="font-space font-bold text-sm tracking-wider text-cyan-400 text-glow-cyan">
+            <h3 className="font-orbitron font-bold text-sm tracking-wider text-cyan-400 text-glow-cyan">
               // OPERATIONS TIMELINE_
             </h3>
             <p className="text-[11px] text-slate-400">Survival parameters set to Year 2035</p>
           </div>
-          <div className="text-right font-space">
+          <div className="text-right font-orbitron">
             <span className="text-xs text-slate-400 uppercase tracking-widest block">YEAR DISTANCE</span>
             <span className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-400">
               {Math.max(endYear - currentYear, 0)} YEARS REMAINING
@@ -75,7 +75,7 @@ export const GameTimeline = ({ currentYear }: GameTimelineProps) => {
         </div>
 
         {/* Labels under track */}
-        <div className="flex justify-between px-2 text-[10px] font-space font-semibold text-slate-500">
+        <div className="flex justify-between px-2 text-[10px] font-orbitron font-semibold text-slate-500">
           {milestones.map((milestone) => {
             const isCurrent = currentYear === milestone.year;
             return (

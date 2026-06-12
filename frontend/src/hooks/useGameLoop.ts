@@ -12,11 +12,64 @@ export const useGameLoop = () => {
   const { actions, state, company } = useGameStore();
 
   const rollDecisions = () => {
-    const freshLevel = useGameStore.getState().state.level;
-    const available = DECISIONS.filter(d => freshLevel >= d.requiredLevel);
-    // Shuffle and pick top 3
-    const shuffled = [...available].sort(() => 0.5 - Math.random());
-    const picked = shuffled.slice(0, 3).map(d => d.id);
+    const snapshot = useGameStore.getState();
+    const freshState = snapshot.state;
+    const c = snapshot.company;
+    const prev = freshState.currentDecisions;
+
+    const available = DECISIONS.filter(d => freshState.level >= d.requiredLevel);
+
+    // Current vitals — these were shaped by the player's PREVIOUS decisions,
+    // so scoring against them makes the hand respond to how the game is going.
+    const morale = freshState.morale;
+    const budget = freshState.budget;
+    const employees = freshState.employees;
+    const maturity = c?.aiMaturityScore ?? 50;
+    const automation = c?.automationRate ?? 40;
+    const training = c?.trainingHours ?? 120;
+
+    const score = (d: typeof DECISIONS[number]) => {
+      let sc = Math.random() * 5; // keep some surprise
+
+      // Struggling morale → surface options that lift the team
+      if (morale < 45 && d.moraleImpact > 0) sc += 7;
+      // Tight on cash → favor cheap plays, punish big spends
+      if (budget < 1_000_000) sc += d.cost < 500_000 ? 5 : -4;
+      // Thin headcount → favor hiring/acquisition
+      if (employees < 6 && d.employeeGain > 0) sc += 5;
+      // Weak AI maturity → favor capability builders
+      if (maturity < 55) sc += d.aiMaturityGain * 0.35;
+      // Low automation → favor automation plays
+      if (automation < 45) sc += d.automationGain * 0.25;
+      // Under-trained workforce → favor upskilling
+      if (training < 150) sc += d.trainingGain * 0.06;
+      // Healthy company → chase growth/ROI
+      if (morale >= 45 && budget >= 1_000_000) sc += d.roiImpact * 0.12;
+      // Avoid repeating last quarter's exact hand
+      if (prev.includes(d.id)) sc -= 6;
+
+      return sc;
+    };
+
+    const ranked = [...available].sort((a, b) => score(b) - score(a));
+
+    // Pick the 3 strongest, but keep category variety so the hand feels distinct
+    const picked: string[] = [];
+    const usedCats = new Set<string>();
+    for (const d of ranked) {
+      if (picked.length >= 3) break;
+      if (usedCats.has(d.category)) continue;
+      picked.push(d.id);
+      usedCats.add(d.category);
+    }
+    // Fallback: if category-diversity left us short, fill from the ranked list
+    if (picked.length < 3) {
+      for (const d of ranked) {
+        if (picked.length >= 3) break;
+        if (!picked.includes(d.id)) picked.push(d.id);
+      }
+    }
+
     actions.updateGameState({ currentDecisions: picked });
   };
 
@@ -39,7 +92,7 @@ export const useGameLoop = () => {
     return null;
   };
 
-  const fetchQuarterReport = async () => {
+  const fetchQuarterReport = async (chosenDecision?: any, unpickedDecisions: any[] = [], preCompanyState?: any) => {
     setIsLoading(true);
     setError(null);
 
@@ -68,6 +121,39 @@ export const useGameLoop = () => {
       const metrics = response.data.metrics;
       const scenarios = response.data.scenarios;
       
+      let recommendations = [];
+      if (chosenDecision && unpickedDecisions.length > 0 && preCompanyState) {
+          recommendations.push(`Chosen: ${chosenDecision.title}: ROI ${Math.round(metrics.roi)}%, Revenue $${(metrics.revenue_impact/1000000).toFixed(2)}M`);
+          
+          for (const dec of unpickedDecisions) {
+             const altPayload = {
+                industry: preCompanyState.industry || "Technology",
+                country: preCompanyState.country || "United States",
+                year: freshState.currentYear,
+                ai_adoption_level: preCompanyState.aiAdoptionLevel || 3.5,
+                ai_investment_usd: (preCompanyState.aiInvestment || 500000) + dec.cost,
+                automation_rate: Math.min((preCompanyState.automationRate || 45.0) + dec.automationGain, 100),
+                employee_ai_training_hours: (preCompanyState.trainingHours || 120.0) + dec.trainingGain,
+                ai_maturity_score: Math.min((preCompanyState.aiMaturityScore || 75.0) + dec.aiMaturityGain, 100),
+                deployment_count: (preCompanyState.deploymentCount || 10) + dec.deploymentGain,
+                save_to_db: false
+             };
+             try {
+                const altRes = await api.getQuarterReport(altPayload);
+                const altMetrics = altRes.data.metrics;
+                recommendations.push(`If Chose: ${dec.title}: ROI ${Math.round(altMetrics.roi)}%, Revenue $${(altMetrics.revenue_impact/1000000).toFixed(2)}M`);
+             } catch (e) {
+                recommendations.push(`If Chose: ${dec.title}: (Prediction Failed)`);
+             }
+          }
+      } else {
+         recommendations = [
+            `Scenario A (Maintain): ROI ${Math.round(scenarios.A.roi)}%, Revenue $${(scenarios.A.revenue/1000000).toFixed(2)}M`,
+            `Scenario B (+20%): ROI ${Math.round(scenarios.B.roi)}%, Revenue $${(scenarios.B.revenue/1000000).toFixed(2)}M`,
+            `Scenario C (+50%): ROI ${Math.round(scenarios.C.roi)}%, Revenue $${(scenarios.C.revenue/1000000).toFixed(2)}M`
+         ];
+      }
+
       const report: LLMReport = {
         quarter: freshState.currentQuarter,
         year: freshState.currentYear,
@@ -76,11 +162,7 @@ export const useGameLoop = () => {
         expenses: Math.round(payload.ai_investment_usd),
         roi: Math.round(metrics.roi),
         moraleChange: Math.round(metrics.productivity_gain),
-        recommendations: [
-          `Scenario A (Maintain): ROI ${Math.round(scenarios.A.roi)}%, Revenue $${(scenarios.A.revenue/1000000).toFixed(2)}M`,
-          `Scenario B (+20%): ROI ${Math.round(scenarios.B.roi)}%, Revenue $${(scenarios.B.revenue/1000000).toFixed(2)}M`,
-          `Scenario C (+50%): ROI ${Math.round(scenarios.C.roi)}%, Revenue $${(scenarios.C.revenue/1000000).toFixed(2)}M`
-        ],
+        recommendations,
         risks: [
           `AI Transformation Score: ${metrics.ai_transformation_score.toFixed(0)}/100`,
           `Risk Score: ${metrics.risk_score.toFixed(0)}%`,
@@ -186,6 +268,8 @@ export const useGameLoop = () => {
       const preMorale = Math.min(state.morale + decision.moraleImpact, 100);
       const nextEmployees = state.employees + decision.employeeGain;
 
+      const preCompanyState = { ...company };
+
       // 2. Update Company Core AI Metrics (this feeds ML)
       actions.updateCompany({
         aiInvestment: (company?.aiInvestment || 0) + decision.cost,
@@ -208,8 +292,10 @@ export const useGameLoop = () => {
         currentYear: nextYear,
       });
 
+      const unpickedDecisions = DECISIONS.filter(d => state.currentDecisions.includes(d.id) && d.id !== decisionId);
+
       // 3. Fetch simulated report representing quarter metrics first
-      const reportResults = await fetchQuarterReport();
+      const reportResults = await fetchQuarterReport(decision, unpickedDecisions, preCompanyState);
       
       const freshState = useGameStore.getState().state;
       const finalBudget = reportResults?.nextBudget ?? preBudget;
@@ -254,7 +340,7 @@ export const useGameLoop = () => {
         }
       }
 
-      // 4. Roll new decision cards for next quarter using updated XP/level
+      // 4. Roll a fresh, state-aware hand for the next quarter
       rollDecisions();
       
       // 5. Trigger Random Event for next quarter

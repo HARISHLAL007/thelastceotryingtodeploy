@@ -6,7 +6,7 @@ import { useGameStore } from '@/store/gameStore';
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="cyber-glass cyber-border-cyan p-3 rounded-lg text-[10px] font-space text-white space-y-1">
+      <div className="cyber-glass cyber-border-cyan p-3 rounded-lg text-[10px] font-orbitron text-white space-y-1">
         <p className="text-slate-500 font-bold border-b border-slate-800 pb-1 mb-1">// YEAR: {label}</p>
         <p className="text-cyan-400 font-black">ROI: +{payload[0].value}%</p>
         {payload[0].payload.revenue !== undefined && (
@@ -33,7 +33,7 @@ export const ROIChart = () => {
       <div className="cyber-sweep-overlay" />
       
       <CardHeader className="border-b border-slate-900 pb-4">
-        <CardTitle className="font-space text-sm font-black tracking-widest text-cyan-400 text-glow-cyan">
+        <CardTitle className="font-orbitron text-sm font-black tracking-widest text-cyan-400 text-glow-cyan">
           // ROI_TELEMETRY_STREAM_
         </CardTitle>
       </CardHeader>

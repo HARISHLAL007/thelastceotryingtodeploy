@@ -16,3 +16,7 @@ dist-ssr/
 .DS_Store
 .vscode/
 .idea/
+
+# Python cache
+__pycache__/
+*.pyc

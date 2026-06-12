@@ -16,24 +16,130 @@ import {
   Zap,
   Activity,
   Terminal,
-  Skull,
-  Download
+  Skull
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-import { ALL_ENDINGS, getAchievedEnding } from '@/lib/endings';
+interface Ending {
+  id: string;
+  title: string;
+  description: string;
+  badge: string;
+  unlockedMsg: string;
+  glowClass: string;
+  hoverGlowClass: string;
+  textColor: string;
+  borderColor: string;
+  icon: any;
+}
+
+const ALL_ENDINGS: Ending[] = [
+  {
+    id: 'unicorn',
+    title: 'THE UNICORN EXIT',
+    description: 'Survive to 2035 with a budget > $3M or ROI > 150%.',
+    badge: '🦄 UNICORN EXIT',
+    unlockedMsg: 'You built a legendary high-growth behemoth that dominated the global markets!',
+    glowClass: 'border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.15)] bg-yellow-500/5',
+    hoverGlowClass: 'hover:border-yellow-400 hover:shadow-[0_0_35px_rgba(234,179,8,0.4)]',
+    textColor: 'text-yellow-400',
+    borderColor: 'border-yellow-500/20',
+    icon: Trophy
+  },
+  {
+    id: 'ipo',
+    title: 'IPO PUBLIC LISTING',
+    description: 'Survive to 2035 with >= 30 employees and >= $2M budget.',
+    badge: '🔔 IPO PUBLIC LISTING',
+    unlockedMsg: 'You successfully listed your startup on the NASDAQ exchange with massive fanfare.',
+    glowClass: 'border-emerald-500/50 shadow-[0_0_20px_rgba(52,211,153,0.15)] bg-emerald-500/5',
+    hoverGlowClass: 'hover:border-emerald-400 hover:shadow-[0_0_35px_rgba(52,211,153,0.4)]',
+    textColor: 'text-emerald-400',
+    borderColor: 'border-emerald-500/20',
+    icon: Zap
+  },
+  {
+    id: 'acquisition',
+    title: 'MEGACORP ACQUISITION',
+    description: 'Survive to 2035 with a budget > $1.5M or ROI > 100%.',
+    badge: '💼 ACQUIRED BY MEGACORP',
+    unlockedMsg: 'A conglomerate purchased your company for a massive exit, rewarding your team.',
+    glowClass: 'border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.15)] bg-purple-500/5',
+    hoverGlowClass: 'hover:border-purple-400 hover:shadow-[0_0_35px_rgba(168,85,247,0.4)]',
+    textColor: 'text-purple-400',
+    borderColor: 'border-purple-500/20',
+    icon: Users
+  },
+  {
+    id: 'bootstrap_legend',
+    title: 'BOOTSTRAP LEGEND',
+    description: 'Survive to 2035 starting with Bootstrapper runway capital.',
+    badge: '👑 BOOTSTRAP LEGEND',
+    unlockedMsg: 'No venture capital, pure grit. You built a self-sustaining empire from just $100K.',
+    glowClass: 'border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.15)] bg-cyan-500/5',
+    hoverGlowClass: 'hover:border-cyan-400 hover:shadow-[0_0_35px_rgba(6,182,212,0.4)]',
+    textColor: 'text-cyan-400',
+    borderColor: 'border-cyan-500/20',
+    icon: Coins
+  },
+  {
+    id: 'lifestyle',
+    title: 'SUSTAINABLE LIFESTYLE',
+    description: 'Survive to 2035 with < 15 employees and <= $1.5M budget.',
+    badge: '☕ LIFESTYLE BUSINESS',
+    unlockedMsg: 'You prioritized longevity and work-life harmony over hyper-scaling.',
+    glowClass: 'border-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.15)] bg-amber-500/5',
+    hoverGlowClass: 'hover:border-amber-400 hover:shadow-[0_0_35px_rgba(245,158,11,0.4)]',
+    textColor: 'text-amber-400',
+    borderColor: 'border-amber-500/20',
+    icon: Heart
+  },
+  {
+    id: 'rogue_ai',
+    title: 'ROGUE AI SINGULARITY',
+    description: 'Survive in Technology sector with an ROI > 200%.',
+    badge: '🤖 AI SINGULARITY',
+    unlockedMsg: 'Your automation routines achieved self-awareness. Humans are now corporate relics.',
+    glowClass: 'border-pink-500/50 shadow-[0_0_20px_rgba(244,63,94,0.15)] bg-pink-500/5',
+    hoverGlowClass: 'hover:border-pink-400 hover:shadow-[0_0_35px_rgba(244,63,94,0.4)]',
+    textColor: 'text-pink-400',
+    borderColor: 'border-pink-500/20',
+    icon: Activity
+  },
+  {
+    id: 'talent_acquired',
+    title: 'TALENT ACQUISITION',
+    description: 'Go bankrupt but maintain > 50% ROI or > 80% morale.',
+    badge: '🤝 TALENT ACQUIRED',
+    unlockedMsg: 'Though capital ran dry, top-tier engineering firms bought your team for their skill.',
+    glowClass: 'border-indigo-500/50 shadow-[0_0_20px_rgba(99,102,241,0.15)] bg-indigo-500/5',
+    hoverGlowClass: 'hover:border-indigo-400 hover:shadow-[0_0_35px_rgba(99,102,241,0.4)]',
+    textColor: 'text-indigo-400',
+    borderColor: 'border-indigo-500/20',
+    icon: Users
+  },
+  {
+    id: 'crash_burn',
+    title: 'CRASH & BURN',
+    description: 'Fail standard capital thresholds before Year 2035.',
+    badge: '💥 CRASH & BURN',
+    unlockedMsg: 'Your runway collapsed. Your startup joins the historic graveyard of failed ventures.',
+    glowClass: 'border-rose-500/50 shadow-[0_0_20px_rgba(244,63,94,0.15)] bg-rose-500/5',
+    hoverGlowClass: 'hover:border-rose-400 hover:shadow-[0_0_35px_rgba(244,63,94,0.45)]',
+    textColor: 'text-rose-400',
+    borderColor: 'border-rose-500/25',
+    icon: Skull
+  }
+];
 
 const ChartTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="cyber-glass cyber-border-cyan p-3 rounded-lg text-[10px] font-space text-white space-y-1">
+      <div className="cyber-glass cyber-border-cyan p-3 rounded-lg text-[10px] font-orbitron text-white space-y-1">
         <p className="text-slate-500 font-bold border-b border-slate-800 pb-1 mb-1">// YEAR: {label}</p>
-        {payload.map((p: any, idx: number) => (
-          <p key={idx} style={{ color: p.color }} className="font-black">
-            {p.name.toUpperCase()}: {p.name === 'budget' || p.name === 'revenue' ? `$${p.value.toLocaleString()}` : p.name === 'roi' || p.name === 'morale' ? `${p.value}%` : p.value}
-          </p>
-        ))}
+        <p className="text-cyan-400 font-black">ROI: +{payload[0].value}%</p>
+        <p className="text-yellow-400 font-black">BUDGET: ${payload[1].value.toLocaleString()}</p>
       </div>
     );
   }
@@ -50,10 +156,36 @@ export const Outcome = () => {
   // State for animations
   const [valTicker, setValTicker] = useState(0);
   const [typedText, setTypedText] = useState('');
-  const [activeTab, setActiveTab] = useState<'capital' | 'roi' | 'vitality' | 'workforce'>('capital');
 
-  const achievedEnding = getAchievedEnding(state, company);
-  const achievedEndingId = achievedEnding.id;
+  // Determine achieved ending
+  const getAchievedEndingId = (): string => {
+    if (state.gameResult === 'victory') {
+      if (company?.industry?.toLowerCase() === 'technology' && state.roi > 200) {
+        return 'rogue_ai';
+      }
+      if (company?.startingBudget === 100000) {
+        return 'bootstrap_legend';
+      }
+      if (state.budget > 3000000 || state.roi > 150) {
+        return 'unicorn';
+      }
+      if (state.employees >= 30 && state.budget >= 2000000) {
+        return 'ipo';
+      }
+      if (state.budget > 1500000 || state.roi > 100) {
+        return 'acquisition';
+      }
+      return 'lifestyle';
+    } else {
+      if (state.roi > 50 || state.morale > 80) {
+        return 'talent_acquired';
+      }
+      return 'crash_burn';
+    }
+  };
+
+  const achievedEndingId = getAchievedEndingId();
+  const achievedEnding = ALL_ENDINGS.find(e => e.id === achievedEndingId) || ALL_ENDINGS[7];
 
   // Calculate corporate valuation metric
   const calculateValuation = () => {
@@ -63,232 +195,6 @@ export const Outcome = () => {
     return 0;
   };
   const valuation = calculateValuation();
-
-  const handleDownloadReport = () => {
-    const today = new Date().toLocaleDateString();
-    
-    // Dynamic generation logic
-    const swot = {
-      strengths: [
-        company?.aiMaturityScore >= 80 ? '✓ Industry-leading AI Maturity' : '✓ Developing ML capabilities',
-        company?.automationRate >= 80 ? '✓ High Operational Automation' : '✓ Expanding autonomous processes',
-        state.budget > 100000000 ? '✓ Massive Capital Reserves ($100M+)' : `✓ Stable Budget ($${(state.budget/1000000).toFixed(1)}M)`
-      ],
-      weaknesses: [
-        state.employees === 0 ? '• Total workforce elimination (0 humans)' : state.employees < 10 ? '• Dangerously low human workforce' : '• Workforce transition friction',
-        state.morale < 50 ? '• Critical morale deficiencies' : '• High reliance on continuous AI compute',
-        company?.aiInvestment > state.budget ? '• Outpaced R&D investment' : '• Internal pushback on AI initiatives'
-      ],
-      opportunities: [
-        state.employees <= 10 && company?.automationRate >= 90 ? '• Post-Human autonomous operations' : '• Potential for public market IPO',
-        '• Expansion into GenAI product lines',
-        '• Strategic acquisition by Megacorp'
-      ],
-      threats: [
-        '• Impending EU AI Regulation',
-        '• Cyberattack vulnerabilities scaling with automation',
-        '• Market saturation of LLM solutions'
-      ]
-    };
-
-    const ceoCommentary = `The enterprise aggressively invested in automation and AI maturity during the evaluation period. ` +
-      `By ${state.currentYear}, AI handled ${company?.automationRate.toFixed(1)}% of core operations. ` +
-      `${state.employees === 0 ? 'The human workforce was entirely eliminated in favor of autonomous agents, creating a perfect zero-friction operational loop. ' : 'The workforce transitioned to AI-augmented roles. '}` +
-      `The resulting productivity gains and $${(state.budget/1000000).toFixed(1)}M capital reserves attracted massive interest from global technology firms.`;
-
-    const boardVerdict = isVictory 
-      ? (achievedEnding.id === 'ai_singularity' ? 'The board has been dismissed. Neural Core has assumed total executive control.' : 'The board unanimously approves the resulting strategic outcome.')
-      : 'The board has initiated Chapter 11 proceedings and terminated executive leadership.';
-
-    const enterpriseStatus = achievedEnding.id === 'ai_singularity' ? 'POST-HUMAN ORGANIZATION' :
-                             achievedEnding.id === 'megacorp_acquisition' ? 'ACQUIRED BY GLOBAL CONGLOMERATE (Strategic Buyout)' :
-                             achievedEnding.id === 'ipo_success' ? 'PUBLICLY LISTED ENTITY (NYSE)' :
-                             achievedEnding.id === 'unicorn_exit' ? 'DECA-CORN PRIVATE STATUS' : 
-                             isVictory ? 'PROFITABLE ENTERPRISE' : 'LIQUIDATED / TERMINATED';
-
-    const renderBar = (val: number, color: string = '#000') => {
-      const pct = Math.min(Math.max(val, 0), 100);
-      return `<div style="width: 100%; background: #e2e8f0; height: 12px; margin-top: 5px;">
-                <div style="width: ${pct}%; background: ${color}; height: 100%;"></div>
-              </div>`;
-    };
-
-    const historyRows = state.history.map(h => `
-      <tr>
-        <td class="highlight">${h.year === 2024 ? '2024 - Founded' : h.year === 2028 ? '2028 - AI Integrated' : h.year === 2035 ? '2035 - Exit' : `Year ${h.year}`}</td>
-        <td>$${(h.budget/1000000).toFixed(1)}M</td>
-        <td>$${(h.revenue/1000000).toFixed(1)}M</td>
-        <td>${h.roi}%</td>
-        <td>${h.morale === 0 && h.year >= 2024 ? 'N/A' : h.morale}</td>
-      </tr>
-    `).join('');
-
-    const htmlContent = `
-      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-      <head><meta charset='utf-8'><title>Corporate Report</title>
-      <style>
-        body { font-family: 'Helvetica Neue', 'Arial', sans-serif; color: #1a1a1a; line-height: 1.6; background: #ffffff; }
-        .cover { text-align: center; margin-top: 150px; margin-bottom: 200px; page-break-after: always; }
-        .cover h1 { font-size: 38pt; color: #0f172a; margin-bottom: 10px; font-weight: 900; letter-spacing: 2px; }
-        .cover .logo { font-size: 24pt; font-weight: 900; color: #06b6d4; margin-bottom: 40px; letter-spacing: 5px; }
-        .cover .divider { border-top: 2px solid #000; width: 60%; margin: 20px auto; }
-        .confidential { color: #d93025; font-weight: bold; font-size: 12pt; text-transform: uppercase; margin-top: 80px; letter-spacing: 4px; }
-        
-        .section-title { font-size: 20pt; color: #000; border-bottom: 2px solid #000; padding-bottom: 5px; margin-top: 50px; font-weight: 700; text-transform: uppercase; }
-        
-        .dashboard { width: 100%; border: 3px solid #0f172a; border-collapse: collapse; margin-top: 20px; }
-        .dashboard td { padding: 20px; text-align: center; border: 1px solid #cbd5e1; width: 20%; vertical-align: top; }
-        .dash-label { font-size: 10pt; text-transform: uppercase; color: #64748b; font-weight: bold; margin-bottom: 10px; }
-        .dash-val { font-size: 24pt; font-weight: 900; color: #0f172a; }
-        
-        table.data-table { width: 100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 30px; }
-        table.data-table th { background-color: #0f172a; color: #fff; padding: 12px; font-size: 11pt; text-align: left; text-transform: uppercase; }
-        table.data-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 11pt; color: #334155; }
-        table.data-table tr:nth-child(even) { background-color: #f8fafc; }
-        .highlight { font-weight: 700; color: #0f172a; }
-        
-        .swot-grid { display: table; width: 100%; margin: 20px 0; border-collapse: collapse; }
-        .swot-cell { display: table-cell; width: 50%; padding: 20px; border: 1px solid #e2e8f0; vertical-align: top; }
-        .swot-title { font-weight: 900; font-size: 14pt; color: #0f172a; margin-bottom: 15px; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; }
-        .swot-list { margin: 0; padding-left: 20px; color: #475569; }
-        .swot-list li { margin-bottom: 8px; }
-
-        .scorecard { display: table; width: 100%; margin-bottom: 15px; }
-        .scorecard-label { display: table-cell; width: 30%; font-weight: bold; }
-        .scorecard-bar { display: table-cell; width: 50%; vertical-align: middle; }
-        .scorecard-val { display: table-cell; width: 20%; text-align: right; font-weight: bold; }
-
-        .conclusion-box { background: #0f172a; color: #fff; padding: 40px; margin-top: 60px; }
-        .conclusion-title { font-size: 20pt; font-weight: bold; margin-bottom: 20px; color: #38bdf8; text-transform: uppercase; border-bottom: 1px solid #334155; padding-bottom: 10px; }
-        .conclusion-text { font-size: 14pt; line-height: 1.8; color: #f8fafc; }
-      </style>
-      </head>
-      <body>
-        <!-- Cover Page -->
-        <div class="cover">
-          <div class="divider"></div>
-          <div class="logo">NEURALFORGE AI</div>
-          <h1>AI TRANSFORMATION REPORT</h1>
-          <h2>2035 BOARD REVIEW</h2>
-          <div class="divider"></div>
-          <br/><br/><br/>
-          <p>Subject: ${company?.name || 'Company'} (${company?.industry})</p>
-          <p>Generated by: NeuralForge Copilot Engine v4.2</p>
-          <div class="confidential">Strictly Confidential</div>
-        </div>
-
-        <h1 class="section-title">Executive Summary</h1>
-        <p style="font-size: 14pt; line-height: 1.8; color: #334155;">
-          ${ceoCommentary}
-        </p>
-
-        <h1 class="section-title">KPI Dashboard</h1>
-        <table class="dashboard">
-          <tr>
-            <td><div class="dash-label">Enterprise Value</div><div class="dash-val">$${(valuation/1000000).toFixed(1)}M</div></td>
-            <td><div class="dash-label">Available Budget</div><div class="dash-val">$${(state.budget/1000000).toFixed(1)}M</div></td>
-            <td><div class="dash-label">Peak ROI</div><div class="dash-val">${state.roi}%</div></td>
-            <td><div class="dash-label">AI Maturity</div><div class="dash-val">${company?.aiMaturityScore.toFixed(0)}/100</div></td>
-            <td><div class="dash-label">Automation</div><div class="dash-val">${company?.automationRate.toFixed(0)}%</div></td>
-          </tr>
-        </table>
-        
-        <p style="text-align: right; font-size: 10pt; color: #64748b; font-weight: bold;">
-          AI Prediction Confidence: 93% ${renderBar(93, '#06b6d4')}
-        </p>
-
-        <h1 class="section-title">Strategic Milestones & Financial Timeline</h1>
-        <p>The following table tracks revenue scaling and compute budget deployment year-over-year.</p>
-        <table class="data-table">
-          <tr>
-            <th>Fiscal Year</th>
-            <th>Available Budget</th>
-            <th>Generated Revenue</th>
-            <th>ROI (%)</th>
-            <th>Human / Machine Ratio (Morale)</th>
-          </tr>
-          ${historyRows}
-        </table>
-
-        <!-- Scorecards embedded as charts -->
-        <h1 class="section-title">Operational Scorecards</h1>
-        <div class="scorecard">
-          <div class="scorecard-label">Innovation Capability</div>
-          <div class="scorecard-bar">${renderBar(company?.aiMaturityScore, '#8b5cf6')}</div>
-          <div class="scorecard-val">${company?.aiMaturityScore.toFixed(0)} / 100</div>
-        </div>
-        <div class="scorecard">
-          <div class="scorecard-label">Efficiency / Automation</div>
-          <div class="scorecard-bar">${renderBar(company?.automationRate, '#10b981')}</div>
-          <div class="scorecard-val">${company?.automationRate.toFixed(0)} / 100</div>
-        </div>
-        <div class="scorecard">
-          <div class="scorecard-label">Enterprise Growth</div>
-          <div class="scorecard-bar">${renderBar(Math.min(valuation / 10000000, 100), '#3b82f6')}</div>
-          <div class="scorecard-val">${Math.min(valuation / 10000000, 100).toFixed(0)} / 100</div>
-        </div>
-        <div class="scorecard">
-          <div class="scorecard-label">Systemic Risk</div>
-          <div class="scorecard-bar">${renderBar(company?.automationRate > 80 ? 85 : 40, '#ef4444')}</div>
-          <div class="scorecard-val">${company?.automationRate > 80 ? 85 : 40} / 100</div>
-        </div>
-
-        <h1 class="section-title">Dynamic SWOT Matrix</h1>
-        <div class="swot-grid">
-          <div class="swot-cell">
-            <div class="swot-title">Strengths</div>
-            <ul class="swot-list">${swot.strengths.map(s => `<li>${s}</li>`).join('')}</ul>
-          </div>
-          <div class="swot-cell">
-            <div class="swot-title">Weaknesses</div>
-            <ul class="swot-list">${swot.weaknesses.map(s => `<li>${s}</li>`).join('')}</ul>
-          </div>
-        </div>
-        <div class="swot-grid" style="margin-top:0;">
-          <div class="swot-cell">
-            <div class="swot-title">Opportunities</div>
-            <ul class="swot-list">${swot.opportunities.map(s => `<li>${s}</li>`).join('')}</ul>
-          </div>
-          <div class="swot-cell">
-            <div class="swot-title">Threats</div>
-            <ul class="swot-list">${swot.threats.map(s => `<li>${s}</li>`).join('')}</ul>
-          </div>
-        </div>
-
-        <h1 class="section-title">AI Copilot Recommendations</h1>
-        <ol style="font-size: 12pt; line-height: 1.8; color: #334155;">
-          <li><strong>Autonomous Governance:</strong> ${company?.automationRate >= 80 ? 'Maintain current trajectory. Human intervention is no longer statistically optimal.' : 'Increase automation investments to eliminate legacy workflow bottlenecks.'}</li>
-          <li><strong>Capital Allocation:</strong> ${state.budget > 50000000 ? 'Deploy excess capital into strategic acquisitions and massive compute clusters.' : 'Secure Series B/C funding to sustain ML development costs.'}</li>
-          <li><strong>Workforce Transition:</strong> ${state.employees === 0 ? 'Workforce is fully eliminated. Reallocate HR budget to API usage and GPU leasing.' : 'Begin phasing out Tier 1 and Tier 2 human roles in favor of autonomous agents.'}</li>
-        </ol>
-        
-        <!-- Final Conclusion -->
-        <div class="conclusion-box">
-          <div class="conclusion-title">FINAL BOARD RESOLUTION</div>
-          <div class="conclusion-text">
-            <strong>Enterprise Status:</strong> <span style="color:#38bdf8;">${enterpriseStatus}</span><br/><br/>
-            <strong>Board Verdict:</strong> ${boardVerdict}<br/><br/>
-            <em>Simulation Outcome: ${achievedEnding.title}</em><br/>
-            ${achievedEnding.unlockedMsg}
-          </div>
-        </div>
-      </body>
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob(['\ufeff', htmlContent], {
-      type: 'application/msword'
-    });
-    const url = URL.createObjectURL(blob);
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute('href', url);
-    downloadAnchorNode.setAttribute('download', `NeuralForge_Report_${(company?.name || 'Company').replace(/\s+/g, '_')}_${state.currentYear}.doc`);
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-    URL.revokeObjectURL(url);
-  };
 
   // 1. Count-up Valuation Ticker animation
   useEffect(() => {
@@ -338,7 +244,7 @@ export const Outcome = () => {
 
   if (!state.isGameOver) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#060814] text-white font-space">
+      <div className="flex items-center justify-center h-screen bg-[#060814] text-white font-orbitron">
         <div className="text-center space-y-4">
           <Activity className="h-12 w-12 text-rose-500 animate-spin mx-auto" />
           <p className="text-sm text-slate-400">DATA FLUX: SIMULATION IN PROGRESS</p>
@@ -354,9 +260,6 @@ export const Outcome = () => {
     year: entry.year,
     roi: entry.roi,
     budget: entry.budget,
-    revenue: entry.revenue,
-    morale: entry.morale,
-    employees: entry.employees || state.employees,
   }));
 
   const handleRestart = () => {
@@ -470,13 +373,13 @@ export const Outcome = () => {
         }
       `}</style>
 
-      {/* Cyber Grid Overlay */}
-      {/* <div className="scanline-bar" /> removed as per user request */}
+      {/* Cyber Grid/Sweep Overlay */}
+      <div className="scanline-bar" />
       <div className="animated-grid-bg" />
 
       {/* Massive diagonal background watermark (smooth scale-in entrance) */}
       <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none select-none z-0">
-        <span className="font-space font-black text-[12vw] tracking-[3vw] text-slate-900/10 uppercase -rotate-12 whitespace-nowrap transition-transform duration-1000 scale-[0.9] animate-[fadeInUp_1.5s_cubic-bezier(0.16,1,0.3,1)_forwards]">
+        <span className="font-orbitron font-black text-[12vw] tracking-[3vw] text-slate-900/10 uppercase -rotate-12 whitespace-nowrap transition-transform duration-1000 scale-[0.9] animate-[fadeInUp_1.5s_cubic-bezier(0.16,1,0.3,1)_forwards]">
           {isVictory ? "SYSTEM // SECURED" : "SYS // TERMINATED"}
         </span>
       </div>
@@ -487,7 +390,7 @@ export const Outcome = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between border-b border-slate-900 pb-5 gap-4 animate-fade-in-up delay-50">
           <div className="flex items-center space-x-3">
             <Terminal className="h-6 w-6 text-cyan-400 animate-pulse" />
-            <span className="font-space text-sm font-black tracking-widest text-cyan-400 text-glow-cyan">
+            <span className="font-orbitron text-sm font-black tracking-widest text-cyan-400 text-glow-cyan">
               // ARCHIVE MEMORY MODULE LOADED // SECURE_LOG.BIN
             </span>
           </div>
@@ -497,7 +400,7 @@ export const Outcome = () => {
               isVictory ? "bg-yellow-400" : "bg-rose-500"
             )} />
             <span className={cn(
-              "font-space text-[10px] font-black uppercase tracking-wider",
+              "font-orbitron text-[10px] font-black uppercase tracking-wider",
               isVictory ? "text-yellow-400 text-glow-gold" : "text-rose-500 text-glow-magenta"
             )}>
               {isVictory ? "SIMULATION COMPLETE" : "SYSTEM FAILURE DIAGNOSIS"}
@@ -517,18 +420,18 @@ export const Outcome = () => {
           
           <div className="space-y-4 text-center md:text-left relative z-10 flex-1">
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-              <span className="font-space text-[10px] font-black tracking-widest text-slate-300 bg-slate-950 px-3.5 py-1 rounded border border-slate-800/80 flex items-center gap-1.5 uppercase transition-colors group-hover:border-slate-700">
+              <span className="font-orbitron text-[10px] font-black tracking-widest text-slate-300 bg-slate-950 px-3.5 py-1 rounded border border-slate-800/80 flex items-center gap-1.5 uppercase transition-colors group-hover:border-slate-700">
                 <Trophy className={cn("h-3.5 w-3.5", achievedEnding.textColor)} />
                 {achievedEnding.badge}
               </span>
               {!isVictory && (
-                <span className="font-space text-[10px] font-black tracking-widest text-rose-400 bg-rose-500/5 px-3.5 py-1 rounded border border-rose-500/20 uppercase animate-pulse">
+                <span className="font-orbitron text-[10px] font-black tracking-widest text-rose-400 bg-rose-500/5 px-3.5 py-1 rounded border border-rose-500/20 uppercase animate-pulse">
                   CRITICAL SHUTDOWN
                 </span>
               )}
             </div>
 
-            <h1 className="text-4xl md:text-5xl font-black font-space tracking-wider text-slate-100 neon-glitch-text">
+            <h1 className="text-4xl md:text-5xl font-black font-orbitron tracking-wider text-slate-100 neon-glitch-text">
               {achievedEnding.title}
             </h1>
             
@@ -543,11 +446,11 @@ export const Outcome = () => {
           </div>
 
           {/* VALUATION CONSOLE */}
-          <div className="text-center md:text-right font-space bg-slate-950/90 p-6 rounded-lg border border-slate-850 shadow-[0_0_25px_rgba(0,0,0,0.6)] min-w-[280px] relative overflow-hidden group/val hover:border-slate-700 transition-colors duration-300">
+          <div className="text-center md:text-right font-orbitron bg-slate-950/90 p-6 rounded-lg border border-slate-850 shadow-[0_0_25px_rgba(0,0,0,0.6)] min-w-[280px] relative overflow-hidden group/val hover:border-slate-700 transition-colors duration-300">
             <div className="absolute -right-12 -top-12 w-24 h-24 bg-yellow-500/5 rounded-full blur-2xl pointer-events-none" />
             
             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block transition-colors group-hover/val:text-slate-300">
-              {isVictory ? "ENTERPRISE VALUATION" : "LIQUIDATION VALUE"}
+              {isVictory ? "CAPITAL LIQUIDATION RATE" : "REMAINING SCRAP VALUE"}
             </span>
             
             <span className="text-4xl font-black block mt-2 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-200 to-orange-400 tracking-wider transition-transform duration-300 group-hover/val:scale-105">
@@ -555,7 +458,7 @@ export const Outcome = () => {
             </span>
 
             <span className="text-[8px] text-slate-500 block mt-2 tracking-widest border-t border-slate-900 pt-2 uppercase">
-              {valuation > 0 ? "MARKET CAPITALIZATION" : "CHAPTER 11 CORP TERMINATION"}
+              {valuation > 0 ? "LEDGER CONVERTED VALUE" : "CHAPTER 11 CORP TERMINATION"}
             </span>
           </div>
         </div>
@@ -569,7 +472,7 @@ export const Outcome = () => {
               <div className="absolute -left-12 -bottom-12 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none" />
               
               <CardHeader className="border-b border-slate-900/80 pb-3">
-                <CardTitle className="font-space text-xs font-black text-cyan-400 tracking-widest flex items-center justify-between">
+                <CardTitle className="font-orbitron text-xs font-black text-cyan-400 tracking-widest flex items-center justify-between">
                   <span>// OPERATIONS METRIC LOG_</span>
                   <span className="h-2 w-2 rounded-full bg-cyan-500 animate-pulse" />
                 </CardTitle>
@@ -584,8 +487,8 @@ export const Outcome = () => {
                       <Coins className="h-4.5 w-4.5" />
                     </div>
                     <div>
-                      <p className="text-[9px] text-slate-500 font-space uppercase tracking-wider">NET RESERVES</p>
-                      <p className="text-lg font-black font-space text-slate-100">
+                      <p className="text-[9px] text-slate-500 font-orbitron uppercase tracking-wider">NET RESERVES</p>
+                      <p className="text-lg font-black font-orbitron text-slate-100">
                         ${state.budget.toLocaleString()}
                       </p>
                     </div>
@@ -599,8 +502,8 @@ export const Outcome = () => {
                       <TrendingUp className="h-4.5 w-4.5" />
                     </div>
                     <div>
-                      <p className="text-[9px] text-slate-500 font-space uppercase tracking-wider">CUMULATIVE ROI</p>
-                      <p className="text-lg font-black font-space text-cyan-400">
+                      <p className="text-[9px] text-slate-500 font-orbitron uppercase tracking-wider">CUMULATIVE ROI</p>
+                      <p className="text-lg font-black font-orbitron text-cyan-400">
                         {state.roi}%
                       </p>
                     </div>
@@ -614,8 +517,8 @@ export const Outcome = () => {
                       <Users className="h-4.5 w-4.5" />
                     </div>
                     <div>
-                      <p className="text-[9px] text-slate-500 font-space uppercase tracking-wider">WORKFORCE CAPACITY</p>
-                      <p className="text-lg font-black font-space text-purple-400">
+                      <p className="text-[9px] text-slate-500 font-orbitron uppercase tracking-wider">WORKFORCE CAPACITY</p>
+                      <p className="text-lg font-black font-orbitron text-purple-400">
                         {state.employees} Staff
                       </p>
                     </div>
@@ -629,8 +532,8 @@ export const Outcome = () => {
                       <Heart className="h-4.5 w-4.5" />
                     </div>
                     <div>
-                      <p className="text-[9px] text-slate-500 font-space uppercase tracking-wider">VITALITY MORALE</p>
-                      <p className="text-lg font-black font-space text-pink-400">
+                      <p className="text-[9px] text-slate-500 font-orbitron uppercase tracking-wider">VITALITY MORALE</p>
+                      <p className="text-lg font-black font-orbitron text-pink-400">
                         {state.morale}%
                       </p>
                     </div>
@@ -641,138 +544,70 @@ export const Outcome = () => {
             </Card>
           </div>
 
-          {/* Executive Summary Card */}
-          <div className="lg:col-span-3 space-y-4 animate-fade-in-up delay-250">
-            <Card className="shimmer-card cyber-glass border-slate-900/90 hover:border-slate-850 bg-slate-900/10 hover:bg-slate-900/20 hover:shadow-[0_0_20px_rgba(6,182,212,0.08)] transition-all h-full flex flex-col justify-between overflow-hidden">
-              <CardHeader className="border-b border-slate-900/80 pb-3">
-                <CardTitle className="font-space text-xs font-black text-emerald-400 tracking-widest flex items-center justify-between">
-                  <span>// EXECUTIVE SUMMARY_</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6 space-y-5 flex-1 flex flex-col">
-                <div className="font-mono text-sm text-slate-300 leading-relaxed flex-1 space-y-2">
-                  <p className="border-b border-slate-800 pb-2 mb-2"><span className="text-slate-500">// ORG_NAME:</span> <span className="text-white font-bold">{company?.name || 'Unknown'}</span></p>
-                  <p><span className="text-slate-500">// SECTOR:</span> <span className="text-white">{company?.industry}</span></p>
-                  <p><span className="text-slate-500">// AI_MATURITY:</span> <span className="text-cyan-400 font-bold">{company?.aiMaturityScore?.toFixed(1) || 0} / 100</span></p>
-                  <p><span className="text-slate-500">// AUTOMATION_RATE:</span> <span className="text-cyan-400 font-bold">{company?.automationRate?.toFixed(1) || 0}%</span></p>
-                  <div className="bg-slate-950/60 border border-slate-800 p-4 rounded mt-4">
-                    <p className="text-xs text-slate-400 italic">"The board of directors has reviewed the strategic trajectory and concluded the final evaluation phase. A comprehensive audit has been generated."</p>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-slate-900/80 mt-auto">
-                  <Button 
-                    onClick={handleDownloadReport}
-                    className="w-full py-6 font-space font-bold text-xs tracking-wider bg-cyan-950/40 hover:bg-cyan-900 border border-cyan-800 text-cyan-400 hover:text-white flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_15px_rgba(6,182,212,0.4)]"
-                  >
-                    <Download className="h-4 w-4" />
-                    DOWNLOAD FULL EXECUTIVE REPORT (.DOC)
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-
-          {/* Interactive Analytics Panel */}
-          <div className="lg:col-span-5 animate-fade-in-up delay-300 space-y-4">
-            <div className="flex flex-wrap gap-2 mb-4 bg-slate-900/40 p-1.5 rounded-lg border border-slate-800/80 w-fit mx-auto md:mx-0 shadow-[0_0_15px_rgba(0,0,0,0.4)]">
-              {['capital', 'roi', 'vitality', 'workforce'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab as any)}
-                  className={cn(
-                    "px-4 py-2 font-space text-[10px] font-black tracking-widest rounded uppercase transition-all duration-300",
-                    activeTab === tab 
-                      ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.15)]"
-                      : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 border border-transparent"
-                  )}
-                >
-                  {tab === 'capital' ? 'Budget & Revenue' : tab === 'vitality' ? 'Morale & Risk' : tab}
-                </button>
-              ))}
-            </div>
-
-            <Card className="shimmer-card cyber-glass border-slate-900/95 hover:border-slate-855 bg-slate-900/10 hover:bg-slate-900/20 transition-all">
+          {/* Trajectory telemetry graph */}
+          <div className="lg:col-span-3 animate-fade-in-up delay-300">
+            <Card className="shimmer-card cyber-glass border-slate-900/95 hover:border-slate-855 bg-slate-900/10 hover:bg-slate-900/20 hover:shadow-[0_0_20px_rgba(6,182,212,0.08)] transition-all">
               <CardHeader className="border-b border-slate-900 pb-3">
-                <CardTitle className="font-space text-xs font-black text-cyan-400 tracking-widest flex items-center justify-between">
-                  <span>
-                    // ANALYTICS_FEED_
-                    {activeTab === 'capital' && 'CAPITAL_TRAJECTORY'}
-                    {activeTab === 'roi' && 'ROI_EXPLOSION'}
-                    {activeTab === 'vitality' && 'VITALITY_INDEX'}
-                    {activeTab === 'workforce' && 'WORKFORCE_SCALING'}
-                  </span>
-                  <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+                <CardTitle className="font-orbitron text-xs font-black text-cyan-400 tracking-widest flex items-center justify-between">
+                  <span>// TRAJECTORY TELEMETRY DIAGNOSTICS //</span>
+                  <span className="text-[8px] bg-slate-950 px-2 py-0.5 rounded border border-slate-800 text-slate-500 font-mono">LIVE_PLOT.TSX</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6 relative">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(6,182,212,0.03),transparent_70%)] pointer-events-none" />
-                <div style={{ width: '100%', height: 350 }}>
-                  <ResponsiveContainer>
-                    {activeTab === 'capital' ? (
-                      <AreaChart data={chartData} margin={{ top: 20, right: 20, left: 20, bottom: 0 }}>
+              
+              <CardContent className="p-6">
+                <div style={{ width: '100%', height: 250 }} className="relative">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.02),transparent_60%)] pointer-events-none" />
+                  
+                  {chartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                         <defs>
-                          <linearGradient id="colorBudget" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#eab308" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#eab308" stopOpacity={0}/>
-                          </linearGradient>
-                          <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#34d399" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#34d399" stopOpacity={0}/>
-                          </linearGradient>
+                          <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#06b6d4" floodOpacity="0.85" />
+                          </filter>
+                          <filter id="glow-yellow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#eab308" floodOpacity="0.85" />
+                          </filter>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#12172a" vertical={false} />
-                        <XAxis dataKey="year" stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                        <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 10 }} tickFormatter={(val) => `$${(val/1000000).toFixed(1)}M`} />
-                        <RechartsTooltip content={<ChartTooltip />} cursor={{ stroke: '#1e293b' }} />
-                        <Area type="monotone" dataKey="budget" name="budget" stroke="#eab308" strokeWidth={3} fillOpacity={1} fill="url(#colorBudget)" />
-                        <Area type="monotone" dataKey="revenue" name="revenue" stroke="#34d399" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
-                      </AreaChart>
-                    ) : activeTab === 'roi' ? (
-                      <AreaChart data={chartData} margin={{ top: 20, right: 20, left: -10, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorRoi" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#12172a" vertical={false} />
-                        <XAxis dataKey="year" stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                        <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                        <RechartsTooltip content={<ChartTooltip />} cursor={{ stroke: '#1e293b' }} />
-                        <Area type="monotone" dataKey="roi" name="roi" stroke="#06b6d4" strokeWidth={3} fillOpacity={1} fill="url(#colorRoi)" />
-                      </AreaChart>
-                    ) : activeTab === 'vitality' ? (
-                      <AreaChart data={chartData} margin={{ top: 20, right: 20, left: -10, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorMorale" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#12172a" vertical={false} />
-                        <XAxis dataKey="year" stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                        <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 10 }} domain={[0, 100]} />
-                        <RechartsTooltip content={<ChartTooltip />} cursor={{ stroke: '#1e293b' }} />
-                        <Area type="monotone" dataKey="morale" name="morale" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorMorale)" />
-                      </AreaChart>
-                    ) : (
-                      <AreaChart data={chartData} margin={{ top: 20, right: 20, left: -10, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorEmp" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#12172a" vertical={false} />
-                        <XAxis dataKey="year" stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                        <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                        <RechartsTooltip content={<ChartTooltip />} cursor={{ stroke: '#1e293b' }} />
-                        <Area type="stepAfter" dataKey="employees" name="employees" stroke="#a855f7" strokeWidth={3} fillOpacity={1} fill="url(#colorEmp)" />
-                      </AreaChart>
-                    )}
-                  </ResponsiveContainer>
+                        <XAxis 
+                          dataKey="year" 
+                          stroke="#475569" 
+                          tick={{ fill: '#94a3b8', fontSize: 10, fontFamily: 'Orbitron' }}
+                          tickLine={{ stroke: '#1e293b' }}
+                        />
+                        <YAxis 
+                          stroke="#475569"
+                          tick={{ fill: '#94a3b8', fontSize: 10, fontFamily: 'Orbitron' }}
+                          tickLine={{ stroke: '#1e293b' }}
+                        />
+                        <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#1e293b', strokeWidth: 1 }} />
+                        
+                        <Line 
+                          type="monotone" 
+                          dataKey="roi" 
+                          stroke="#06b6d4" 
+                          strokeWidth={3.5}
+                          dot={{ fill: "#06b6d4", stroke: "#040610", strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 6, fill: "#fff" }}
+                          filter="url(#glow-cyan)"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="budget" 
+                          stroke="#eab308" 
+                          strokeWidth={2.5}
+                          dot={{ fill: "#eab308", stroke: "#040610", strokeWidth: 1.5, r: 4 }}
+                          activeDot={{ r: 6, fill: "#fff" }}
+                          filter="url(#glow-yellow)"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-xs text-slate-500 font-orbitron">
+                      NO HISTORICAL TELEMETRY GENERATED
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -783,11 +618,11 @@ export const Outcome = () => {
         {/* BOTTOM: STAGGERED MATRIX LOGS */}
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-900 pb-3 gap-2 animate-fade-in-up delay-400">
-            <h2 className="font-space font-black text-sm tracking-widest text-slate-300 uppercase flex items-center gap-2">
+            <h2 className="font-orbitron font-black text-sm tracking-widest text-slate-300 uppercase flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
               // OUTCOME ARCHIVAL MATRIX // PROTOCOLS INDEXED
             </h2>
-            <span className="text-[10px] font-space text-slate-500 font-bold bg-slate-950 px-2 py-0.5 border border-slate-800 rounded">
+            <span className="text-[10px] font-orbitron text-slate-500 font-bold bg-slate-950 px-2 py-0.5 border border-slate-800 rounded">
               COMPILATION STABLE // {ALL_ENDINGS.filter(e => e.id === achievedEndingId).length}/8 UNLOCKED
             </span>
           </div>
@@ -825,7 +660,7 @@ export const Outcome = () => {
                     <div className="flex items-center space-x-2">
                       <EndingIcon className={cn("h-4.5 w-4.5 transition-transform duration-300 group-hover:rotate-12", isUnlocked ? ending.textColor : "text-slate-600")} />
                       <span className={cn(
-                        "text-[9px] font-space font-black border px-2 py-0.5 rounded tracking-wide transition-colors", 
+                        "text-[9px] font-orbitron font-black border px-2 py-0.5 rounded tracking-wide transition-colors", 
                         isUnlocked 
                           ? `${ending.textColor} border-slate-800/80 group-hover:border-slate-700` 
                           : "text-slate-600 border-slate-900/80"
@@ -835,67 +670,20 @@ export const Outcome = () => {
                     </div>
 
                     <h3 className={cn(
-                      "font-space font-black text-xs tracking-wider transition-colors", 
+                      "font-orbitron font-black text-xs tracking-wider transition-colors", 
                       isUnlocked ? "text-slate-100" : "text-slate-600 group-hover:text-slate-400"
                     )}>
                       {ending.title}
                     </h3>
                     
                     <p className="text-[10px] text-slate-400 font-space leading-relaxed transition-colors group-hover:text-slate-300">
-                      {isUnlocked ? ending.unlockedMsg : (
-                        <div className="mt-1 flex flex-col gap-1.5">
-                          <span className="text-slate-500 line-clamp-1">{ending.description}</span>
-                          
-                          {(() => {
-                            let progress = 0;
-                            let reqText = '';
-                            if (ending.id === 'ai_singularity') {
-                              progress = company?.automationRate || 0;
-                              reqText = '100% Automation & 100 AI Maturity';
-                            } else if (ending.id === 'unicorn_exit') {
-                              progress = Math.min(Math.max((state.budget / 3000000) * 100, (state.roi / 150) * 100), 100);
-                              reqText = '$3M Budget or 150% ROI';
-                            } else if (ending.id === 'ipo_success') {
-                              const empProg = Math.min((state.employees / 30) * 100, 100);
-                              const budProg = Math.min((state.budget / 2000000) * 100, 100);
-                              progress = (empProg + budProg) / 2;
-                              reqText = '30+ Employees & $2M Budget';
-                            } else if (ending.id === 'megacorp_acquisition') {
-                              progress = Math.min(((company?.aiMaturityScore || 0) / 80) * 100, 100);
-                              reqText = '80% AI Maturity';
-                            } else {
-                              progress = ((state.currentYear - 2024) / 11) * 100;
-                              reqText = 'Survive till 2035';
-                            }
-
-                            return (
-                              <div className="flex flex-col gap-1 mt-1 w-full max-w-[80%]">
-                                <span className="text-yellow-500/80 font-bold bg-yellow-500/10 px-1 py-0.5 w-fit rounded text-[8px] uppercase tracking-widest">
-                                  {`REQ: ${reqText}`}
-                                </span>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex-1 h-1 bg-slate-900 rounded-full overflow-hidden">
-                                    <div 
-                                      className="h-full bg-cyan-500/70 rounded-full transition-all duration-1000"
-                                      style={{ width: `${Math.max(progress, 0)}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-cyan-500/70 text-[9px] font-bold">
-                                    {Math.max(Math.floor(progress), 0)}%
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })()}
-
-                        </div>
-                      )}
+                      {isUnlocked ? ending.unlockedMsg : ending.description}
                     </p>
                   </div>
 
                   {isUnlocked && (
                     <div className={cn(
-                      "text-[8px] font-space font-black text-right tracking-widest mt-3 uppercase animate-pulse", 
+                      "text-[8px] font-orbitron font-black text-right tracking-widest mt-3 uppercase animate-pulse", 
                       ending.textColor
                     )}>
                       [ LOG UNLOCKED ]
@@ -913,7 +701,7 @@ export const Outcome = () => {
             <Button 
               size="lg" 
               onClick={handleRestart}
-              className="py-6 px-10 font-space font-black text-xs tracking-widest bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_35px_rgba(6,182,212,0.7)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"
+              className="py-6 px-10 font-orbitron font-black text-xs tracking-widest bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_35px_rgba(6,182,212,0.7)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"
             >
               <ArrowLeft className="mr-2.5 h-4.5 w-4.5" />
               TERMINATE TERMINAL // INITIALIZE NEW DECK
