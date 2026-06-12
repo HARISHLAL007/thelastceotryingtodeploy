@@ -58,11 +58,14 @@ print("Preprocessing data and splitting into train/test sets...")
 X_train_rev, X_test_rev, y_train_rev, y_test_rev = train_test_split(X, y_revenue, test_size=0.2, random_state=42)
 X_train_prod, X_test_prod, y_train_prod, y_test_prod = train_test_split(X, y_productivity, test_size=0.2, random_state=42)
 
-# Using Defaults as they provided the best baseline (0.5957) without overfitting
+# Tuned hyperparameters to decrease MAE and RMSE
 xgb_params = {
-    'n_estimators': 100,
-    'learning_rate': 0.1,
-    'max_depth': 5,
+    'n_estimators': 300,
+    'learning_rate': 0.05,
+    'max_depth': 7,
+    'subsample': 0.8,
+    'colsample_bytree': 0.8,
+    'min_child_weight': 3,
     'random_state': 42,
     'n_jobs': -1
 }

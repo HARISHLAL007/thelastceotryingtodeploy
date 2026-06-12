@@ -68,8 +68,8 @@ X_test_rev_transformed = preprocessor.transform(X_test_rev)
 print("Training Revenue Impact Model with Advanced XGBoost Parameters...")
 
 xgb_revenue = xgb.XGBRegressor(
-    n_estimators=500,
-    learning_rate=0.03,
+    n_estimators=1000,          # Increased trees, let early stopping decide when to stop
+    learning_rate=0.01,         # Slower learning rate for finer adjustments
     max_depth=8,
     min_child_weight=3,
     subsample=0.8,
@@ -77,11 +77,17 @@ xgb_revenue = xgb.XGBRegressor(
     gamma=0.1,
     reg_alpha=0.1,
     reg_lambda=1,
+    early_stopping_rounds=50,   # Stops training if eval metrics don't improve
     random_state=42,
     n_jobs=-1
 )
 
-xgb_revenue.fit(X_train_rev_transformed, y_train_rev)
+xgb_revenue.fit(
+    X_train_rev_transformed, 
+    y_train_rev,
+    eval_set=[(X_test_rev_transformed, y_test_rev)],
+    verbose=False
+)
 
 print("\n--- Model Evaluation ---")
 y_pred_rev = xgb_revenue.predict(X_test_rev_transformed)
