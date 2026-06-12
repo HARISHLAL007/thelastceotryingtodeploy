@@ -13,7 +13,8 @@ export interface CompanyProfile {
   trainingHours: number;
   aiMaturityScore: number;
   deploymentCount: number;
-  founderClass?: string;
+  employees: number;
+  skin?: string; // cosmetic CEO appearance only — no gameplay effect
 }
 
 // Game state structure
@@ -36,6 +37,7 @@ export interface GameState {
 
 export interface YearHistory {
   year: number;
+  quarter?: number;
   revenue: number;
   budget: number;
   roi: number;

@@ -4,19 +4,48 @@ import { Button } from '@/components/ui/Button';
 import { useGameLoop } from '@/hooks/useGameLoop';
 import { useGameStore } from '@/store/gameStore';
 import { DECISIONS } from '@/data/decisions';
-import { 
-  AlertCircle, 
-  CheckCircle2, 
-  Loader2, 
-  Coins, 
-  TrendingUp, 
+import CEOModel from '@/components/CEOModel';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  Coins,
+  TrendingUp,
   Smile,
-  AlertTriangle
+  AlertTriangle,
+  Terminal,
+  Brain,
+  Radio
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Rotating, escalating boardroom story beats so no two quarters feel the same.
+const BOARD_BRIEFINGS = [
+  { tag: 'CHAIRMAN', text: 'The boardroom dims. "Every quarter you hesitate, a rival ships. The market is watching, CEO — what is our move?"' },
+  { tag: 'CFO', text: 'A tablet slides across the obsidian table. "Capital is finite. Spend it like the future depends on it — because it does."' },
+  { tag: 'CTO', text: 'Your CTO bursts in, eyes wild. "The models are starving for compute. Feed them now, or we fall behind the curve forever."' },
+  { tag: 'TRADING FLOOR', text: 'Static crackles over the comms. "Word from the street: the analysts are shorting every adopter who moves too slow."' },
+  { tag: 'CHRO', text: 'The CHRO lowers her voice. "The workforce is restless. Whispers of automation are spreading through every floor below us."' },
+  { tag: 'WAR ROOM', text: 'Red light pulses across the glass walls. "A competitor just demoed an autonomous agent. The clock is ticking."' },
+  { tag: 'CRO', text: 'The Risk Officer steeples his fingers. "Bold bets win headlines. Reckless ones write obituaries. Choose with open eyes."' },
+  { tag: 'CHAIRMAN', text: '"History remembers the bold and forgets the cautious," the Chairman says. "Which legacy will you leave?"' },
+  { tag: 'ENCRYPTED', text: 'A memo decrypts on your private channel. "The singularity is not a question of if, but when. Put us at the front of it."' },
+  { tag: 'CITY DESK', text: 'Neon rain streaks the windows of the 100th floor. A new quarter dawns over the skyline, and the board awaits your directive.' },
+  { tag: 'CTO', text: '"Our last deployment is already paying for itself," your CTO grins. "Imagine what the next one does. Press the advantage."' },
+  { tag: 'CFO', text: '"Shareholders convene in ninety days," the CFO warns. "Give them a number that silences the doubters."' },
+];
+
+const DIRECTIVE_PROMPTS = [
+  'Walk the floor and decide where to strike next.',
+  'Three initiatives await your signature. Choose your battlefield.',
+  'The board defers to you. Approach a station to issue your order.',
+  'Your move shapes the quarter. Step up to a console to begin.',
+  'Power is leverage applied at the right moment. Pick yours.',
+];
+
 export const QuarterlyDecision = () => {
   const state = useGameStore((s) => s.state);
+  const company = useGameStore((s) => s.company);
   const currentEvent = useGameStore((s) => s.currentEvent);
   const { isLoading, makeQuarterDecision, error } = useGameLoop();
   const [selectedDecision, setSelectedDecision] = useState<string | null>(null);
@@ -24,10 +53,17 @@ export const QuarterlyDecision = () => {
   // Filter decisions based on current decisions hand
   const unlockedDecisions = DECISIONS.filter(d => state.currentDecisions.includes(d.id));
 
+  // Monotonic quarter counter drives an escalating story so each turn reads fresh.
+  const turn = state.currentYear * 4 + state.currentQuarter;
+  const briefing = BOARD_BRIEFINGS[turn % BOARD_BRIEFINGS.length];
+  const directivePrompt = DIRECTIVE_PROMPTS[turn % DIRECTIVE_PROMPTS.length];
+
   const handleDecision = async (decisionId: string) => {
     setSelectedDecision(decisionId);
     try {
       await makeQuarterDecision(decisionId);
+      // We clear the selection so that when the player returns, the terminal asks to walk to a station
+      setSelectedDecision(null);
     } catch (err) {
       console.error(err);
     }
@@ -50,6 +86,20 @@ export const QuarterlyDecision = () => {
       </CardHeader>
       
       <CardContent className="pt-6 relative z-10">
+        {/* Story briefing — rotates and escalates each quarter */}
+        <div className="mb-6 relative overflow-hidden rounded-xl border border-cyan-500/20 bg-gradient-to-r from-slate-950/90 via-slate-900/50 to-slate-950/90 p-4 animate-in fade-in slide-in-from-top-2 duration-500">
+          <div className="absolute inset-0 cyber-sweep-overlay opacity-30" />
+          <div className="flex items-center gap-2 mb-2 relative z-10">
+            <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            <span className="text-[10px] font-mono tracking-[0.3em] text-cyan-400/80 uppercase">
+              Incoming Transmission <span className="text-slate-600">//</span> {briefing.tag}
+            </span>
+          </div>
+          <p className="text-sm text-slate-300 font-space leading-relaxed italic relative z-10">
+            {briefing.text}
+          </p>
+        </div>
+
         {error && (
           <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-lg flex items-center gap-3 text-xs font-mono">
             <AlertCircle className="h-5 w-5 text-rose-400 flex-shrink-0" />
@@ -68,106 +118,112 @@ export const QuarterlyDecision = () => {
           </div>
         )}
 
-        <div className="grid gap-6">
-          {unlockedDecisions.map((decision) => {
-            const isSelected = selectedDecision === decision.id;
-            const isHigh = decision.riskLevel === 'HIGH_RISK';
-            const isMedium = decision.riskLevel === 'MEDIUM_RISK';
-            
-            let cardStyle = "cyber-border-cyan hover:border-cyan-400/80";
-            let riskGlow = "text-cyan-400";
-            if (isHigh) {
-              cardStyle = "cyber-border-magenta hover:border-rose-400/80";
-              riskGlow = "text-rose-400";
-            } else if (isMedium) {
-              cardStyle = "cyber-border-gold hover:border-yellow-400/80";
-              riskGlow = "text-yellow-400";
-            }
-
-            return (
-              <div
-                key={decision.id}
-                className={cn(
-                  "cyber-glass p-5 rounded-xl transition-all duration-300 hover:scale-[1.015] relative group overflow-hidden cursor-pointer",
-                  cardStyle,
-                  isSelected && "bg-slate-950/90 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.2)]"
-                )}
-                onClick={() => setSelectedDecision(decision.id)}
-              >
-                <div className="cyber-sweep-overlay" />
-
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 relative z-10">
-                  <div className="space-y-3 flex-1">
-                    <div className="flex items-center space-x-2">
-                      <span className="relative flex h-2 w-2">
-                        <span className={cn(
-                          "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", 
-                          isHigh ? "bg-rose-400" : isMedium ? "bg-yellow-400" : "bg-cyan-400"
-                        )}></span>
-                        <span className={cn(
-                          "relative inline-flex rounded-full h-2 w-2", 
-                          isHigh ? "bg-rose-500" : isMedium ? "bg-yellow-500" : "bg-cyan-500"
-                        )}></span>
-                      </span>
-
-                      <span className={cn("text-[10px] font-space font-bold uppercase tracking-widest", riskGlow)}>
-                        {decision.riskLevel.replace('_', ' ')}
-                      </span>
-                    </div>
-
-                    <h3 className="text-lg font-space font-bold text-slate-100 group-hover:text-cyan-300 transition-colors tracking-wide">
-                      {decision.title.replace(/_/g, ' ')}
-                    </h3>
-                    
-                    <p className="text-sm text-slate-400 leading-relaxed max-w-lg font-space">
-                      {decision.description}
-                    </p>
-
-                    <div className="grid grid-cols-2 gap-3 bg-slate-950/50 p-3 rounded-lg border border-slate-800/60 mt-4 text-xs font-space">
-                      <div className="flex items-center space-x-2">
-                        <Coins className="h-4 w-4 text-rose-400" />
-                        <div className="flex flex-col">
-                          <span className="text-[9px] text-slate-500 uppercase tracking-widest font-semibold">Cost</span>
-                          <span className="font-bold text-slate-200">-${decision.cost.toLocaleString()}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <TrendingUp className="h-4 w-4 text-emerald-400" />
-                        <div className="flex flex-col">
-                          <span className="text-[9px] text-slate-500 uppercase tracking-widest font-semibold">ROI Impact</span>
-                          <span className="font-bold text-emerald-400">+{decision.roiImpact}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex sm:flex-col justify-end items-center sm:self-center gap-2">
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDecision(decision.id);
-                      }}
-                      disabled={isLoading}
-                      variant={isSelected ? 'default' : 'outline'}
-                      className={cn(
-                        "font-space font-black text-xs tracking-widest border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 min-w-[120px] transition-all",
-                        isSelected && "bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.4)] border-none"
-                      )}
-                    >
-                      {isLoading && selectedDecision === decision.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                      ) : isSelected ? (
-                        <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                      ) : null}
-                      {isLoading && selectedDecision === decision.id ? "SYNCING..." : isSelected ? "APPROVE INITIATIVE" : "PROPOSE BOARD ACTION"}
-                    </Button>
-                  </div>
-                </div>
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center h-[400px] space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-cyan-500" />
+            <span className="text-cyan-400 font-space font-bold tracking-widest animate-pulse">IMPLEMENTING INITIATIVE...</span>
+          </div>
+        ) : (
+          <div className="grid lg:grid-cols-[2fr,1fr] gap-6">
+            {/* Left side: 3D CEO Game */}
+            <div className="h-[500px] w-full relative rounded-xl overflow-hidden border border-slate-800 cyber-glass">
+              <div className="absolute bottom-4 left-0 right-0 z-10 flex justify-center pointer-events-none">
+                <span className="bg-black/50 px-4 py-1 rounded text-[10px] text-white tracking-widest font-mono">USE ARROW KEYS TO WALK TO A STATION</span>
               </div>
-            );
-          })}
-        </div>
+
+              <CEOModel
+                playable={true}
+                archetype={company?.skin || 'researcher'}
+                onStationChange={(station) => {
+                  if (isLoading) return;
+                  if (station === 'none') {
+                    setSelectedDecision(null);
+                    return;
+                  }
+                  
+                  let dec = null;
+                  if (station === 'hr' && unlockedDecisions[0]) dec = unlockedDecisions[0].id;
+                  if (station === 'boardroom' && unlockedDecisions[1]) dec = unlockedDecisions[1].id;
+                  if (station === 'ml' && unlockedDecisions[2]) dec = unlockedDecisions[2].id;
+                  
+                  if (dec !== selectedDecision) {
+                    setSelectedDecision(dec);
+                  }
+                }}
+              />
+            </div>
+
+            {/* Right side: Action Confirmation Card */}
+            <div className="flex flex-col">
+              <div className="flex-1 bg-slate-950/80 border border-slate-800 rounded-xl p-6 flex flex-col relative overflow-hidden cyber-glass shadow-xl">
+                <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent opacity-40" />
+                
+                <h3 className="text-sm font-space font-bold text-cyan-400 tracking-widest uppercase mb-6 flex items-center gap-2">
+                  <Terminal className="w-4 h-4" />
+                  Terminal Uplink
+                </h3>
+
+                {!selectedDecision ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
+                    <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center animate-pulse">
+                      <Brain className="w-8 h-8 text-slate-600" />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-slate-300 font-space font-bold uppercase tracking-widest text-sm">Awaiting CEO Directive</p>
+                      <p className="text-slate-500 text-xs font-mono">
+                        {directivePrompt}<br/><br/>
+                        <span className="text-emerald-400">← LEFT: {unlockedDecisions[0]?.title.replace(/_/g, ' ')}</span><br/>
+                        <span className="text-yellow-400">↑ STRAIGHT: {unlockedDecisions[1]?.title.replace(/_/g, ' ')}</span><br/>
+                        <span className="text-cyan-400">→ RIGHT: {unlockedDecisions[2]?.title.replace(/_/g, ' ')}</span>
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col animate-in fade-in zoom-in-95 duration-300">
+                    {(() => {
+                      const decision = unlockedDecisions.find(d => d.id === selectedDecision);
+                      if (!decision) return null;
+                      
+                      const isHigh = decision.riskLevel === 'HIGH_RISK';
+                      const isMedium = decision.riskLevel === 'MEDIUM_RISK';
+                      const riskGlow = isHigh ? "text-rose-400" : isMedium ? "text-yellow-400" : "text-emerald-400";
+                      
+                      return (
+                        <>
+                          <h4 className="text-xl font-space font-bold text-white mb-4 tracking-wide leading-tight">
+                            {decision.title.replace(/_/g, ' ')}
+                          </h4>
+                          
+                          <p className="text-sm text-slate-400 leading-relaxed font-space mb-6 flex-1">
+                            {decision.description}
+                          </p>
+
+                          <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-800 mb-6">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <Coins className="h-4 w-4 text-rose-400" />
+                                <span className="text-xs text-slate-400 uppercase tracking-widest font-semibold">Cost</span>
+                              </div>
+                              <span className="font-bold text-rose-400 text-lg">-${decision.cost.toLocaleString()}</span>
+                            </div>
+                          </div>
+
+                          <Button
+                            onClick={() => handleDecision(decision.id)}
+                            className="w-full h-12 font-space font-black tracking-widest bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all uppercase"
+                          >
+                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                            Confirm Action
+                          </Button>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

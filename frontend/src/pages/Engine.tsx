@@ -118,8 +118,8 @@ export const Engine = () => {
           />
         </div>
 
-        {/* Simulation operations board split panel */}
-        <div className="grid lg:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-12 duration-700 delay-500 fill-mode-both">
+        {/* Simulation operations board */}
+        <div className="animate-in fade-in slide-in-from-bottom-12 duration-700 delay-500 fill-mode-both space-y-8">
           <QuarterlyDecision />
           <ROIChart />
         </div>

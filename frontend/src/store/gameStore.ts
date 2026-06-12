@@ -58,25 +58,14 @@ export const useGameStore = create<{
   currentEvent: null,
   actions: {
     initializeGame: (company) => {
-      let updatedCompany = { ...company };
-
-      // Apply Founder Class Bonuses
-      if (company.founderClass === 'engineer') {
-        updatedCompany.automationRate += 15;
-      } else if (company.founderClass === 'mba') {
-        updatedCompany.aiInvestment += 200000;
-      } else if (company.founderClass === 'researcher') {
-        updatedCompany.aiMaturityScore += 20;
-      } else if (company.founderClass === 'sales') {
-        // Base Revenue scaling factor can be handled elsewhere or we can set an initial boost.
-      } else if (company.founderClass === 'grit') {
-        // Risk resistance handled in prediction layer or game logic.
-      }
+      // The chosen skin is purely cosmetic — it grants no stats, bonuses, or abilities.
+      const updatedCompany = { ...company };
 
       const startYear = updatedCompany.foundedYear || 2024;
       const initialBudget = updatedCompany.startingBudget || 1000000;
+      const initialEmployees = updatedCompany.employees || 10;
       const mockHistory = [
-        { year: startYear, revenue: 4500000, budget: initialBudget, roi: company.founderClass === 'mba' ? 10 : 0, morale: 75, employees: 10 }
+        { year: startYear, revenue: 4500000, budget: initialBudget, roi: 0, morale: 75, employees: initialEmployees }
       ];
       set({
         company: updatedCompany,
@@ -84,8 +73,8 @@ export const useGameStore = create<{
           ...initialState,
           currentYear: startYear,
           budget: initialBudget,
-          employees: 10,
-          roi: company.founderClass === 'mba' ? 10 : 0,
+          employees: initialEmployees,
+          roi: 0,
           history: mockHistory,
         },
         lastDecisionOutcome: null,

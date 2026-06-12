@@ -43,16 +43,18 @@ The Last CEO provides an interactive simulation where players act as CEOs respon
 
 ## ✨ Key Features
 
-1. **🏢 Company Creation System:** Select industry, size, budget, and set initial AI maturity.
-2. **📈 Executive Dashboard:** Track revenue, ROI, budget, AI maturity, workforce readiness, and risk indicators.
-3. **🛠️ Strategic Decision Engine:** Manage AI engineering hires, training, deployment, automation, and governance.
-4. **📅 Quarterly Simulation System:** Simulates company evolution quarter by quarter.
-5. **🤖 Machine Learning Predictions:** Forecasting for revenue growth and productivity improvement.
-6. **🎲 Dynamic Event Generation:** Random events like economic recessions, regulatory changes, and cyber incidents.
-7. **⚙️ Business Rules Engine:** Updates budget, ROI, risk, AI maturity, and workforce readiness.
-8. **❤️ Survival Score Calculator:** Measures long-term sustainability and company health.
-9. **📝 AI-Powered Executive Reports:** Strategic recommendations, risk assessments, and future outlook via LLM.
-10. **🏆 Multiple Endings:** AI Industry Leader, High Growth Innovator, Balanced Transformer, Legacy Enterprise, or Bankruptcy.
+1. **🏢 Conversational Company Setup:** A cinematic boardroom interview defines your founder, company, industry, budget, and initial AI posture. Free-form answers — no character-count limits.
+2. **🎭 CEO Avatar Skins:** Pick how your CEO looks from 6 purely cosmetic skins — Cyberpunk Executive, AI Researcher, Quant Trader, Stealth Agent, Space Entrepreneur, and Hacker. Skins are appearance-only and grant **no** stats, bonuses, or abilities.
+3. **🕹️ 3D Playable Office:** Walk your voxel CEO around an isometric office and step up to HR, ML, or Boardroom stations to review and commit each quarter's initiative.
+4. **🎬 Story-Driven Board Meetings:** Each quarter opens with a rotating, escalating "incoming transmission" from your board (Chairman, CFO, CTO, CHRO, CRO) so no two meetings read the same.
+5. **🛠️ Adaptive Decision Engine:** A pool of 21 strategic moves across 9 categories. The hand re-rolls every quarter and is **context-aware** — surfacing morale boosters when the team is unhappy, cheap plays when cash is tight, hiring when headcount is thin, and aggressive growth when you're healthy.
+6. **📈 Executive Dashboard:** Track revenue, ROI, budget, AI maturity, automation, workforce, and risk indicators in a cyber-HUD command console.
+7. **📅 Quarterly Simulation System:** Simulates company evolution quarter by quarter until 2035.
+8. **🤖 Machine Learning Predictions:** XGBoost forecasting for revenue impact and productivity gain.
+9. **🎲 Dynamic Event Generation:** Random events like competitor launches, GPU shortages, regulation, cyberattacks, and viral hits.
+10. **❤️ Survival & Risk Scoring:** Measures long-term sustainability, AI transformation score, and company health.
+11. **📝 Executive Reports:** Per-quarter board decisions, scenario comparisons, and risk/readiness assessments.
+12. **🏆 Multiple Endings:** Unicorn Exit, IPO, Megacorp Acquisition, Bootstrap Legend, Rogue AI Singularity, and more.
 
 ---
 
@@ -66,6 +68,8 @@ The Last CEO provides an interactive simulation where players act as CEOs respon
   2. Productivity Gain Percentage
 
 These predictions integrate with business rules to update company performance after each quarter.
+
+> **Note:** The bundled models are trained with **scikit-learn 1.9** for compatibility with current environments. The revenue model uses tuned hyperparameters, outlier removal, and engineered interaction features (R² ≈ 0.70); the productivity model reaches R² ≈ 0.96.
 
 ---
 
@@ -119,12 +123,14 @@ The-Last-CEO/
 │   ├── database.db           # SQLite database storing prediction history
 │   └── requirements.txt      # Backend dependencies
 ├── frontend/                 # React Console Dashboard
-│   ├── public/               # Static vector assets
+│   ├── public/               # Static assets (city backdrop, board avatars)
 │   └── src/
-│       ├── components/       # Telemetry graphs, HUD metric cards, timeline, modals
-│       ├── hooks/            # Custom hook handlers (game loops and API drivers)
+│       ├── components/       # HUD cards, charts, modals, sci-fi Sidebar,
+│       │   └── CEOModel.tsx  # 3D voxel CEO + playable office (react-three-fiber)
+│       ├── data/             # decisions.ts (decision pool) + skins.ts (cosmetic CEO skins)
+│       ├── hooks/            # Custom hook handlers (game loop, adaptive decision roll, API)
 │       ├── lib/              # API client axios instance and styling utils
-│       ├── pages/            # Primary route view entrypoints (Home, Engine, Outcome)
+│       ├── pages/            # Route views (Landing, Home setup, Engine, Outcome, Database)
 │       └── store/            # Zustand state store
 ├── models/                   # Pre-trained ML Models
 │   ├── productivity_model.joblib
@@ -193,6 +199,8 @@ cd backend
 uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 ```
 The backend API will be available at `http://localhost:8000`. You can view the API documentation at `http://localhost:8000/docs`.
+
+> **macOS note:** XGBoost needs the OpenMP runtime. If startup fails with `Library not loaded: libomp.dylib`, install it with `brew install libomp`.
 
 ### 2. Frontend Setup & Run
 Open a new terminal and navigate to the `frontend` directory:
