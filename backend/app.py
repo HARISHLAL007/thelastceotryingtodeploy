@@ -21,6 +21,7 @@ class PredictionRecord(Base):
     industry = Column(String)
     country = Column(String)
     year = Column(Integer)
+    quarter = Column(Integer, nullable=True)
     ai_adoption_level = Column(Float)
     ai_investment_usd = Column(Float)
     automation_rate = Column(Float)
@@ -36,6 +37,8 @@ class PredictionRecord(Base):
     readiness_level = Column(String)
     board_decision = Column(String)
     recommendation = Column(String)
+    player_decision = Column(String, nullable=True)
+    player_result = Column(String, nullable=True)
 
 Base.metadata.create_all(bind=engine)
 
@@ -73,6 +76,7 @@ class PredictionRequest(BaseModel):
     industry: str = "Technology"
     country: str = "United States"
     year: int = 2026
+    quarter: int = 1
     ai_adoption_level: float = 3.5
     ai_investment_usd: float = 5000000.0
     automation_rate: float = 45.0
@@ -80,6 +84,8 @@ class PredictionRequest(BaseModel):
     ai_maturity_score: float = 75.0
     deployment_count: int = 10
     save_to_db: bool = False
+    player_decision: str = None
+    player_result: str = None
 
 def engineer_features(df):
     df["investment_per_deployment"] = df["ai_investment_usd"] / (df["deployment_count"]+1)
@@ -182,6 +188,7 @@ def predict(request: PredictionRequest, db: Session = Depends(get_db)):
             industry=request.industry,
             country=request.country,
             year=request.year,
+            quarter=request.quarter,
             ai_adoption_level=request.ai_adoption_level,
             ai_investment_usd=request.ai_investment_usd,
             automation_rate=request.automation_rate,
@@ -195,12 +202,39 @@ def predict(request: PredictionRequest, db: Session = Depends(get_db)):
             risk_score=result["metrics"]["risk_score"],
             readiness_level=result["metrics"]["readiness_level"],
             board_decision=result["metrics"]["board_decision"],
-            recommendation=result["metrics"]["recommendation"]
+            recommendation=result["metrics"]["recommendation"],
+            player_decision=request.player_decision,
+            player_result=request.player_result
         )
         db.add(db_record)
         db.commit()
         db.refresh(db_record)
         
+        # Also append to the CSV dataset
+        try:
+            import csv
+            import uuid
+            csv_path = os.path.join(BASE_DIR, 'corporate_ai_adoption_dataset.csv')
+            with open(csv_path, mode='a', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    f"CORP-{str(uuid.uuid4().hex)[:5].upper()}",
+                    request.industry,
+                    request.country,
+                    request.year,
+                    round(request.ai_adoption_level / 5.0, 4),
+                    round(request.ai_investment_usd, 2),
+                    round(request.automation_rate / 100.0, 4),
+                    round(result["metrics"]["revenue_impact"] * 0.15, 2), # proxy for cost savings
+                    round(result["metrics"]["revenue_impact"], 2),
+                    round(result["metrics"]["productivity_gain"] / 100.0, 4),
+                    round(request.employee_ai_training_hours, 1),
+                    round(request.ai_maturity_score / 10.0, 2),
+                    request.deployment_count
+                ])
+        except Exception as e:
+            print(f"Error appending to CSV: {e}")
+            
     return result
 
 class GameHistoryRequest(BaseModel):
@@ -214,6 +248,7 @@ def save_game_history(request: GameHistoryRequest, db: Session = Depends(get_db)
             industry=req.industry,
             country=req.country,
             year=req.year,
+            quarter=req.quarter,
             ai_adoption_level=req.ai_adoption_level,
             ai_investment_usd=req.ai_investment_usd,
             automation_rate=req.automation_rate,
@@ -227,7 +262,9 @@ def save_game_history(request: GameHistoryRequest, db: Session = Depends(get_db)
             risk_score=result["metrics"]["risk_score"],
             readiness_level=result["metrics"]["readiness_level"],
             board_decision=result["metrics"]["board_decision"],
-            recommendation=result["metrics"]["recommendation"]
+            recommendation=result["metrics"]["recommendation"],
+            player_decision=req.player_decision,
+            player_result=req.player_result
         )
         db.add(db_record)
     db.commit()

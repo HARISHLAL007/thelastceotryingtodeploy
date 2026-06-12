@@ -85,11 +85,11 @@ export const useGameStore = create<{
       set((prev) => {
         const { currentQuarter, currentYear } = prev.state;
         const newQuarter = currentQuarter + 1;
-        const newYear = newQuarter > 4 ? currentYear + 1 : currentYear;
+        const newYear = newQuarter > 2 ? currentYear + 1 : currentYear;
         return {
           state: {
             ...prev.state,
-            currentQuarter: newQuarter > 4 ? 1 : newQuarter,
+            currentQuarter: newQuarter > 2 ? 1 : newQuarter,
             currentYear: newYear,
           },
         };

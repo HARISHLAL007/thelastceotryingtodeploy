@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '@/store/gameStore';
 import { Mic, Send, MicOff, Globe, Stethoscope, Landmark, ShoppingCart, Factory, Truck, CheckCircle2, ChevronRight, Download } from 'lucide-react';
@@ -12,18 +12,11 @@ import { SKINS } from '@/data/skins';
 const QUESTIONS = [
   { id: 'q1', speakerId: 'chairman', text: "What is your name?", type: 'text', field: 'founderName', stage: 'IDENTITY' },
   { id: 'q2', speakerId: 'chairman', text: "What should we call your company?", type: 'text', field: 'name', stage: 'IDENTITY' },
-  { id: 'q3', speakerId: 'chairman', text: "Describe your company's mission in one sentence.", type: 'text', field: 'description', stage: 'IDENTITY' },
-  { id: 'q4', speakerId: 'strategy', text: "Which industry will your company operate in?", type: 'cards', field: 'industry', options: ['Technology', 'Healthcare', 'Finance', 'Retail', 'Manufacturing', 'Logistics'], stage: 'STRATEGY' },
-  { id: 'q5', speakerId: 'strategy', text: "Which country will serve as headquarters?", type: 'text', field: 'country', stage: 'STRATEGY' },
+  { id: 'q3', speakerId: 'strategy', text: "Which industry will your company operate in?", type: 'cards', field: 'industry', options: ['Technology', 'Healthcare', 'Finance', 'Retail', 'Manufacturing', 'Logistics'], stage: 'STRATEGY' },
+  { id: 'q4', speakerId: 'strategy', text: "Which country will serve as headquarters?", type: 'cards', field: 'country', options: ['United States', 'China', 'Germany', 'Japan', 'United Kingdom', 'India'], stage: 'STRATEGY' },
+  { id: 'q5', speakerId: 'cfo', text: "How much starting capital should the Board allocate?", type: 'slider', field: 'startingBudget', min: 500000, max: 50000000, step: 500000, prefix: '$', stage: 'FINANCE' },
   { id: 'q6', speakerId: 'cfo', text: "How much should we invest in Artificial Intelligence?", type: 'slider', field: 'aiInvestment', min: 100000, max: 10000000, step: 100000, prefix: '$', stage: 'FINANCE' },
-  { id: 'q7', speakerId: 'cfo', text: "How much starting capital should the Board allocate?", type: 'slider', field: 'startingBudget', min: 500000, max: 50000000, step: 500000, prefix: '$', stage: 'FINANCE' },
-  { id: 'q8', speakerId: 'cto', text: "How mature is your AI strategy today? (0-100)", type: 'slider', field: 'aiMaturity', min: 0, max: 100, step: 1, stage: 'TECH' },
-  { id: 'q9', speakerId: 'cto', text: "What percentage of operations should be automated?", type: 'slider', field: 'automationRate', min: 0, max: 100, step: 5, suffix: '%', stage: 'TECH' },
-  { id: 'q10', speakerId: 'cto', text: "How widely has AI been adopted across the company? (0-5)", type: 'slider', field: 'aiAdoptionLevel', min: 0, max: 5, step: 0.1, stage: 'TECH' },
-  { id: 'q11', speakerId: 'cto', text: "How many AI systems should be deployed initially?", type: 'slider', field: 'deploymentCount', min: 1, max: 50, step: 1, stage: 'TECH' },
-  { id: 'q12', speakerId: 'chro', text: "How much AI training should employees receive?", type: 'slider', field: 'employeeTrainingHours', min: 10, max: 500, step: 10, suffix: ' hrs', stage: 'WORKFORCE' },
-  { id: 'q13', speakerId: 'chro', text: "How many employees do you need in the beginning?", type: 'slider', field: 'employees', min: 0, max: 50, step: 1, stage: 'WORKFORCE' },
-  { id: 'q14', speakerId: 'risk', text: "How much business risk are you willing to take?", type: 'cards', field: 'riskLevel', options: ['Low', 'Moderate', 'High', 'Extreme'], stage: 'GOVERNANCE' }
+  { id: 'q7', speakerId: 'chro', text: "How many employees do you need in the beginning?", type: 'slider', field: 'employees', min: 1, max: 50, step: 1, stage: 'WORKFORCE' }
 ];
 
 const BOARD_MEMBERS = [
@@ -336,26 +329,78 @@ export const Home = () => {
   };
 
   if (showReport) {
+    const entries = Object.entries(formData).filter(([key]) => key !== 'skin');
     return (
       <div className="min-h-screen w-full bg-black text-white font-space flex flex-col items-center justify-center p-8 scanlines overflow-y-auto">
-        <div className="max-w-2xl w-full bg-slate-900/80 border border-cyan-500/50 p-8 rounded-2xl shadow-[0_0_50px_rgba(6,182,212,0.15)] backdrop-blur-xl animate-in fade-in zoom-in duration-700">
-          <h2 className="text-3xl font-black text-cyan-400 mb-6 tracking-widest uppercase border-b border-slate-700 pb-4 text-center">Executive Summary</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 mb-8">
-            {Object.entries(formData).map(([key, val]) => (
-              <div key={key} className="flex flex-col border-b border-slate-800 pb-2">
-                <span className="text-slate-500 capitalize tracking-wider text-[10px] uppercase mb-1">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                <span className="font-bold text-slate-200 text-sm">{val}</span>
+        <div className="max-w-6xl w-full flex flex-col lg:flex-row gap-8 items-stretch justify-center">
+          
+          {/* Left: Report Summary */}
+          <div className="w-full lg:w-1/2 bg-slate-900/80 border border-cyan-500/50 p-8 rounded-3xl shadow-[0_0_50px_rgba(6,182,212,0.15)] backdrop-blur-xl animate-in fade-in slide-in-from-left-8 duration-700 flex flex-col justify-between">
+            <div>
+              <h2 className="text-3xl font-black text-cyan-400 mb-6 tracking-widest uppercase border-b border-slate-700 pb-4 text-center">Executive Summary</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 mb-8">
+                {entries.map(([key, val], index) => (
+                  <div 
+                    key={key} 
+                    className="flex flex-col border-b border-slate-800 pb-2"
+                  >
+                    <span className="text-slate-500 capitalize tracking-wider text-[10px] uppercase mb-1">
+                      {key.replace(/([A-Z])/g, ' $1').trim()}
+                    </span>
+                    <Typewriter 
+                      text={String(val)} 
+                      delay={index * 400 + 200} 
+                      speed={30} 
+                      className="font-bold text-[#00D9FF] text-sm drop-shadow-[0_0_8px_rgba(0,217,255,0.5)]" 
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+
+            <div className="flex-1 flex items-center justify-center my-4 animate-in fade-in" style={{ animationDelay: `${entries.length * 400}ms`, animationFillMode: 'both' }}>
+              <Typewriter 
+                text="The Future of This Company Is in Your Hands." 
+                delay={entries.length * 400 + 200} 
+                speed={30} 
+                className="text-center text-sm md:text-base font-black tracking-[0.25em] uppercase text-[#00D9FF] drop-shadow-[0_0_20px_rgba(0,217,255,0.8)] animate-pulse" 
+              />
+            </div>
+            
+            <div 
+              className="flex flex-col sm:flex-row gap-4 justify-center animate-in fade-in slide-in-from-bottom-4"
+              style={{ animationDelay: `${entries.length * 400 + 500}ms`, animationFillMode: 'both' }}
+            >
+              <button onClick={generateDocx} className="px-6 py-3 bg-slate-800 border border-slate-600 text-slate-300 font-bold rounded-xl hover:bg-slate-700 hover:text-white transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-sm">
+                <Download className="w-4 h-4" /> Download .docx
+              </button>
+              <button onClick={() => { actions.initializeGame(formData as CompanyProfile); navigate('/engine'); }} className="px-6 py-3 bg-[#00D9FF]/20 border border-[#00D9FF] text-[#00D9FF] font-bold rounded-xl hover:bg-[#00D9FF] hover:text-slate-950 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-sm shadow-[0_0_20px_rgba(0,217,255,0.3)]">
+                Commence Operations <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button onClick={generateDocx} className="px-6 py-3 bg-slate-800 border border-slate-600 text-slate-300 font-bold rounded-xl hover:bg-slate-700 hover:text-white transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-sm">
-              <Download className="w-4 h-4" /> Download .docx
-            </button>
-            <button onClick={() => { actions.initializeGame(formData as CompanyProfile); navigate('/engine'); }} className="px-6 py-3 bg-cyan-500/20 border border-cyan-500 text-cyan-400 font-bold rounded-xl hover:bg-cyan-500 hover:text-slate-950 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-sm shadow-[0_0_20px_rgba(6,182,212,0.3)]">
-              Commence Operations <ChevronRight className="w-4 h-4" />
-            </button>
+
+          {/* Right: Selected Avatar Preview */}
+          <div className="w-full lg:w-1/2 rounded-3xl border border-slate-800 bg-slate-900/50 flex flex-col items-center justify-center relative overflow-hidden animate-in fade-in slide-in-from-right-8 duration-700" style={{ minHeight: '600px' }}>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10 pointer-events-none" />
+            <div className="absolute inset-0" style={{ boxShadow: `inset 0 0 100px rgba(0,217,255,0.05)` }} />
+            
+            <div className="w-full h-full absolute inset-0">
+              <Suspense fallback={<div className="w-full h-full flex items-center justify-center text-slate-500 animate-pulse font-space tracking-widest text-sm">INITIALIZING MODEL...</div>}>
+                <CEOModel archetype={formData.skin || 'researcher'} mood="default" playable={false} />
+              </Suspense>
+            </div>
+
+            <div className="absolute bottom-12 z-20 flex flex-col items-center text-center pointer-events-none">
+              <h2 className="text-3xl font-black tracking-widest text-[#00D9FF] uppercase drop-shadow-[0_0_15px_rgba(0,217,255,0.6)]">
+                {formData.founderName ? formData.founderName : 'CEO'}
+              </h2>
+              <div className="px-4 py-1 mt-2 rounded-full border border-[#00D9FF]/30 bg-slate-950/80 text-[10px] tracking-[0.2em] text-slate-300 uppercase">
+                AUTHORIZED PERSONNEL
+              </div>
+            </div>
           </div>
+
         </div>
       </div>
     );

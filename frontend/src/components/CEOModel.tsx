@@ -1,5 +1,6 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useRef, useEffect } from 'react';
+import { OrbitControls, Text } from '@react-three/drei';
 import { getAudioCtx } from '@/lib/audio';
 
 type CEOModelProps = {
@@ -460,6 +461,7 @@ const CEOCharacter = ({
   let eyeColor = '#06b6d4';  // Cyan visor
   let hairColor = '#1e293b'; // Hair / helmet block
   let accessoryColor = '';
+  let handTattoo = '';
 
   switch (archetype) {
     case 'cyberpunk': // Cyberpunk Executive — magenta neon
@@ -468,24 +470,28 @@ const CEOCharacter = ({
       eyeColor = '#f0abfc';
       hairColor = '#0f0a18';
       accessoryColor = '#ec4899';
+      handTattoo = 'H';
       break;
     case 'researcher': // AI Researcher — lab white + cyan glasses
       suitColor = '#e2e8f0';
       tieColor = '#0891b2';
       eyeColor = '#22d3ee';
       hairColor = '#1e293b';
+      handTattoo = 'K';
       break;
     case 'quant': // Quant Trader — dark suit, ticker green
       suitColor = '#0f172a';
       tieColor = '#22c55e';
       eyeColor = '#4ade80';
       hairColor = '#0b1220';
+      handTattoo = 'SA';
       break;
     case 'stealth': // Stealth Agent — all black + hat
       suitColor = '#0a0a0a';
       tieColor = '#334155';
       eyeColor = '#e2e8f0';
       hairColor = '#000000';
+      handTattoo = 'A';
       break;
     case 'space': // Space Entrepreneur — white suit, violet helmet
       suitColor = '#e2e8f0';
@@ -493,6 +499,7 @@ const CEOCharacter = ({
       eyeColor = '#7c3aed';
       hairColor = '#cbd5e1';
       accessoryColor = '#a855f7';
+      handTattoo = 'SH';
       break;
     case 'hacker': // Hacker — dark hoodie, matrix green
       suitColor = '#0a0f0a';
@@ -500,6 +507,7 @@ const CEOCharacter = ({
       eyeColor = '#4ade80';
       hairColor = '#020617';
       accessoryColor = '#16a34a';
+      handTattoo = 'X';
       break;
   }
 
@@ -654,11 +662,24 @@ const CEOCharacter = ({
             <boxGeometry args={[0.22, 0.7, 0.22]} />
             <meshStandardMaterial color={suitColor} roughness={0.5} />
           </mesh>
-          {/* Hand */}
-          <mesh position={[0, -0.75, 0]}>
-            <boxGeometry args={[0.18, 0.12, 0.18]} />
-            <meshStandardMaterial color={skinColor} roughness={0.6} />
-          </mesh>
+          {/* Hand with Encryption Tattoo */}
+          <group position={[0, -0.75, 0]}>
+            <mesh>
+              <boxGeometry args={[0.18, 0.12, 0.18]} />
+              <meshStandardMaterial color={skinColor} roughness={0.6} />
+            </mesh>
+            <Text
+              position={[0, 0, -0.095]}
+              rotation={[0, Math.PI, 0]}
+              fontSize={0.06}
+              color="#000000"
+              anchorX="center"
+              anchorY="middle"
+              fontWeight="bold"
+            >
+              {handTattoo}
+            </Text>
+          </group>
         </group>
 
         {/* Right Arm */}
@@ -748,11 +769,11 @@ export const CEOModel = ({
   onStationChange
 }: CEOModelProps) => {
   return (
-    <div className="h-full w-full pointer-events-none select-none">
+    <div className={`h-full w-full select-none ${playable ? 'pointer-events-none' : ''}`}>
       <Canvas
         camera={{ position: [0, 1.4, 3.2], fov: 42 }}
-        className="h-full w-full pointer-events-none"
-        style={{ background: 'transparent', pointerEvents: 'none' }}
+        className={`h-full w-full ${playable ? 'pointer-events-none' : ''}`}
+        style={{ background: 'transparent', pointerEvents: playable ? 'none' : 'auto' }}
       >
         <ambientLight intensity={0.8} />
         <pointLight position={[10, 10, 10]} intensity={1.5} />
@@ -760,6 +781,8 @@ export const CEOModel = ({
         <spotLight position={[0, 6, 0]} intensity={1.0} />
         
         <CameraController playable={playable} />
+        
+        {!playable && <OrbitControls enableZoom={true} enablePan={false} minDistance={2} maxDistance={6} target={[0, 0.6, 0]} />}
         
         {playable && <OfficeRoom />}
         

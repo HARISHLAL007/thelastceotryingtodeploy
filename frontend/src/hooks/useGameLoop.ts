@@ -92,7 +92,7 @@ export const useGameLoop = () => {
     return null;
   };
 
-  const fetchQuarterReport = async (chosenDecision?: any, unpickedDecisions: any[] = [], preCompanyState?: any) => {
+  const fetchQuarterReport = async (chosenDecision?: any, unpickedDecisions: any[] = [], preCompanyState?: any, preQuarter?: number, preYear?: number) => {
     setIsLoading(true);
     setError(null);
 
@@ -103,14 +103,17 @@ export const useGameLoop = () => {
       const payload = {
         industry: freshCompany?.industry || "Technology",
         country: freshCompany?.country || "United States",
-        year: freshState.currentYear,
+        year: preYear || freshState.currentYear,
+        quarter: preQuarter || freshState.currentQuarter,
         ai_adoption_level: freshCompany?.aiAdoptionLevel || 3.5,
         ai_investment_usd: freshCompany?.aiInvestment || 500000,
         automation_rate: freshCompany?.automationRate || 45.0,
         employee_ai_training_hours: freshCompany?.trainingHours || 120.0,
         ai_maturity_score: freshCompany?.aiMaturityScore || 75.0,
         deployment_count: freshCompany?.deploymentCount || 10,
-        save_to_db: false
+        save_to_db: true,
+        player_decision: chosenDecision ? chosenDecision.title : "None",
+        player_result: chosenDecision ? `Cost: $${chosenDecision.cost.toLocaleString()}, ROI Impact: ${chosenDecision.roiImpact}%` : "None"
       };
 
       const response = await api.getQuarterReport(payload);
@@ -129,7 +132,7 @@ export const useGameLoop = () => {
              const altPayload = {
                 industry: preCompanyState.industry || "Technology",
                 country: preCompanyState.country || "United States",
-                year: freshState.currentYear,
+                year: preYear || freshState.currentYear,
                 ai_adoption_level: preCompanyState.aiAdoptionLevel || 3.5,
                 ai_investment_usd: (preCompanyState.aiInvestment || 500000) + dec.cost,
                 automation_rate: Math.min((preCompanyState.automationRate || 45.0) + dec.automationGain, 100),
@@ -155,8 +158,8 @@ export const useGameLoop = () => {
       }
 
       const report: LLMReport = {
-        quarter: freshState.currentQuarter,
-        year: freshState.currentYear,
+        quarter: preQuarter || freshState.currentQuarter,
+        year: preYear || freshState.currentYear,
         summary: `Board Decision: ${metrics.board_decision} - ${metrics.recommendation}`,
         revenue: Math.round(metrics.revenue_impact),
         expenses: Math.round(payload.ai_investment_usd),
@@ -182,19 +185,19 @@ export const useGameLoop = () => {
       const aiMaturityBonus = (freshCompany?.aiMaturityScore || 0) * 200000; 
       const employeeRevenueBonus = freshState.employees * 500000; 
 
-      let quarterlyRevenue = (baseRevenue + aiAutomationBonus + aiMaturityBonus + employeeRevenueBonus) / 4;
+      let quarterlyRevenue = (baseRevenue + aiAutomationBonus + aiMaturityBonus + employeeRevenueBonus) / 2;
       // Add XGBoost prediction bonus/penalty
       quarterlyRevenue += (report.revenue / 2); // Dampen the ML spike slightly
 
-      const costs = 2000000; // Base operational costs
-      const salaries = freshState.employees * 40000; // 40k per quarter per employee
+      const costs = 4000000; // Base operational costs for a half-year
+      const salaries = freshState.employees * 80000; // 80k per half-year per employee
       
       const nextBudget = freshState.budget + quarterlyRevenue - costs - salaries; 
-      const annualizedRevenue = quarterlyRevenue * 4;
+      const annualizedRevenue = quarterlyRevenue * 2;
       const totalAiInvestment = freshCompany?.aiInvestment || 1;
       
       // Realistic ROI: Profit / Total Expenses
-      const totalAnnualExpenses = (costs * 4) + (salaries * 4) + totalAiInvestment;
+      const totalAnnualExpenses = (costs * 2) + (salaries * 2) + totalAiInvestment;
       const profit = annualizedRevenue - totalAnnualExpenses;
       let calculatedRoi = Math.round((profit / totalAnnualExpenses) * 100);
       calculatedRoi = Math.max(calculatedRoi, -100); // Floor at -100%, let it fly high naturally
@@ -280,7 +283,7 @@ export const useGameLoop = () => {
       });
 
       const nextQuarter = state.currentQuarter + 1;
-      const willYearChange = nextQuarter > 4;
+      const willYearChange = nextQuarter > 2;
       const nextYear = willYearChange ? state.currentYear + 1 : state.currentYear;
 
       // Interim state update before fetching the report
@@ -295,7 +298,7 @@ export const useGameLoop = () => {
       const unpickedDecisions = DECISIONS.filter(d => state.currentDecisions.includes(d.id) && d.id !== decisionId);
 
       // 3. Fetch simulated report representing quarter metrics first
-      const reportResults = await fetchQuarterReport(decision, unpickedDecisions, preCompanyState);
+      const reportResults = await fetchQuarterReport(decision, unpickedDecisions, preCompanyState, state.currentQuarter, state.currentYear);
       
       const freshState = useGameStore.getState().state;
       const finalBudget = reportResults?.nextBudget ?? preBudget;

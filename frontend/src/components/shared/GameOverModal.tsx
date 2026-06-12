@@ -1,8 +1,10 @@
 import { useGameStore } from '@/store/gameStore';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Trophy, AlertOctagon, RotateCcw, ArrowRight, BarChart2 } from 'lucide-react';
+import { Trophy, AlertOctagon, RotateCcw, ArrowRight, BarChart2, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, AlignmentType } from 'docx';
+import { saveAs } from 'file-saver';
 
 export const GameOverModal = () => {
   const state = useGameStore((s) => s.state);
@@ -17,6 +19,160 @@ export const GameOverModal = () => {
   const handleRestart = () => {
     actions.resetGame();
     navigate('/');
+  };
+
+  const handleDownloadReport = async () => {
+    const createDivider = () => new Paragraph({ text: "---", alignment: AlignmentType.CENTER, spacing: { before: 200, after: 200 } });
+    
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: [
+          new Paragraph({ text: "🚀 AI STARTUP SIMULATION", heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }),
+          new Paragraph({ text: "FINAL EXECUTIVE REPORT", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER }),
+          createDivider(),
+          
+          new Paragraph({ text: "🏢 COMPANY PROFILE", heading: HeadingLevel.HEADING_1 }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Company Name: ", bold: true }),
+              new TextRun({ text: company?.name || 'Company', bold: true }),
+            ]
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Simulation Status: ", bold: true }),
+              new TextRun({ text: isVictory ? "🏆 VICTORY" : "💀 BANKRUPTCY", bold: true }),
+            ]
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Simulation Duration: ", bold: true }),
+              new TextRun({ text: `2025 → ${state.currentYear} (Q${state.currentQuarter})`, bold: true }),
+            ]
+          }),
+          createDivider(),
+
+          new Paragraph({ text: "📊 FINAL PERFORMANCE METRICS", heading: HeadingLevel.HEADING_1 }),
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph({ text: "Metric", bold: true })] }),
+                  new TableCell({ children: [new Paragraph({ text: "Final Value", bold: true })] }),
+                ]
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph("💰 Final Budget")] }),
+                  new TableCell({ children: [new Paragraph({ text: `$${state.budget.toLocaleString()}`, bold: true })] }),
+                ]
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph("📈 Final ROI")] }),
+                  new TableCell({ children: [new Paragraph({ text: `${state.roi}%`, bold: true })] }),
+                ]
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph("👥 Employees")] }),
+                  new TableCell({ children: [new Paragraph({ text: `${state.employees}`, bold: true })] }),
+                ]
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph("😊 Employee Morale")] }),
+                  new TableCell({ children: [new Paragraph({ text: `${state.morale}%`, bold: true })] }),
+                ]
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph("⭐ Company Level")] }),
+                  new TableCell({ children: [new Paragraph({ text: `${state.level}`, bold: true })] }),
+                ]
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph("📅 Final Quarter")] }),
+                  new TableCell({ children: [new Paragraph({ text: `${state.currentYear} - Q${state.currentQuarter}`, bold: true })] }),
+                ]
+              })
+            ]
+          }),
+          createDivider(),
+
+          new Paragraph({ text: "🎯 EXECUTIVE SUMMARY", heading: HeadingLevel.HEADING_1 }),
+          new Paragraph({ text: isVictory 
+            ? "Over the course of the simulation, the company successfully expanded its operations through strategic AI investments and operational decisions. The organization achieved significant capital growth while maintaining maximum employee morale and progressing to the highest possible levels." 
+            : "The simulation concluded in corporate failure. Operations ceased due to critical insolvency, failing to maintain the necessary capital reserves or operational ROI to sustain market presence." 
+          }),
+          new Paragraph({ text: "" }),
+          new Paragraph({ text: isVictory
+            ? "The Board recognizes this simulation as a Victory, demonstrating strong long-term business sustainability and successful AI-driven transformation."
+            : "The Board recognizes this simulation as a Bankruptcy, highlighting critical failures in resource management and strategic adaptation.",
+          }),
+          createDivider(),
+
+          new Paragraph({ text: "📜 COMPANY HISTORY LOG", heading: HeadingLevel.HEADING_1 }),
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph({ text: "Year", bold: true })] }),
+                  new TableCell({ children: [new Paragraph({ text: "Quarter", bold: true })] }),
+                  new TableCell({ children: [new Paragraph({ text: "Revenue", bold: true })] }),
+                  new TableCell({ children: [new Paragraph({ text: "Budget", bold: true })] }),
+                  new TableCell({ children: [new Paragraph({ text: "ROI", bold: true })] }),
+                  new TableCell({ children: [new Paragraph({ text: "Morale", bold: true })] }),
+                ]
+              }),
+              ...state.history.map((h) => 
+                new TableRow({
+                  children: [
+                    new TableCell({ children: [new Paragraph(`${h.year}`)] }),
+                    new TableCell({ children: [new Paragraph(`Q${h.quarter || 1}`)] }),
+                    new TableCell({ children: [new Paragraph(`$${(h.revenue || 0).toLocaleString()}`)] }),
+                    new TableCell({ children: [new Paragraph(`$${h.budget.toLocaleString()}`)] }),
+                    new TableCell({ children: [new Paragraph(`${h.roi}%`)] }),
+                    new TableCell({ children: [new Paragraph(`${h.morale}%`)] }),
+                  ]
+                })
+              )
+            ]
+          }),
+          createDivider(),
+          
+          new Paragraph({ text: "🏅 BOARD VERDICT", heading: HeadingLevel.HEADING_1 }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Simulation Result: ", bold: true }),
+              new TextRun({ text: isVictory ? "🏆 VICTORY" : "💀 BANKRUPTCY", bold: true })
+            ]
+          }),
+          new Paragraph({ text: "" }),
+          new Paragraph({ text: isVictory
+            ? "Your leadership successfully transformed a startup into a thriving AI-driven enterprise through strategic investments, workforce development, and operational expansion."
+            : "Your leadership failed to maintain the required capital thresholds and market competitiveness, leading to corporate dissolution."
+          }),
+          new Paragraph({ text: "" }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: isVictory 
+                ? "\"The Board of Directors congratulates you on building a resilient AI enterprise capable of competing in the future economy.\""
+                : "\"The Board of Directors terminates your position effective immediately. Please clear your desk.\"", bold: true })
+            ]
+          }),
+          createDivider(),
+          new Paragraph({ text: "Generated by AI Startup Simulator • Executive Board Report", alignment: AlignmentType.CENTER, italics: true }),
+        ],
+      }],
+    });
+    Packer.toBlob(doc).then((blob) => {
+      saveAs(blob, `${company?.name || 'Company'}_Final_Report.docx`);
+    });
   };
 
   return (
@@ -96,13 +252,13 @@ export const GameOverModal = () => {
 
           {/* Action buttons */}
           <div className="flex flex-col sm:flex-row gap-3 pt-6 w-full justify-center">
-            
+
             <Button
-              onClick={handleRestart}
-              className="py-5 px-6 font-orbitron font-bold text-xs tracking-wider bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-200 hover:text-white flex items-center justify-center gap-2 hover:scale-[1.02] transition-all"
+              onClick={handleDownloadReport}
+              className="py-3 px-4 font-orbitron font-bold text-[10px] sm:text-xs tracking-wider bg-slate-900 hover:bg-slate-800 border border-slate-700 text-cyan-400 hover:text-cyan-300 flex items-center justify-center gap-2 hover:scale-[1.02] transition-all"
             >
-              <RotateCcw className="h-4 w-4" />
-              NEW FOUNDER TICKET //
+              <Download className="h-4 w-4" />
+              DOWNLOAD REPORT .DOCX
             </Button>
 
             <Button
@@ -112,7 +268,7 @@ export const GameOverModal = () => {
                 // We'll navigate to /outcome which displays the details report.
                 navigate('/outcome');
               }}
-              className={`py-5 px-6 font-orbitron font-black text-xs tracking-widest flex items-center justify-center gap-2 hover:scale-[1.02] transition-all ${
+              className={`py-3 px-4 font-orbitron font-black text-[10px] sm:text-xs tracking-widest flex items-center justify-center gap-2 hover:scale-[1.02] transition-all ${
                 isVictory 
                   ? 'bg-yellow-500 text-slate-950 hover:bg-yellow-400 shadow-[0_0_12px_rgba(234,179,8,0.3)]' 
                   : 'bg-rose-500 text-slate-950 hover:bg-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.3)]'
