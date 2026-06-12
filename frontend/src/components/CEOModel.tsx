@@ -338,6 +338,7 @@ const CEOCharacter = ({
   const playerRot = useRef(0);
   const lastStation = useRef('none');
   const moveKeys = useRef({ forward: false, backward: false, left: false, right: false });
+  const joystickRef = useRef({ x: 0, y: 0 });
 
   // Footstep trail (refs to avoid re-renders inside the 60fps loop)
   const footRefs = useRef<any[]>([]);
@@ -391,11 +392,17 @@ const CEOCharacter = ({
       if (isRight) moveKeys.current.right = false;
     };
 
+    const handleJoystickMove = (e: any) => {
+      joystickRef.current = { x: e.detail.x, y: e.detail.y };
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('joystickMove', handleJoystickMove);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('joystickMove', handleJoystickMove);
     };
   }, [playable]);
 
@@ -411,11 +418,17 @@ const CEOCharacter = ({
         if (moveKeys.current.left) dx -= 1;
         if (moveKeys.current.right) dx += 1;
 
+        // Add joystick contribution (y is vertical on screen, which maps to z on floor)
+        dx += joystickRef.current.x;
+        dz += joystickRef.current.y;
+
         // Diagonal normalization
         if (dx !== 0 && dz !== 0) {
           const len = Math.sqrt(dx * dx + dz * dz);
-          dx /= len;
-          dz /= len;
+          if (len > 1) { // Only normalize if vector length is > 1 to allow analog slow movement
+            dx /= len;
+            dz /= len;
+          }
         }
 
         const isMoving = dx !== 0 || dz !== 0;

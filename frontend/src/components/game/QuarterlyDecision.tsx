@@ -5,6 +5,7 @@ import { useGameLoop } from '@/hooks/useGameLoop';
 import { useGameStore } from '@/store/gameStore';
 import { DECISIONS } from '@/data/decisions';
 import CEOModel from '@/components/CEOModel';
+import { Joystick } from './Joystick';
 import {
   AlertCircle,
   CheckCircle2,
@@ -235,6 +236,8 @@ export const QuarterlyDecision = () => {
                   <div className="absolute inset-0 z-30 bg-slate-950/60 backdrop-blur-sm flex flex-col items-center justify-center">
                   </div>
                 )}
+
+                <Joystick />
 
                 <Button
                   variant="ghost"
