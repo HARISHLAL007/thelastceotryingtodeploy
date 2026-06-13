@@ -127,8 +127,10 @@ export const useGameLoop = () => {
       let recommendations = [];
       if (chosenDecision && unpickedDecisions.length > 0 && preCompanyState) {
           recommendations.push(`Chosen: ${chosenDecision.title}: ROI ${Math.round(metrics.roi)}%, Revenue $${(metrics.revenue_impact/1000000).toFixed(2)}M`);
-          
-          for (const dec of unpickedDecisions) {
+
+          // "What if" lines for the un-chosen options. Fire them in parallel instead
+          // of awaiting each one sequentially, then keep the original order.
+          const altLines = await Promise.all(unpickedDecisions.map(async (dec) => {
              const altPayload = {
                 industry: preCompanyState.industry || "Technology",
                 country: preCompanyState.country || "United States",
@@ -144,11 +146,12 @@ export const useGameLoop = () => {
              try {
                 const altRes = await api.getQuarterReport(altPayload);
                 const altMetrics = altRes.data.metrics;
-                recommendations.push(`If Chose: ${dec.title}: ROI ${Math.round(altMetrics.roi)}%, Revenue $${(altMetrics.revenue_impact/1000000).toFixed(2)}M`);
+                return `If Chose: ${dec.title}: ROI ${Math.round(altMetrics.roi)}%, Revenue $${(altMetrics.revenue_impact/1000000).toFixed(2)}M`;
              } catch (e) {
-                recommendations.push(`If Chose: ${dec.title}: (Prediction Failed)`);
+                return `If Chose: ${dec.title}: (Prediction Failed)`;
              }
-          }
+          }));
+          recommendations.push(...altLines);
       } else {
          recommendations = [
             `Scenario A (Maintain): ROI ${Math.round(scenarios.A.roi)}%, Revenue $${(scenarios.A.revenue/1000000).toFixed(2)}M`,
@@ -178,25 +181,26 @@ export const useGameLoop = () => {
       // Give XP based on ML metrics
       actions.addXp(Math.round(metrics.ai_transformation_score * 10));
 
-      // Financials Logic
-      // Revenue grows realistically with AI and Workforce
-      const baseRevenue = 20000000; 
-      const aiAutomationBonus = (freshCompany?.automationRate || 0) * 150000; 
-      const aiMaturityBonus = (freshCompany?.aiMaturityScore || 0) * 200000; 
-      const employeeRevenueBonus = freshState.employees * 500000; 
+      // --- Quarterly economy (XGBoost-driven) ---
+      // The model already accounts for automation_rate, ai_maturity_score, investment,
+      // training and deployment_count, so the AI revenue line now comes straight from
+      // its prediction (full weight) instead of the old hardcoded automation/maturity
+      // bonuses that double-counted those signals and drowned out the model.
+      const AI_REVENUE_SCALE = 8; // lifts the per-quarter model impact to enterprise scale (tunable)
+      const organicRevenue = 7000000 + freshState.employees * 400000; // non-AI baseline business (half-year)
+      const aiRevenue = Math.max(0, report.revenue) * AI_REVENUE_SCALE; // report.revenue = model's quarterly revenue impact
 
-      let quarterlyRevenue = (baseRevenue + aiAutomationBonus + aiMaturityBonus + employeeRevenueBonus) / 2;
-      // Add XGBoost prediction bonus/penalty
-      quarterlyRevenue += (report.revenue / 2); // Dampen the ML spike slightly
+      const quarterlyRevenue = organicRevenue + aiRevenue;
 
       const costs = 4000000; // Base operational costs for a half-year
       const salaries = freshState.employees * 80000; // 80k per half-year per employee
-      
-      const nextBudget = freshState.budget + quarterlyRevenue - costs - salaries; 
+
+      const nextBudget = freshState.budget + quarterlyRevenue - costs - salaries;
       const annualizedRevenue = quarterlyRevenue * 2;
       const totalAiInvestment = freshCompany?.aiInvestment || 1;
-      
-      // Realistic ROI: Profit / Total Expenses
+
+      // Realistic ROI: annual profit / total annual expenses — now reflects the
+      // model-driven revenue above rather than a flat hardcoded baseline.
       const totalAnnualExpenses = (costs * 2) + (salaries * 2) + totalAiInvestment;
       const profit = annualizedRevenue - totalAnnualExpenses;
       let calculatedRoi = Math.round((profit / totalAnnualExpenses) * 100);

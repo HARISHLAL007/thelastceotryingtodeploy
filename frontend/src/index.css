@@ -192,6 +192,12 @@
 }
 
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* Scrolling perspective grid floor (landing horizon) */
+@keyframes grid-pan {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 46px; }
+}
 .typing-cursor::after { content: '_'; animation: blink 1s step-end infinite; }
 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }

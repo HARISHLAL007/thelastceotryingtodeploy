@@ -1,12 +1,13 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional
 import joblib
 import pandas as pd
 import os
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Database Setup
 SQLALCHEMY_DATABASE_URL = "sqlite:///./database.db"
@@ -17,7 +18,7 @@ Base = declarative_base()
 class PredictionRecord(Base):
     __tablename__ = "predictions"
     id = Column(Integer, primary_key=True, index=True)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     industry = Column(String)
     country = Column(String)
     year = Column(Integer)
@@ -47,7 +48,9 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    # Wildcard origins are incompatible with credentialed requests per the CORS
+    # spec, and this API uses no cookies/auth, so credentials stay disabled.
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -84,8 +87,8 @@ class PredictionRequest(BaseModel):
     ai_maturity_score: float = 75.0
     deployment_count: int = 10
     save_to_db: bool = False
-    player_decision: str = None
-    player_result: str = None
+    player_decision: Optional[str] = None
+    player_result: Optional[str] = None
 
 def engineer_features(df):
     df["investment_per_deployment"] = df["ai_investment_usd"] / (df["deployment_count"]+1)
@@ -101,11 +104,28 @@ def engineer_features(df):
     
     return df
 
-def predict_scenario(sample_data, investment_multiplier):
+def build_model_frame(sample_data, investment_multiplier=1.0):
+    """Convert raw UI-scale inputs to the model's training distribution, then engineer features.
+
+    The models were trained on a dataset that stores NORMALIZED values:
+      ai_adoption_level : 0-1   (UI sends 0-5)
+      automation_rate   : 0-1   (UI sends 0-100)
+      ai_maturity_score : 0-10  (UI sends 0-100)
+    Feeding the raw UI scales puts inputs far outside the training range and
+    produces extrapolated (meaningless) predictions, so we rescale here before
+    inference. These ratios mirror the normalization already used when the API
+    appends rows back to the CSV.
+    """
     df = pd.DataFrame([sample_data])
     df["ai_investment_usd"] = df["ai_investment_usd"] * investment_multiplier
-    df = engineer_features(df)
-    
+    df["ai_adoption_level"] = df["ai_adoption_level"] / 5.0
+    df["automation_rate"] = df["automation_rate"] / 100.0
+    df["ai_maturity_score"] = df["ai_maturity_score"] / 10.0
+    return engineer_features(df)
+
+def predict_scenario(sample_data, investment_multiplier):
+    df = build_model_frame(sample_data, investment_multiplier)
+
     X_rev = revenue_preprocessor.transform(df)
     annual_rev = revenue_model.predict(X_rev)[0]
     rev_impact = annual_rev / 4.0 # Make it a quarterly revenue for the budget
@@ -121,9 +141,9 @@ def predict_scenario(sample_data, investment_multiplier):
 def process_prediction(request: PredictionRequest):
     req_dict = request.dict()
     
-    df_sample = pd.DataFrame([req_dict])
-    df_sample = engineer_features(df_sample)
-    
+    # Normalize to the training distribution (same as the revenue path) before inference.
+    df_sample = build_model_frame(req_dict, 1.0)
+
     # Predict Productivity
     X_prod = productivity_preprocessor.transform(df_sample)
     prod_gain = float(productivity_model.predict(X_prod)[0]) * 100
@@ -209,32 +229,13 @@ def predict(request: PredictionRequest, db: Session = Depends(get_db)):
         db.add(db_record)
         db.commit()
         db.refresh(db_record)
-        
-        # Also append to the CSV dataset
-        try:
-            import csv
-            import uuid
-            csv_path = os.path.join(BASE_DIR, 'corporate_ai_adoption_dataset.csv')
-            with open(csv_path, mode='a', newline='', encoding='utf-8') as f:
-                writer = csv.writer(f)
-                writer.writerow([
-                    f"CORP-{str(uuid.uuid4().hex)[:5].upper()}",
-                    request.industry,
-                    request.country,
-                    request.year,
-                    round(request.ai_adoption_level / 5.0, 4),
-                    round(request.ai_investment_usd, 2),
-                    round(request.automation_rate / 100.0, 4),
-                    round(result["metrics"]["revenue_impact"] * 0.15, 2), # proxy for cost savings
-                    round(result["metrics"]["revenue_impact"], 2),
-                    round(result["metrics"]["productivity_gain"] / 100.0, 4),
-                    round(request.employee_ai_training_hours, 1),
-                    round(request.ai_maturity_score / 10.0, 2),
-                    request.deployment_count
-                ])
-        except Exception as e:
-            print(f"Error appending to CSV: {e}")
-            
+
+        # NOTE: Predictions are persisted to the SQLite ledger above only.
+        # We intentionally do NOT append model predictions back into
+        # corporate_ai_adoption_dataset.csv — that training file is ground
+        # truth, and writing the model's own (fabricated) outputs into it would
+        # contaminate any future retraining with a self-reinforcing feedback loop.
+
     return result
 
 class GameHistoryRequest(BaseModel):

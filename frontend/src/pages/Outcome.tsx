@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, AlignmentType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ShadingType, TableLayoutType } from 'docx';
 import { saveAs } from 'file-saver';
 
 interface Ending {
@@ -275,151 +275,178 @@ export const Outcome = () => {
   };
 
   const handleDownloadReport = async () => {
-    const createDivider = () => new Paragraph({ text: "---", alignment: AlignmentType.CENTER, spacing: { before: 200, after: 200 } });
-    
+    // Palette (hex without '#', as docx expects)
+    const ACCENT = "0E7490";   // cyan-700 — headings & table headers
+    const POSITIVE = "15803D"; // green
+    const NEGATIVE = "B91C1C"; // red
+    const MUTED = "64748B";    // slate-500
+    const BORDER = "D1D5DB";   // gray-300
+    const statusColor = isVictory ? POSITIVE : NEGATIVE;
+    const statusText = isVictory ? "VICTORY" : "BANKRUPTCY";
+
+    // --- Formatting helpers (bold/italics must live on TextRun, not Paragraph) ---
+    const heading = (text: string) =>
+      new Paragraph({
+        heading: HeadingLevel.HEADING_1,
+        spacing: { before: 280, after: 120 },
+        children: [new TextRun({ text, bold: true, color: ACCENT, size: 26 })],
+      });
+
+    const kv = (label: string, value: string, valueColor?: string) =>
+      new Paragraph({
+        spacing: { after: 80 },
+        children: [
+          new TextRun({ text: `${label}:  `, bold: true }),
+          new TextRun({ text: value, bold: true, color: valueColor }),
+        ],
+      });
+
+    const para = (text: string) =>
+      new Paragraph({ spacing: { after: 140 }, children: [new TextRun({ text })] });
+
+    const divider = () =>
+      new Paragraph({
+        spacing: { before: 160, after: 160 },
+        border: { bottom: { color: BORDER, space: 1, style: BorderStyle.SINGLE, size: 6 } },
+        children: [],
+      });
+
+    const headerCell = (text: string, width: number) =>
+      new TableCell({
+        width: { size: width, type: WidthType.DXA },
+        shading: { type: ShadingType.CLEAR, color: "auto", fill: ACCENT },
+        margins: { top: 60, bottom: 60, left: 120, right: 120 },
+        children: [new Paragraph({ children: [new TextRun({ text, bold: true, color: "FFFFFF" })] })],
+      });
+
+    const cell = (text: string, width: number, opts: { bold?: boolean; color?: string } = {}) =>
+      new TableCell({
+        width: { size: width, type: WidthType.DXA },
+        margins: { top: 60, bottom: 60, left: 120, right: 120 },
+        children: [new Paragraph({ children: [new TextRun({ text, bold: opts.bold, color: opts.color })] })],
+      });
+
+    // Explicit column widths (twips). Without these + FIXED layout, Word/Pages
+    // collapse the columns to one character wide.
+    const METRIC_COLS = [3120, 6240];                          // 2 cols, ~9360 total
+    const HISTORY_COLS = [1000, 1100, 2280, 2280, 1350, 1350]; // 6 cols, ~9360 total
+
+    const tableBorders = {
+      top: { style: BorderStyle.SINGLE, size: 4, color: BORDER },
+      bottom: { style: BorderStyle.SINGLE, size: 4, color: BORDER },
+      left: { style: BorderStyle.SINGLE, size: 4, color: BORDER },
+      right: { style: BorderStyle.SINGLE, size: 4, color: BORDER },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: "E5E7EB" },
+      insideVertical: { style: BorderStyle.SINGLE, size: 4, color: "E5E7EB" },
+    };
+
+    const metrics: [string, string][] = [
+      ["Final Budget", `$${state.budget.toLocaleString()}`],
+      ["Final ROI", `${state.roi}%`],
+      ["Employees", `${state.employees}`],
+      ["Employee Morale", `${state.morale}%`],
+      ["Company Level", `${state.level}`],
+      ["Final Quarter", `${state.currentYear} - Q${state.currentQuarter}`],
+    ];
+
     const doc = new Document({
+      styles: { default: { document: { run: { font: "Calibri", size: 22 } } } },
       sections: [{
         properties: {},
         children: [
-          new Paragraph({ text: "🚀 AI STARTUP SIMULATION", heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }),
-          new Paragraph({ text: "FINAL EXECUTIVE REPORT", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER }),
-          createDivider(),
-          
-          new Paragraph({ text: "🏢 COMPANY PROFILE", heading: HeadingLevel.HEADING_1 }),
+          // Title block
           new Paragraph({
-            children: [
-              new TextRun({ text: "Company Name: ", bold: true }),
-              new TextRun({ text: company?.name || 'Company', bold: true }),
-            ]
+            alignment: AlignmentType.CENTER, spacing: { after: 40 },
+            children: [new TextRun({ text: "THE LAST CEO", bold: true, size: 44, color: ACCENT })],
           }),
           new Paragraph({
-            children: [
-              new TextRun({ text: "Simulation Status: ", bold: true }),
-              new TextRun({ text: isVictory ? "🏆 VICTORY" : "💀 BANKRUPTCY", bold: true }),
-            ]
+            alignment: AlignmentType.CENTER, spacing: { after: 60 },
+            children: [new TextRun({ text: "Final Executive Report", bold: true, size: 28, color: MUTED })],
           }),
           new Paragraph({
-            children: [
-              new TextRun({ text: "Simulation Duration: ", bold: true }),
-              new TextRun({ text: `2025 → ${state.currentYear} (Q${state.currentQuarter})`, bold: true }),
-            ]
+            alignment: AlignmentType.CENTER, spacing: { after: 80 },
+            children: [new TextRun({ text: statusText, bold: true, size: 32, color: statusColor })],
           }),
-          createDivider(),
+          divider(),
 
-          new Paragraph({ text: "📊 FINAL PERFORMANCE METRICS", heading: HeadingLevel.HEADING_1 }),
+          heading("Company Profile"),
+          kv("Company Name", company?.name || "Company"),
+          kv("Sector", company?.industry || "—"),
+          kv("Simulation Status", statusText, statusColor),
+          kv("Simulation Duration", `2025 → ${state.currentYear} (Q${state.currentQuarter})`),
+          divider(),
+
+          heading("Final Performance Metrics"),
           new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
+            columnWidths: METRIC_COLS,
+            layout: TableLayoutType.FIXED,
+            borders: tableBorders,
             rows: [
-              new TableRow({
-                children: [
-                  new TableCell({ children: [new Paragraph({ text: "Metric", bold: true })] }),
-                  new TableCell({ children: [new Paragraph({ text: "Final Value", bold: true })] }),
-                ]
-              }),
-              new TableRow({
-                children: [
-                  new TableCell({ children: [new Paragraph("💰 Final Budget")] }),
-                  new TableCell({ children: [new Paragraph({ text: `$${state.budget.toLocaleString()}`, bold: true })] }),
-                ]
-              }),
-              new TableRow({
-                children: [
-                  new TableCell({ children: [new Paragraph("📈 Final ROI")] }),
-                  new TableCell({ children: [new Paragraph({ text: `${state.roi}%`, bold: true })] }),
-                ]
-              }),
-              new TableRow({
-                children: [
-                  new TableCell({ children: [new Paragraph("👥 Employees")] }),
-                  new TableCell({ children: [new Paragraph({ text: `${state.employees}`, bold: true })] }),
-                ]
-              }),
-              new TableRow({
-                children: [
-                  new TableCell({ children: [new Paragraph("😊 Employee Morale")] }),
-                  new TableCell({ children: [new Paragraph({ text: `${state.morale}%`, bold: true })] }),
-                ]
-              }),
-              new TableRow({
-                children: [
-                  new TableCell({ children: [new Paragraph("⭐ Company Level")] }),
-                  new TableCell({ children: [new Paragraph({ text: `${state.level}`, bold: true })] }),
-                ]
-              }),
-              new TableRow({
-                children: [
-                  new TableCell({ children: [new Paragraph("📅 Final Quarter")] }),
-                  new TableCell({ children: [new Paragraph({ text: `${state.currentYear} - Q${state.currentQuarter}`, bold: true })] }),
-                ]
-              })
-            ]
+              new TableRow({ tableHeader: true, children: [headerCell("Metric", METRIC_COLS[0]), headerCell("Final Value", METRIC_COLS[1])] }),
+              ...metrics.map(([k, v]) => new TableRow({ children: [cell(k, METRIC_COLS[0]), cell(v, METRIC_COLS[1], { bold: true })] })),
+            ],
           }),
-          createDivider(),
+          divider(),
 
-          new Paragraph({ text: "🎯 EXECUTIVE SUMMARY", heading: HeadingLevel.HEADING_1 }),
-          new Paragraph({ text: isVictory 
-            ? "Over the course of the simulation, the company successfully expanded its operations through strategic AI investments and operational decisions. The organization achieved significant capital growth while maintaining maximum employee morale and progressing to the highest possible levels." 
-            : "The simulation concluded in corporate failure. Operations ceased due to critical insolvency, failing to maintain the necessary capital reserves or operational ROI to sustain market presence." 
-          }),
-          new Paragraph({ text: "" }),
-          new Paragraph({ text: isVictory
+          heading("Executive Summary"),
+          para(isVictory
+            ? "Over the course of the simulation, the company successfully expanded its operations through strategic AI investments and operational decisions. The organization achieved significant capital growth while maintaining strong employee morale and progressing to the highest possible levels."
+            : "The simulation concluded in corporate failure. Operations ceased due to critical insolvency, failing to maintain the necessary capital reserves or operational ROI to sustain market presence."),
+          para(isVictory
             ? "The Board recognizes this simulation as a Victory, demonstrating strong long-term business sustainability and successful AI-driven transformation."
-            : "The Board recognizes this simulation as a Bankruptcy, highlighting critical failures in resource management and strategic adaptation.",
-          }),
-          createDivider(),
+            : "The Board recognizes this simulation as a Bankruptcy, highlighting critical failures in resource management and strategic adaptation."),
+          divider(),
 
-          new Paragraph({ text: "📜 COMPANY HISTORY LOG", heading: HeadingLevel.HEADING_1 }),
+          heading("Company History Log"),
           new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
+            columnWidths: HISTORY_COLS,
+            layout: TableLayoutType.FIXED,
+            borders: tableBorders,
             rows: [
               new TableRow({
+                tableHeader: true,
                 children: [
-                  new TableCell({ children: [new Paragraph({ text: "Year", bold: true })] }),
-                  new TableCell({ children: [new Paragraph({ text: "Quarter", bold: true })] }),
-                  new TableCell({ children: [new Paragraph({ text: "Revenue", bold: true })] }),
-                  new TableCell({ children: [new Paragraph({ text: "Budget", bold: true })] }),
-                  new TableCell({ children: [new Paragraph({ text: "ROI", bold: true })] }),
-                  new TableCell({ children: [new Paragraph({ text: "Morale", bold: true })] }),
-                ]
+                  headerCell("Year", HISTORY_COLS[0]), headerCell("Quarter", HISTORY_COLS[1]), headerCell("Revenue", HISTORY_COLS[2]),
+                  headerCell("Budget", HISTORY_COLS[3]), headerCell("ROI", HISTORY_COLS[4]), headerCell("Morale", HISTORY_COLS[5]),
+                ],
               }),
-              ...state.history.map((h) => 
+              ...state.history.map((h) =>
                 new TableRow({
                   children: [
-                    new TableCell({ children: [new Paragraph(`${h.year}`)] }),
-                    new TableCell({ children: [new Paragraph(`Q${h.quarter || 1}`)] }),
-                    new TableCell({ children: [new Paragraph(`$${(h.revenue || 0).toLocaleString()}`)] }),
-                    new TableCell({ children: [new Paragraph(`$${h.budget.toLocaleString()}`)] }),
-                    new TableCell({ children: [new Paragraph(`${h.roi}%`)] }),
-                    new TableCell({ children: [new Paragraph(`${h.morale}%`)] }),
-                  ]
+                    cell(`${h.year}`, HISTORY_COLS[0]),
+                    cell(`Q${h.quarter || 1}`, HISTORY_COLS[1]),
+                    cell(`$${(h.revenue || 0).toLocaleString()}`, HISTORY_COLS[2]),
+                    cell(`$${h.budget.toLocaleString()}`, HISTORY_COLS[3]),
+                    cell(`${h.roi}%`, HISTORY_COLS[4]),
+                    cell(`${h.morale}%`, HISTORY_COLS[5]),
+                  ],
                 })
-              )
-            ]
+              ),
+            ],
           }),
-          createDivider(),
-          
-          new Paragraph({ text: "🏅 BOARD VERDICT", heading: HeadingLevel.HEADING_1 }),
-          new Paragraph({
-            children: [
-              new TextRun({ text: "Simulation Result: ", bold: true }),
-              new TextRun({ text: isVictory ? "🏆 VICTORY" : "💀 BANKRUPTCY", bold: true })
-            ]
-          }),
-          new Paragraph({ text: "" }),
-          new Paragraph({ text: isVictory
+          divider(),
+
+          heading("Board Verdict"),
+          kv("Simulation Result", statusText, statusColor),
+          para(isVictory
             ? "Your leadership successfully transformed a startup into a thriving AI-driven enterprise through strategic investments, workforce development, and operational expansion."
-            : "Your leadership failed to maintain the required capital thresholds and market competitiveness, leading to corporate dissolution."
-          }),
-          new Paragraph({ text: "" }),
+            : "Your leadership failed to maintain the required capital thresholds and market competitiveness, leading to corporate dissolution."),
           new Paragraph({
-            children: [
-              new TextRun({ text: isVictory 
-                ? "\"The Board of Directors congratulates you on building a resilient AI enterprise capable of competing in the future economy.\""
-                : "\"The Board of Directors terminates your position effective immediately. Please clear your desk.\"", bold: true })
-            ]
+            spacing: { before: 80, after: 140 },
+            children: [new TextRun({
+              text: isVictory
+                ? "“The Board of Directors congratulates you on building a resilient AI enterprise capable of competing in the future economy.”"
+                : "“The Board of Directors terminates your position effective immediately. Please clear your desk.”",
+              italics: true, bold: true, color: MUTED,
+            })],
           }),
-          createDivider(),
-          new Paragraph({ text: "Generated by AI Startup Simulator • Executive Board Report", alignment: AlignmentType.CENTER, italics: true }),
+          divider(),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({ text: "Generated by The Last CEO • AI Strategy Simulator", italics: true, color: MUTED, size: 18 })],
+          }),
         ],
       }],
     });
