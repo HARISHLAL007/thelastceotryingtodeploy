@@ -160,32 +160,6 @@ export const useGameLoop = () => {
          ];
       }
 
-      const report: LLMReport = {
-        quarter: preQuarter || freshState.currentQuarter,
-        year: preYear || freshState.currentYear,
-        summary: `Board Decision: ${metrics.board_decision} - ${metrics.recommendation}`,
-        revenue: Math.round(metrics.revenue_impact),
-        expenses: Math.round(payload.ai_investment_usd),
-        roi: Math.round(metrics.roi),
-        moraleChange: Math.round(metrics.productivity_gain),
-        recommendations,
-        risks: [
-          `AI Transformation Score: ${metrics.ai_transformation_score.toFixed(0)}/100`,
-          `Risk Score: ${metrics.risk_score.toFixed(0)}%`,
-          `Readiness Level: ${metrics.readiness_level}`
-        ]
-      };
-
-      actions.setReport(report);
-      
-      // Give XP based on ML metrics
-      actions.addXp(Math.round(metrics.ai_transformation_score * 10));
-
-      // --- Quarterly economy (XGBoost-driven) ---
-      // The model already accounts for automation_rate, ai_maturity_score, investment,
-      // training and deployment_count, so the AI revenue line now comes straight from
-      // its prediction (full weight) instead of the old hardcoded automation/maturity
-      // bonuses that double-counted those signals and drowned out the model.
       const AI_REVENUE_SCALE = 8; // lifts the per-quarter model impact to enterprise scale
       const organicRevenue = 3500000 + freshState.employees * 200000; // non-AI baseline business (quarterly)
       
@@ -242,6 +216,38 @@ export const useGameLoop = () => {
       
       nextMorale = nextMorale + finalMoraleChange;
       nextMorale = Math.max(0, Math.min(100, nextMorale));
+
+      const quarterExpenses = costs + salaries + (amortizedInvestment / 4);
+
+      // Logic override: If the company is bleeding money and budget is low, force a survival recommendation
+      let finalRecommendation = metrics.recommendation;
+      let boardDecision = metrics.board_decision;
+      
+      if (quarterlyRevenue < quarterExpenses && nextBudget < 2000000) {
+         finalRecommendation = "CRITICAL WARNING: The company is experiencing severe negative cash flow and is nearing bankruptcy. Immediate cost reduction, automation, and operational efficiency are required. Halt aggressive expansion.";
+         boardDecision = "MANDATE COST REDUCTION";
+      }
+
+      const reportPayload: LLMReport = {
+        quarter: preQuarter || freshState.currentQuarter,
+        year: preYear || freshState.currentYear,
+        summary: `Board Decision: ${boardDecision} - ${finalRecommendation}`,
+        revenue: Math.round(quarterlyRevenue),
+        expenses: Math.round(quarterExpenses),
+        roi: calculatedRoi,
+        moraleChange: Math.round(finalMoraleChange),
+        recommendations,
+        risks: [
+          `Projected 10-Year AI ROI: ${Math.round(metrics.roi)}%`,
+          `AI Transformation Score: ${metrics.ai_transformation_score.toFixed(0)}/100`,
+          `Risk Level: ${metrics.readiness_level}`
+        ]
+      };
+
+      actions.setReport(reportPayload);
+      
+      // Give XP based on ML metrics
+      actions.addXp(Math.round(metrics.ai_transformation_score * 10));
 
       actions.updateGameState({
         revenue: annualizedRevenue,
