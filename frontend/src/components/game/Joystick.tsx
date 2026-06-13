@@ -55,7 +55,7 @@ export const Joystick: React.FC = () => {
   return (
     <div 
       ref={containerRef}
-      className="absolute top-4 left-4 w-20 h-20 rounded-full border-2 border-cyan-500/30 bg-slate-900/50 backdrop-blur-md z-50 touch-none flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.15)] cursor-pointer"
+      className="absolute bottom-6 left-6 w-20 h-20 rounded-full border-2 border-cyan-500/30 bg-slate-900/50 backdrop-blur-md z-50 touch-none flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.15)] cursor-pointer"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}

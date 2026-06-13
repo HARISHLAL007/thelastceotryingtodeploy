@@ -363,10 +363,10 @@ const CEOCharacter = ({
 
       const key = e.key.toLowerCase();
       
-      const isForward = key === 'arrowup';
-      const isBackward = key === 'arrowdown';
-      const isLeft = key === 'arrowleft';
-      const isRight = key === 'arrowright';
+      const isForward = key === 'arrowup' || key === 'w';
+      const isBackward = key === 'arrowdown' || key === 's';
+      const isLeft = key === 'arrowleft' || key === 'a';
+      const isRight = key === 'arrowright' || key === 'd';
 
       if (isForward || isBackward || isLeft || isRight) {
         e.preventDefault();
@@ -381,10 +381,10 @@ const CEOCharacter = ({
     const handleKeyUp = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
       
-      const isForward = key === 'arrowup';
-      const isBackward = key === 'arrowdown';
-      const isLeft = key === 'arrowleft';
-      const isRight = key === 'arrowright';
+      const isForward = key === 'arrowup' || key === 'w';
+      const isBackward = key === 'arrowdown' || key === 's';
+      const isLeft = key === 'arrowleft' || key === 'a';
+      const isRight = key === 'arrowright' || key === 'd';
 
       if (isForward) moveKeys.current.forward = false;
       if (isBackward) moveKeys.current.backward = false;

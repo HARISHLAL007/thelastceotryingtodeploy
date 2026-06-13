@@ -260,8 +260,8 @@ export const QuarterlyDecision = () => {
                 {/* Hidden Audio Element */}
                 <audio ref={audioRef} src="/gamesound.mp3" loop />
 
-                <div className="absolute bottom-4 left-4 right-0 z-10 flex justify-start pointer-events-none">
-                  <span className="bg-black/50 px-4 py-1 rounded text-[10px] text-white tracking-widest font-mono">USE ARROW KEYS TO WALK TO A STATION{isFullscreen ? ' (ESC TO EXIT FULLSCREEN)' : ''}</span>
+                <div className="absolute bottom-4 left-0 right-0 z-10 flex justify-center pointer-events-none">
+                  <span className="bg-black/50 px-4 py-1 rounded text-[10px] text-white tracking-widest font-mono">USE WASD / ARROW KEYS OR THE JOYSTICK TO WALK TO A STATION{isFullscreen ? ' (ESC TO EXIT FULLSCREEN)' : ''}</span>
                 </div>
 
                 {showBoundaryMessage && (
