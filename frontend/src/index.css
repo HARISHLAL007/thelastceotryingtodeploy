@@ -203,3 +203,155 @@
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(6, 182, 212, 0.3); border-radius: 4px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(6, 182, 212, 0.6); }
+
+/* Smooth scroll for anchor links */
+html { scroll-behavior: smooth; }
+
+/* Selection styling */
+::selection {
+  background: rgba(6, 182, 212, 0.3);
+  color: white;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LANDING PAGE — CINEMATIC ANIMATIONS
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Floating vertical drift */
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-18px) rotate(2deg); }
+}
+@keyframes float-medium {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+@keyframes float-reverse {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(14px) rotate(-1.5deg); }
+}
+.animate-float-slow { animation: float-slow 8s ease-in-out infinite; }
+.animate-float-medium { animation: float-medium 5s ease-in-out infinite; }
+.animate-float-reverse { animation: float-reverse 7s ease-in-out infinite; }
+
+/* Horizontal drift for background elements */
+@keyframes drift-left {
+  0%, 100% { transform: translateX(0px); }
+  50% { transform: translateX(-20px); }
+}
+@keyframes drift-right {
+  0%, 100% { transform: translateX(0px); }
+  50% { transform: translateX(20px); }
+}
+.animate-drift-left { animation: drift-left 12s ease-in-out infinite; }
+.animate-drift-right { animation: drift-right 10s ease-in-out infinite; }
+
+/* Glitch effect for title */
+@keyframes glitch-1 {
+  0%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
+  20% { clip-path: inset(15% 0 60% 0); transform: translate(-4px, 2px); }
+  40% { clip-path: inset(50% 0 20% 0); transform: translate(3px, -1px); }
+  60% { clip-path: inset(70% 0 5% 0); transform: translate(-2px, 1px); }
+  80% { clip-path: inset(10% 0 75% 0); transform: translate(4px, -2px); }
+}
+@keyframes glitch-2 {
+  0%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
+  20% { clip-path: inset(60% 0 10% 0); transform: translate(4px, -1px); }
+  40% { clip-path: inset(20% 0 55% 0); transform: translate(-3px, 2px); }
+  60% { clip-path: inset(5% 0 70% 0); transform: translate(2px, -1px); }
+  80% { clip-path: inset(75% 0 10% 0); transform: translate(-4px, 2px); }
+}
+
+/* Timeline pulse dot */
+@keyframes timeline-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7); }
+  50% { box-shadow: 0 0 0 12px rgba(6, 182, 212, 0); }
+}
+.animate-timeline-pulse { animation: timeline-pulse 2s ease-in-out infinite; }
+
+/* Data flow line */
+@keyframes data-flow {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
+}
+.animate-data-flow {
+  background-size: 200% 100%;
+  animation: data-flow 3s linear infinite;
+}
+
+/* Stock ticker scroll */
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-ticker { animation: ticker-scroll 30s linear infinite; }
+
+/* Neon flicker for event cards */
+@keyframes neon-flicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
+  20%, 24%, 55% { opacity: 0.6; }
+}
+
+/* Scale-in reveal for cards */
+@keyframes scale-in {
+  0% { transform: scale(0.85); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Line drawing animation for borders */
+@keyframes draw-border {
+  0% { stroke-dashoffset: 1000; }
+  100% { stroke-dashoffset: 0; }
+}
+
+/* Progress bar fill */
+@keyframes fill-bar {
+  0% { width: 0%; }
+}
+.animate-fill-bar { animation: fill-bar 1.5s ease-out forwards; }
+
+/* Background ambient pulse */
+@keyframes ambient-pulse {
+  0%, 100% { opacity: 0.03; }
+  50% { opacity: 0.08; }
+}
+
+/* Holographic shimmer for cards */
+@keyframes holo-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.holo-shimmer {
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(6, 182, 212, 0.05) 45%,
+    rgba(6, 182, 212, 0.1) 50%,
+    rgba(6, 182, 212, 0.05) 55%,
+    transparent 60%
+  );
+  background-size: 200% 100%;
+  animation: holo-shimmer 4s ease-in-out infinite;
+}
+
+/* Ending card specific glow pulse */
+@keyframes ending-glow {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.15); }
+}
+
+/* Landing page scanline overlay — lighter than dashboard */
+.landing-scanlines::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}

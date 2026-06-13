@@ -1,265 +1,825 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BrainCircuit, Database, LineChart, Target, Server, Cpu, Activity, ShieldAlert,
-  BarChart, Network, ChevronRight, Terminal, Gauge, Layers
+  BarChart, Network, ChevronRight, Terminal, Gauge, Layers, Zap, TrendingUp,
+  Users, Shield, Crosshair, Clock, ArrowDown, Sparkles, Play
 } from 'lucide-react';
 
-// HUD corner brackets for that command-console framing
+/* ═══════════════════════════════════════════════════════════════
+   PARTICLE CANVAS — floating dots connected by proximity lines
+   ═══════════════════════════════════════════════════════════════ */
+interface Particle {
+  x: number; y: number; vx: number; vy: number; r: number; o: number;
+}
+
+const ParticleField = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const particles = useRef<Particle[]>([]);
+  const mouse = useRef({ x: -1000, y: -1000 });
+  const raf = useRef(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Initialize particles
+    const count = Math.min(80, Math.floor(window.innerWidth / 18));
+    particles.current = Array.from({ length: count }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      r: Math.random() * 2 + 0.5,
+      o: Math.random() * 0.5 + 0.2,
+    }));
+
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const pts = particles.current;
+
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+        // Mouse repulsion
+        const dx = p.x - mouse.current.x;
+        const dy = p.y - mouse.current.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 120) {
+          p.vx += dx * 0.0008;
+          p.vy += dy * 0.0008;
+        }
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(6, 182, 212, ${p.o})`;
+        ctx.fill();
+
+        // Connect nearby particles
+        for (let j = i + 1; j < pts.length; j++) {
+          const q = pts[j];
+          const ddx = p.x - q.x;
+          const ddy = p.y - q.y;
+          const d = Math.sqrt(ddx * ddx + ddy * ddy);
+          if (d < 140) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(q.x, q.y);
+            ctx.strokeStyle = `rgba(6, 182, 212, ${0.08 * (1 - d / 140)})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+      raf.current = requestAnimationFrame(draw);
+    };
+    draw();
+
+    const handleMouse = (e: MouseEvent) => {
+      mouse.current = { x: e.clientX, y: e.clientY };
+    };
+    window.addEventListener('mousemove', handleMouse);
+
+    return () => {
+      cancelAnimationFrame(raf.current);
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('mousemove', handleMouse);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="fixed inset-0 z-0 pointer-events-none"
+      style={{ opacity: 0.6 }}
+    />
+  );
+};
+
+/* ═══════════════════════════════════════════════════
+   GLITCH TEXT — periodic distortion on the title
+   ═══════════════════════════════════════════════════ */
+const GlitchText = ({ text, className = '' }: { text: string; className?: string }) => {
+  const [glitching, setGlitching] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setGlitching(true);
+      setTimeout(() => setGlitching(false), 200);
+    }, 4000 + Math.random() * 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <span className={`relative inline-block ${className}`}>
+      <span className="relative z-10">{text}</span>
+      {glitching && (
+        <>
+          <span
+            className="absolute inset-0 z-20"
+            style={{
+              color: 'rgba(6, 182, 212, 0.8)',
+              clipPath: 'polygon(0 15%, 100% 15%, 100% 40%, 0 40%)',
+              transform: 'translate(-3px, 1px)',
+            }}
+          >
+            {text}
+          </span>
+          <span
+            className="absolute inset-0 z-20"
+            style={{
+              color: 'rgba(244, 63, 94, 0.6)',
+              clipPath: 'polygon(0 65%, 100% 65%, 100% 85%, 0 85%)',
+              transform: 'translate(3px, -1px)',
+            }}
+          >
+            {text}
+          </span>
+        </>
+      )}
+    </span>
+  );
+};
+
+/* ═══════════════════════════════════════════════════
+   ANIMATED COUNTER — counts up on scroll-reveal
+   ═══════════════════════════════════════════════════ */
+const Counter = ({ end, suffix = '', duration = 2000 }: { end: number; suffix?: string; duration?: number }) => {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  const started = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting && !started.current) {
+        started.current = true;
+        const start = performance.now();
+        const tick = (now: number) => {
+          const t = Math.min((now - start) / duration, 1);
+          const ease = 1 - Math.pow(1 - t, 3); // ease-out cubic
+          setCount(Math.round(ease * end));
+          if (t < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }
+    }, { threshold: 0.3 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [end, duration]);
+
+  return <span ref={ref}>{count}{suffix}</span>;
+};
+
+/* ═══════════════════════════════════════════════════
+   SCROLL-REVEAL WRAPPER
+   ═══════════════════════════════════════════════════ */
+const Reveal = ({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { setVisible(true); obs.disconnect(); }
+    }, { threshold: 0.15 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={`transition-all duration-1000 ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'} ${className}`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════
+   HUD CORNER BRACKETS
+   ═══════════════════════════════════════════════════ */
 const Corners = ({ color = 'rgba(34,211,238,0.5)' }: { color?: string }) => (
   <>
-    <span className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 rounded-tl-md" style={{ borderColor: color }} />
-    <span className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 rounded-tr-md" style={{ borderColor: color }} />
-    <span className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 rounded-bl-md" style={{ borderColor: color }} />
-    <span className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 rounded-br-md" style={{ borderColor: color }} />
+    <span className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 rounded-tl-sm" style={{ borderColor: color }} />
+    <span className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 rounded-tr-sm" style={{ borderColor: color }} />
+    <span className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 rounded-bl-sm" style={{ borderColor: color }} />
+    <span className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 rounded-br-sm" style={{ borderColor: color }} />
   </>
 );
 
-const FloatingIcons = () => (
-  <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-    <div className="absolute top-[14%] left-[8%] opacity-[0.05] animate-[bounce_10s_infinite]"><BrainCircuit className="w-24 h-24 text-cyan-400" /></div>
-    <div className="absolute top-[20%] right-[11%] opacity-[0.05] animate-[pulse_8s_infinite]"><Database className="w-32 h-32 text-indigo-400" /></div>
-    <div className="absolute bottom-[26%] left-[14%] opacity-[0.05] animate-[spin_24s_infinite_linear]"><Cpu className="w-20 h-20 text-purple-400" /></div>
-    <div className="absolute bottom-[34%] right-[8%] opacity-[0.05] animate-[bounce_12s_infinite]"><Network className="w-28 h-28 text-emerald-400" /></div>
-    <div className="absolute top-[58%] left-[24%] opacity-[0.04] animate-[bounce_14s_infinite]"><BarChart className="w-16 h-16 text-yellow-400" /></div>
-    <div className="absolute top-[68%] right-[28%] opacity-[0.05] animate-[spin_28s_infinite_linear]"><ShieldAlert className="w-24 h-24 text-slate-400" /></div>
-  </div>
-);
-
-// Cyberpunk perspective grid floor (the game-board horizon)
+/* ═══════════════════════════════════════════════════
+   PERSPECTIVE GRID FLOOR
+   ═══════════════════════════════════════════════════ */
 const GridFloor = () => (
-  <div className="absolute bottom-0 inset-x-0 h-[42vh] z-0 pointer-events-none overflow-hidden" style={{ perspective: '320px' }}>
+  <div className="absolute bottom-0 inset-x-0 h-[50vh] z-0 pointer-events-none overflow-hidden" style={{ perspective: '300px' }}>
     <div
-      className="absolute inset-x-[-50%] bottom-0 h-[200%] origin-bottom"
+      className="absolute inset-x-[-60%] bottom-0 h-[250%] origin-bottom"
       style={{
-        transform: 'rotateX(74deg)',
+        transform: 'rotateX(72deg)',
         backgroundImage:
-          'linear-gradient(rgba(6,182,212,0.45) 1px, transparent 1px), linear-gradient(90deg, rgba(6,182,212,0.45) 1px, transparent 1px)',
-        backgroundSize: '46px 46px',
-        maskImage: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent 75%)',
-        WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent 75%)',
-        animation: 'grid-pan 6s linear infinite',
+          'linear-gradient(rgba(6,182,212,0.35) 1px, transparent 1px), linear-gradient(90deg, rgba(6,182,212,0.35) 1px, transparent 1px)',
+        backgroundSize: '50px 50px',
+        maskImage: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent 70%)',
+        WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent 70%)',
+        animation: 'grid-pan 5s linear infinite',
       }}
     />
-    <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-[#040610] to-transparent" />
+    <div className="absolute bottom-0 inset-x-0 h-2/3 bg-gradient-to-t from-[#040610] to-transparent" />
   </div>
 );
 
+/* ═══════════════════════════════════════════════════
+   CONSTANTS
+   ═══════════════════════════════════════════════════ */
 const FEATURES = [
-  { icon: Target, color: 'text-cyan-400', glow: 'rgba(6,182,212,0.35)', code: 'MOD.01', title: 'Simulate Strategy', body: 'Allocate quarterly budget across AI infrastructure, upskilling, and enterprise integrations.' },
-  { icon: Cpu, color: 'text-indigo-400', glow: 'rgba(99,102,241,0.35)', code: 'MOD.02', title: 'Dynamic Decisions', body: 'Build your tech stack with real-world AI plays, from basic RPA to autonomous agent swarms.' },
-  { icon: Database, color: 'text-rose-400', glow: 'rgba(244,63,94,0.35)', code: 'MOD.03', title: 'Immutable Ledger', body: 'Every prediction and decision is logged to a local SQLite ledger for historical analysis.' },
+  {
+    icon: BrainCircuit, color: 'text-cyan-400', glow: 'rgba(6,182,212,0.35)',
+    border: 'border-cyan-500/30', hoverBorder: 'hover:border-cyan-400/60',
+    code: 'SYS.01', title: 'Live ML Predictions',
+    body: 'XGBoost models predict revenue impact and productivity from real corporate AI-adoption data. Every move is scored.',
+    stat: '~0.96 R²',
+  },
+  {
+    icon: Target, color: 'text-indigo-400', glow: 'rgba(99,102,241,0.35)',
+    border: 'border-indigo-500/30', hoverBorder: 'hover:border-indigo-400/60',
+    code: 'SYS.02', title: '21 Strategic Plays',
+    body: 'From basic RPA to autonomous agent swarms — 9 categories of real-world AI decisions that adapt to your company state.',
+    stat: '9 Categories',
+  },
+  {
+    icon: Zap, color: 'text-amber-400', glow: 'rgba(245,158,11,0.35)',
+    border: 'border-amber-500/30', hoverBorder: 'hover:border-amber-400/60',
+    code: 'SYS.03', title: 'Dynamic Events',
+    body: 'Recessions, regulation shifts, GPU shortages, cyberattacks and viral hits inject real-world chaos each quarter.',
+    stat: '∞ Scenarios',
+  },
+  {
+    icon: LineChart, color: 'text-emerald-400', glow: 'rgba(16,185,129,0.35)',
+    border: 'border-emerald-500/30', hoverBorder: 'hover:border-emerald-400/60',
+    code: 'SYS.04', title: 'Executive Reports',
+    body: 'Board decisions, A/B/C scenario comparisons, risk assessments and readiness scores — exportable to .docx.',
+    stat: 'Full Audit',
+  },
+  {
+    icon: Shield, color: 'text-rose-400', glow: 'rgba(244,63,94,0.35)',
+    border: 'border-rose-500/30', hoverBorder: 'hover:border-rose-400/60',
+    code: 'SYS.05', title: 'Risk & Survival Engine',
+    body: 'A composite risk model tracks financial health, morale, automation debt and regulatory exposure every quarter.',
+    stat: 'Real-Time',
+  },
+  {
+    icon: Database, color: 'text-purple-400', glow: 'rgba(168,85,247,0.35)',
+    border: 'border-purple-500/30', hoverBorder: 'hover:border-purple-400/60',
+    code: 'SYS.06', title: 'Immutable Ledger',
+    body: 'Every prediction, decision and outcome is logged to a local SQLite database for post-game historical analysis.',
+    stat: 'Permanent',
+  },
 ];
 
-// Live telemetry shown in the inference panel — values drift slightly to feel "alive".
-const TELEMETRY = [
-  { key: 'REVENUE', dot: 'bg-emerald-400', bar: 'from-emerald-500 to-emerald-300', base: 78 },
-  { key: 'PRODUCTIVITY', dot: 'bg-purple-400', bar: 'from-purple-500 to-purple-300', base: 64 },
-  { key: 'RISK', dot: 'bg-rose-400', bar: 'from-rose-500 to-rose-300', base: 41 },
+const STATS = [
+  { value: 20, suffix: '+', label: 'Years of Simulation', icon: Clock },
+  { value: 8, suffix: '', label: 'Distinct Endings', icon: Crosshair },
+  { value: 200, suffix: 'K+', label: 'Training Rows', icon: Database },
+  { value: 21, suffix: '', label: 'Strategic Plays', icon: Target },
+];
+
+const ENDINGS = [
+  { emoji: '🦄', name: 'Unicorn Exit', desc: 'IPO with $3M+ budget', color: 'from-cyan-500 to-blue-500' },
+  { emoji: '🏛️', name: 'IPO Listing', desc: '30+ staff, $2M+ budget', color: 'from-indigo-500 to-violet-500' },
+  { emoji: '💼', name: 'Megacorp Acquisition', desc: '$1.5M+ or 100% ROI', color: 'from-emerald-500 to-teal-500' },
+  { emoji: '🤖', name: 'Rogue AI Singularity', desc: 'Tech startup, 200%+ ROI', color: 'from-rose-500 to-pink-500' },
+  { emoji: '👑', name: 'Bootstrap Legend', desc: 'Survive from nothing', color: 'from-amber-500 to-orange-500' },
+  { emoji: '☕', name: 'Sustainable Lifestyle', desc: 'Small but profitable', color: 'from-lime-500 to-green-500' },
+  { emoji: '🤝', name: 'Talent Acquisition', desc: 'Bankrupt but valued', color: 'from-purple-500 to-fuchsia-500' },
+  { emoji: '💥', name: 'Crash & Burn', desc: 'Capital exhausted', color: 'from-red-600 to-red-400' },
 ];
 
 const BOOT_LOG = [
   '> initializing inference core ........ OK',
   '> loading revenue_model.joblib ....... OK',
+  '> loading productivity_model.joblib .. OK',
   '> binding FastAPI :: XGBoost 3.x ..... OK',
+  '> dynamic event engine online ........ OK',
   '> board uplink established ........... READY',
 ];
 
-const TITLE = 'THE LAST CEO';
+const TECH_STACK = [
+  { name: 'React 18', color: 'text-cyan-400' },
+  { name: 'TypeScript', color: 'text-blue-400' },
+  { name: 'XGBoost', color: 'text-amber-400' },
+  { name: 'FastAPI', color: 'text-emerald-400' },
+  { name: 'Three.js', color: 'text-purple-400' },
+  { name: 'Zustand', color: 'text-rose-400' },
+];
 
+/* ═══════════════════════════════════════════════════
+   MAIN LANDING COMPONENT
+   ═══════════════════════════════════════════════════ */
 export const Landing = () => {
   const navigate = useNavigate();
-  const [vals, setVals] = useState(TELEMETRY.map((t) => t.base));
   const [logCount, setLogCount] = useState(0);
   const [uptime, setUptime] = useState(0);
   const [typed, setTyped] = useState(0);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [heroReady, setHeroReady] = useState(false);
   const startedAt = useRef(Date.now());
+  const TITLE = 'THE LAST CEO';
 
-  // Drift telemetry values + tick uptime clock for the live-system feel.
+  // Uptime clock
   useEffect(() => {
-    const id = setInterval(() => {
-      setVals((prev) => prev.map((v, i) => {
-        const next = v + (Math.random() - 0.5) * 6;
-        return Math.max(20, Math.min(96, Math.round(next * 10) / 10 || TELEMETRY[i].base));
-      }));
-      setUptime(Math.floor((Date.now() - startedAt.current) / 1000));
-    }, 1400);
+    const id = setInterval(() => setUptime(Math.floor((Date.now() - startedAt.current) / 1000)), 1000);
     return () => clearInterval(id);
   }, []);
 
-  // Type out the title, then reveal the boot log line by line.
+  // Type title
   useEffect(() => {
     if (typed >= TITLE.length) return;
-    const id = setTimeout(() => setTyped((c) => c + 1), 90);
+    const id = setTimeout(() => setTyped(c => c + 1), 80);
     return () => clearTimeout(id);
   }, [typed]);
 
+  // Boot log
   useEffect(() => {
     if (typed < TITLE.length || logCount >= BOOT_LOG.length) return;
-    const id = setTimeout(() => setLogCount((c) => c + 1), 350 + logCount * 220);
+    const id = setTimeout(() => setLogCount(c => c + 1), 300 + logCount * 180);
     return () => clearTimeout(id);
   }, [logCount, typed]);
 
-  // Subtle mouse parallax on the whole console.
-  const onMouseMove = (e: React.MouseEvent) => {
-    const x = (e.clientX / window.innerWidth - 0.5) * 2;
-    const y = (e.clientY / window.innerHeight - 0.5) * 2;
-    setTilt({ x: x * 4, y: y * 4 });
-  };
+  // Delay hero reveal
+  useEffect(() => {
+    const id = setTimeout(() => setHeroReady(true), 300);
+    return () => clearTimeout(id);
+  }, []);
 
   const clock = `${String(Math.floor(uptime / 60)).padStart(2, '0')}:${String(uptime % 60).padStart(2, '0')}`;
   const titleDone = typed >= TITLE.length;
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center relative p-6 md:p-8 bg-[#040610] overflow-hidden scanlines"
-      onMouseMove={onMouseMove}
-    >
-      {/* Cinematic city backdrop (matches the boardroom screens) */}
-      <div
-        className="absolute inset-0 z-0 bg-cover bg-center opacity-[0.18]"
-        style={{ backgroundImage: "url('/cyberpunk_city.png')" }}
-      />
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.05] z-0"
-        style={{ backgroundImage: 'linear-gradient(rgba(6,182,212,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(6,182,212,0.5) 1px, transparent 1px)', backgroundSize: '34px 34px' }}
-      />
-      <div className="absolute inset-0 z-0" style={{ background: 'radial-gradient(circle at 50% 26%, rgba(6,182,212,0.14), transparent 55%)' }} />
-      <GridFloor />
-      <FloatingIcons />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#040610] via-[#040610]/40 to-[#040610] z-0" />
+    <div className="min-h-screen bg-[#040610] text-slate-100 overflow-x-hidden">
+      <ParticleField />
 
-      {/* Top HUD status strip */}
-      <div className="absolute top-0 inset-x-0 z-20 flex items-center justify-between px-5 md:px-8 py-3 text-[10px] font-mono tracking-[0.25em] uppercase border-b border-slate-800/60 bg-slate-950/30 backdrop-blur-sm">
-        <span className="text-slate-500">The Last CEO <span className="text-slate-700">//</span> Enterprise Edition</span>
-        <span className="hidden md:flex items-center gap-2 text-cyan-400/70">
-          <Gauge className="w-3 h-3" /> Uptime {clock}
+      {/* ═══ TOP HUD BAR ═══ */}
+      <div className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-5 md:px-8 py-3 text-[10px] font-mono tracking-[0.25em] uppercase border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-md">
+        <span className="text-slate-500 flex items-center gap-2">
+          <span className="h-2 w-2 rounded bg-cyan-500/40 animate-pulse" />
+          The Last CEO <span className="text-slate-700">//</span> Enterprise Sim
+        </span>
+        <span className="hidden md:flex items-center gap-4">
+          {TECH_STACK.map(t => (
+            <span key={t.name} className={`${t.color} opacity-50`}>{t.name}</span>
+          ))}
         </span>
         <span className="flex items-center gap-2 text-emerald-400/80">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)] animate-pulse" />
-          System Online <span className="text-slate-700">//</span> v2.0
+          Online <span className="text-slate-700">//</span> {clock}
         </span>
       </div>
 
-      <div
-        className="max-w-5xl w-full z-10 space-y-8 my-16 transition-transform duration-300 ease-out"
-        style={{ transform: `translate(${tilt.x}px, ${tilt.y}px)` }}
-      >
-        {/* Hero */}
-        <div className="space-y-5 text-center animate-in fade-in slide-in-from-bottom-8 duration-1000">
-          {/* Holographic core: rotating rings around the brain (matches Home's holo-core) */}
-          <div className="relative inline-flex items-center justify-center w-32 h-32 mb-1">
-            <span className="absolute inset-0 rounded-full border border-cyan-500/20 animate-[spin_16s_linear_infinite]" />
-            <span className="absolute inset-2 rounded-full border border-indigo-500/20 animate-[spin_10s_linear_infinite_reverse]" />
-            <span className="absolute inset-4 rounded-full border-t-2 border-cyan-400/40 animate-[spin_4s_linear_infinite]" />
-            <span className="absolute inset-0 rounded-full blur-2xl bg-cyan-500/15" />
-            <div className="relative p-4 bg-cyan-500/10 rounded-2xl border border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.3)] hover:scale-110 transition-transform duration-500">
-              <BrainCircuit className="w-12 h-12 text-cyan-300" />
+      {/* ═══════════════════════════════════════════
+           SECTION 1 — HERO (Full Viewport)
+           ═══════════════════════════════════════════ */}
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        {/* City backdrop */}
+        <div
+          className="absolute inset-0 z-0 bg-cover bg-center"
+          style={{
+            backgroundImage: "url('/cyberpunk_city.png')",
+            opacity: 0.15,
+            filter: 'saturate(1.4)',
+          }}
+        />
+        {/* Vignette */}
+        <div className="absolute inset-0 z-[1]" style={{
+          background: 'radial-gradient(ellipse at 50% 40%, transparent 20%, #040610 75%)',
+        }} />
+        {/* Top radial glow */}
+        <div className="absolute inset-0 z-[1]" style={{
+          background: 'radial-gradient(circle at 50% 20%, rgba(6,182,212,0.12), transparent 50%)',
+        }} />
+
+        <GridFloor />
+
+        {/* Hero content */}
+        <div className={`relative z-10 text-center max-w-5xl mx-auto px-6 transition-all duration-1500 ${heroReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          {/* Holographic ring logo */}
+          <div className="relative inline-flex items-center justify-center w-36 h-36 md:w-44 md:h-44 mb-6">
+            <span className="absolute inset-0 rounded-full border border-cyan-500/15 animate-[spin_20s_linear_infinite]" />
+            <span className="absolute inset-3 rounded-full border border-indigo-500/15 animate-[spin_12s_linear_infinite_reverse]" />
+            <span className="absolute inset-6 rounded-full border-t-2 border-b-2 border-cyan-400/30 animate-[spin_4s_linear_infinite]" />
+            <span className="absolute inset-8 rounded-full border-l-2 border-r-2 border-indigo-400/25 animate-[spin_6s_linear_infinite_reverse]" />
+            <span className="absolute inset-0 rounded-full blur-3xl bg-cyan-500/10" />
+            <span className="absolute inset-4 rounded-full blur-xl bg-indigo-500/8" />
+            <div className="relative p-5 bg-gradient-to-br from-cyan-500/15 to-indigo-500/10 rounded-2xl border border-cyan-500/25 shadow-[0_0_40px_rgba(6,182,212,0.25)] hover:shadow-[0_0_60px_rgba(6,182,212,0.4)] hover:scale-110 transition-all duration-700">
+              <BrainCircuit className="w-14 h-14 md:w-16 md:h-16 text-cyan-300" />
             </div>
           </div>
 
-          <div className="flex items-center justify-center gap-3 text-[10px] font-mono uppercase tracking-[0.4em] text-cyan-400/60">
-            <span className="h-px w-8 bg-cyan-500/30" /> AI Strategy Simulator <span className="h-px w-8 bg-cyan-500/30" />
+          {/* Subtitle badge */}
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <span className="h-px w-10 bg-gradient-to-r from-transparent to-cyan-500/50" />
+            <span className="text-[11px] font-mono uppercase tracking-[0.5em] text-cyan-400/70 flex items-center gap-2">
+              <Sparkles className="w-3 h-3" /> AI Strategy Simulator
+            </span>
+            <span className="h-px w-10 bg-gradient-to-l from-transparent to-cyan-500/50" />
           </div>
 
-          {/* Typed title with blinking cursor */}
-          <h1 className="text-5xl md:text-7xl font-space font-black tracking-tighter text-white uppercase text-glow-cyan min-h-[1.1em]">
+          {/* Title */}
+          <h1 className="text-6xl md:text-8xl lg:text-9xl font-orbitron font-black tracking-tight text-white uppercase mb-6 leading-[0.9]">
             {titleDone ? (
-              <>The Last <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400">CEO</span></>
+              <>
+                <span className="block text-glow-cyan">The Last</span>
+                <GlitchText
+                  text="CEO"
+                  className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400"
+                />
+              </>
             ) : (
-              <span>{TITLE.slice(0, typed)}<span className="text-cyan-400 animate-pulse">_</span></span>
+              <span className="block">
+                {TITLE.slice(0, typed)}
+                <span className="text-cyan-400 animate-pulse">_</span>
+              </span>
             )}
           </h1>
 
-          <p className="text-base md:text-lg text-slate-400 max-w-2xl mx-auto font-space leading-relaxed">
-            Lead a company through the AI revolution and run real-time financial projections on a live <span className="text-cyan-400">XGBoost</span> predictive engine. Every directive reshapes your trajectory to 2035.
+          {/* Tagline */}
+          <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto font-space leading-relaxed mb-4">
+            One CEO. Twenty years. Infinite consequences.
           </p>
-        </div>
+          <p className="text-sm md:text-base text-slate-500 max-w-xl mx-auto font-space leading-relaxed mb-10">
+            Lead a company through the AI revolution — every quarterly decision scored by a{' '}
+            <span className="text-cyan-400 font-semibold">live XGBoost prediction engine</span>.
+            Survive to 2035 or face the consequences.
+          </p>
 
-        {/* Live inference engine HUD panel with animated telemetry */}
-        <div className="relative cyber-glass cyber-border-cyan rounded-2xl p-6 overflow-hidden animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-200 fill-mode-both">
-          <Corners />
-          <div className="cyber-sweep-overlay opacity-30" />
-          <div className="relative z-10 grid md:grid-cols-[1.1fr,1fr] gap-6 items-center">
-            {/* Boot log */}
-            <div className="space-y-3">
-              <h3 className="font-space font-bold text-cyan-400 text-xs tracking-[0.25em] uppercase flex items-center gap-2 text-glow-cyan">
-                <Server className="w-4 h-4" /> Live Inference Engine
-              </h3>
-              <div className="rounded-lg border border-slate-800 bg-slate-950/70 p-3 font-mono text-[11px] leading-relaxed min-h-[104px]">
-                {BOOT_LOG.slice(0, logCount).map((line, i) => (
-                  <div key={i} className="text-slate-400 animate-in fade-in slide-in-from-left-2 duration-300">
-                    {line.replace(/(OK|READY)$/, '')}
-                    <span className="text-emerald-400">{(line.match(/(OK|READY)$/) || [''])[0]}</span>
-                  </div>
-                ))}
-                {logCount >= BOOT_LOG.length && <div className="text-cyan-400/80 typing-cursor">_</div>}
-              </div>
-            </div>
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+            <button
+              onClick={() => navigate('/enter')}
+              className="group relative px-10 py-5 font-orbitron font-black text-sm tracking-[0.2em] uppercase text-slate-950 bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400 rounded-xl shadow-[0_0_30px_rgba(6,182,212,0.5)] hover:shadow-[0_0_60px_rgba(6,182,212,0.8)] hover:scale-105 transition-all duration-300 flex items-center gap-3 overflow-hidden"
+            >
+              <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/40 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+              <Play className="w-5 h-5 relative z-10 fill-slate-950" />
+              <span className="relative z-10">Begin Simulation</span>
+              <ChevronRight className="w-4 h-4 relative z-10 group-hover:translate-x-1 transition-transform" />
+            </button>
+            <a
+              href="#features"
+              className="group px-8 py-4 font-space font-bold text-sm tracking-wider uppercase text-slate-300 border border-slate-700/80 bg-slate-900/40 backdrop-blur-sm rounded-xl hover:border-cyan-500/50 hover:text-cyan-300 hover:bg-slate-800/50 transition-all duration-300 flex items-center gap-2"
+            >
+              <Layers className="w-4 h-4" />
+              Explore Systems
+              <ArrowDown className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+            </a>
+          </div>
 
-            {/* Telemetry bars */}
-            <div className="space-y-3">
-              {TELEMETRY.map((t, i) => (
-                <div key={t.key} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-widest">
-                    <span className="flex items-center gap-2 text-slate-300">
-                      <span className={`h-2 w-2 rounded-full ${t.dot} animate-pulse`} /> {t.key}
-                    </span>
-                    <span className="text-slate-400 tabular-nums">{vals[i].toFixed(1)}%</span>
-                  </div>
-                  <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full bg-gradient-to-r ${t.bar} transition-[width] duration-1000 ease-out`}
-                      style={{ width: `${vals[i]}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+          {/* System badges */}
+          <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] font-mono text-slate-600 tracking-[0.2em] uppercase">
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-800/60 bg-slate-900/30">
+              <Gauge className="w-3 h-3 text-cyan-500/50" /> XGBoost Core
+            </span>
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-800/60 bg-slate-900/30">
+              <Activity className="w-3 h-3 text-emerald-500/50" /> FastAPI Backend
+            </span>
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-800/60 bg-slate-900/30">
+              <Server className="w-3 h-3 text-purple-500/50" /> React + Three.js
+            </span>
           </div>
         </div>
 
-        {/* Feature grid */}
-        <div className="grid md:grid-cols-3 gap-5 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300 fill-mode-both">
-          {FEATURES.map((f) => (
-            <div
-              key={f.title}
-              className="group relative p-6 bg-slate-900/40 backdrop-blur-sm rounded-2xl border border-slate-800/80 hover:-translate-y-1.5 hover:border-slate-600/80 transition-all duration-500 cursor-default overflow-hidden"
-            >
-              <div className="absolute -right-8 -top-8 w-24 h-24 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: f.glow }} />
-              <Corners color="rgba(148,163,184,0.25)" />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-3">
-                  <f.icon className={`w-6 h-6 ${f.color} group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300`} />
-                  <span className="text-[10px] font-mono text-slate-600 tracking-widest">{f.code}</span>
+        {/* Scroll indicator */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 animate-bounce">
+          <span className="text-[9px] font-mono text-slate-600 tracking-[0.3em] uppercase">Scroll</span>
+          <ArrowDown className="w-4 h-4 text-cyan-500/50" />
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════
+           SECTION 2 — BOOT SEQUENCE + STATS
+           ═══════════════════════════════════════════ */}
+      <section className="relative py-24 md:py-32 overflow-hidden">
+        {/* Horizontal divider glow */}
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-60 h-20 blur-3xl bg-cyan-500/10 -translate-y-1/2" />
+
+        <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+          {/* Boot log terminal */}
+          <Reveal>
+            <div className="relative cyber-glass cyber-border-cyan rounded-2xl p-6 overflow-hidden">
+              <Corners />
+              <div className="cyber-sweep-overlay opacity-30" />
+              <div className="relative z-10 space-y-4">
+                <h3 className="font-orbitron font-bold text-cyan-400 text-xs tracking-[0.25em] uppercase flex items-center gap-2 text-glow-cyan">
+                  <Terminal className="w-4 h-4" /> Inference Engine Boot
+                </h3>
+                <div className="rounded-lg border border-slate-800 bg-slate-950/70 p-4 font-mono text-[11px] leading-relaxed min-h-[170px]">
+                  {BOOT_LOG.slice(0, logCount).map((line, i) => (
+                    <div key={i} className="text-slate-400 animate-in fade-in slide-in-from-left-2 duration-300">
+                      {line.replace(/(OK|READY)$/, '')}
+                      <span className={line.includes('READY') ? 'text-cyan-400 font-bold' : 'text-emerald-400'}>
+                        {(line.match(/(OK|READY)$/) || [''])[0]}
+                      </span>
+                    </div>
+                  ))}
+                  {logCount >= BOOT_LOG.length && (
+                    <div className="text-cyan-400/80 mt-2 typing-cursor">
+                      awaiting CEO input
+                    </div>
+                  )}
                 </div>
-                <h3 className="text-md font-space font-bold text-white mb-2 tracking-wide">{f.title}</h3>
-                <p className="text-xs text-slate-400 font-space leading-relaxed">{f.body}</p>
+                {/* Mini status indicators */}
+                <div className="flex items-center gap-4 text-[10px] font-mono">
+                  <span className="flex items-center gap-1.5 text-emerald-400/70">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Revenue Model
+                  </span>
+                  <span className="flex items-center gap-1.5 text-purple-400/70">
+                    <span className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
+                    Productivity Model
+                  </span>
+                  <span className="flex items-center gap-1.5 text-cyan-400/70">
+                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                    Event Engine
+                  </span>
+                </div>
               </div>
             </div>
-          ))}
+          </Reveal>
+
+          {/* Stats grid */}
+          <Reveal delay={200}>
+            <div className="grid grid-cols-2 gap-5">
+              {STATS.map((s, i) => (
+                <div
+                  key={s.label}
+                  className="group relative p-5 bg-slate-900/50 border border-slate-800/60 rounded-xl hover:border-cyan-500/40 hover:bg-slate-800/40 transition-all duration-500"
+                >
+                  <Corners color="rgba(148,163,184,0.15)" />
+                  <s.icon className="w-5 h-5 text-cyan-400/50 mb-3 group-hover:text-cyan-400 transition-colors" />
+                  <div className="text-3xl md:text-4xl font-orbitron font-black text-white mb-1">
+                    <Counter end={s.value} suffix={s.suffix} duration={1800 + i * 200} />
+                  </div>
+                  <div className="text-[11px] font-mono text-slate-500 uppercase tracking-widest">{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════
+           SECTION 3 — FEATURES
+           ═══════════════════════════════════════════ */}
+      <section id="features" className="relative py-24 md:py-32 overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent" />
+
+        <div className="max-w-6xl mx-auto px-6">
+          <Reveal>
+            <div className="text-center mb-16">
+              <span className="text-[11px] font-mono uppercase tracking-[0.5em] text-indigo-400/60 flex items-center justify-center gap-3 mb-4">
+                <span className="h-px w-8 bg-indigo-500/30" /> Core Systems <span className="h-px w-8 bg-indigo-500/30" />
+              </span>
+              <h2 className="text-4xl md:text-5xl font-orbitron font-black text-white tracking-tight mb-4">
+                Six Engines.{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
+                  One Simulation.
+                </span>
+              </h2>
+              <p className="text-slate-500 font-space max-w-xl mx-auto">
+                Every subsystem works in concert to create the most realistic AI business strategy experience ever built.
+              </p>
+            </div>
+          </Reveal>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {FEATURES.map((f, i) => (
+              <Reveal key={f.code} delay={i * 100}>
+                <div
+                  className={`group relative p-6 bg-slate-900/40 backdrop-blur-sm rounded-2xl border ${f.border} ${f.hoverBorder} hover:-translate-y-2 hover:shadow-lg transition-all duration-500 cursor-default overflow-hidden h-full`}
+                >
+                  {/* Hover glow */}
+                  <div
+                    className="absolute -right-10 -top-10 w-32 h-32 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                    style={{ background: f.glow }}
+                  />
+                  <Corners color="rgba(148,163,184,0.15)" />
+
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-4">
+                      <f.icon className={`w-7 h-7 ${f.color} group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300`} />
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-mono ${f.color} opacity-60 px-2 py-0.5 rounded-full border border-current/20 bg-current/5`}>
+                          {f.stat}
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-600 tracking-widest">{f.code}</span>
+                      </div>
+                    </div>
+                    <h3 className="text-lg font-orbitron font-bold text-white mb-2 tracking-wide">{f.title}</h3>
+                    <p className="text-sm text-slate-400 font-space leading-relaxed">{f.body}</p>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════
+           SECTION 4 — ENDINGS MATRIX
+           ═══════════════════════════════════════════ */}
+      <section className="relative py-24 md:py-32 overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-rose-500/30 to-transparent" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-24 blur-3xl bg-rose-500/8 -translate-y-1/2" />
+
+        <div className="max-w-6xl mx-auto px-6">
+          <Reveal>
+            <div className="text-center mb-16">
+              <span className="text-[11px] font-mono uppercase tracking-[0.5em] text-rose-400/60 flex items-center justify-center gap-3 mb-4">
+                <span className="h-px w-8 bg-rose-500/30" /> Outcomes <span className="h-px w-8 bg-rose-500/30" />
+              </span>
+              <h2 className="text-4xl md:text-5xl font-orbitron font-black text-white tracking-tight mb-4">
+                8 Endings.{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-amber-400">
+                  Your Legacy.
+                </span>
+              </h2>
+              <p className="text-slate-500 font-space max-w-xl mx-auto">
+                From Unicorn Exit to Crash & Burn — every decision chain leads to a distinct outcome.
+              </p>
+            </div>
+          </Reveal>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {ENDINGS.map((e, i) => (
+              <Reveal key={e.name} delay={i * 80}>
+                <div className="group relative p-5 bg-slate-900/50 border border-slate-800/60 rounded-xl hover:border-slate-600/80 hover:-translate-y-1 transition-all duration-500 text-center overflow-hidden cursor-default">
+                  {/* Gradient glow on hover */}
+                  <div className={`absolute inset-0 bg-gradient-to-br ${e.color} opacity-0 group-hover:opacity-[0.06] transition-opacity duration-500`} />
+                  <div className="relative z-10">
+                    <span className="text-3xl mb-3 block">{e.emoji}</span>
+                    <h4 className="text-sm font-orbitron font-bold text-white mb-1">{e.name}</h4>
+                    <p className="text-[11px] text-slate-500 font-mono">{e.desc}</p>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════
+           SECTION 5 — ARCHITECTURE OVERVIEW
+           ═══════════════════════════════════════════ */}
+      <section className="relative py-24 md:py-32 overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+
+        <div className="max-w-5xl mx-auto px-6">
+          <Reveal>
+            <div className="relative cyber-glass rounded-2xl border border-emerald-500/20 p-8 md:p-12 overflow-hidden">
+              <Corners color="rgba(16,185,129,0.4)" />
+              <div className="cyber-sweep-overlay opacity-20" />
+
+              <div className="relative z-10 grid md:grid-cols-2 gap-10 items-center">
+                {/* Left: Architecture description */}
+                <div>
+                  <span className="text-[11px] font-mono uppercase tracking-[0.5em] text-emerald-400/60 flex items-center gap-3 mb-4">
+                    <Network className="w-3 h-3" /> System Architecture
+                  </span>
+                  <h2 className="text-3xl md:text-4xl font-orbitron font-black text-white tracking-tight mb-6">
+                    Built for{' '}
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">
+                      Real Inference
+                    </span>
+                  </h2>
+                  <div className="space-y-4 text-sm text-slate-400 font-space">
+                    <p>
+                      Your decisions flow through a full-stack ML pipeline: React captures input → FastAPI normalizes features → XGBoost predicts outcomes → Business rules compute the next company state.
+                    </p>
+                    <p>
+                      No mock data. No random dice rolls. Every revenue and productivity number comes from a gradient-boosted model trained on <span className="text-emerald-400">200K+ rows</span> of real corporate AI adoption data.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right: Tech flow visualization */}
+                <div className="space-y-3">
+                  {[
+                    { label: 'Player Input', icon: Users, color: 'text-cyan-400', border: 'border-cyan-500/30' },
+                    { label: 'React + Zustand', icon: Layers, color: 'text-blue-400', border: 'border-blue-500/30' },
+                    { label: 'FastAPI Pipeline', icon: Server, color: 'text-emerald-400', border: 'border-emerald-500/30' },
+                    { label: 'XGBoost Inference', icon: BrainCircuit, color: 'text-amber-400', border: 'border-amber-500/30' },
+                    { label: 'Business Rules', icon: Shield, color: 'text-purple-400', border: 'border-purple-500/30' },
+                    { label: 'Dashboard Update', icon: BarChart, color: 'text-rose-400', border: 'border-rose-500/30' },
+                  ].map((step, i) => (
+                    <div key={step.label} className="flex items-center gap-3">
+                      <div className={`flex-shrink-0 w-10 h-10 rounded-lg border ${step.border} bg-slate-900/60 flex items-center justify-center`}>
+                        <step.icon className={`w-5 h-5 ${step.color}`} />
+                      </div>
+                      <div className="flex-1 h-px bg-gradient-to-r from-slate-700 to-transparent" />
+                      <span className={`text-xs font-mono ${step.color} tracking-wider`}>{step.label}</span>
+                      {i < 5 && (
+                        <ChevronRight className="w-3 h-3 text-slate-700 flex-shrink-0 rotate-90 md:rotate-0 opacity-0 md:opacity-100" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════
+           SECTION 6 — FINAL CTA
+           ═══════════════════════════════════════════ */}
+      <section className="relative py-32 md:py-44 overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
+        {/* Background elements */}
+        <div className="absolute inset-0 z-0" style={{
+          background: 'radial-gradient(ellipse at 50% 50%, rgba(6,182,212,0.08), transparent 60%)',
+        }} />
+        <div className="absolute bottom-0 inset-x-0 h-[40vh] z-0 pointer-events-none overflow-hidden" style={{ perspective: '300px' }}>
+          <div
+            className="absolute inset-x-[-60%] bottom-0 h-[250%] origin-bottom"
+            style={{
+              transform: 'rotateX(72deg)',
+              backgroundImage:
+                'linear-gradient(rgba(6,182,212,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(6,182,212,0.2) 1px, transparent 1px)',
+              backgroundSize: '50px 50px',
+              maskImage: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent 65%)',
+              WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent 65%)',
+              animation: 'grid-pan 5s linear infinite',
+            }}
+          />
         </div>
 
-        {/* CTA */}
-        <div className="flex flex-col items-center gap-3 pt-2 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500 fill-mode-both">
-          <button
-            onClick={() => navigate('/enter')}
-            className="group relative px-10 py-5 font-space font-black text-sm tracking-[0.25em] uppercase text-slate-950 bg-gradient-to-r from-cyan-400 to-sky-400 rounded-xl shadow-[0_0_30px_rgba(6,182,212,0.5)] hover:shadow-[0_0_50px_rgba(6,182,212,0.85)] hover:scale-105 transition-all duration-300 flex items-center gap-3 overflow-hidden"
-          >
-            <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/40 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-            <Terminal className="w-4 h-4 relative z-10" />
-            <span className="relative z-10">Enter Simulation Environment</span>
-            <ChevronRight className="w-4 h-4 relative z-10 group-hover:translate-x-1 transition-transform" />
-          </button>
-          <p className="text-[10px] font-mono text-slate-600 tracking-[0.3em] uppercase flex items-center gap-2">
-            <Layers className="w-3 h-3" /> XGBoost Inference Core
-            <span className="text-slate-700">//</span>
-            <LineChart className="w-3 h-3" /> Survive to 2035
-            <span className="text-slate-700">//</span>
-            <Activity className="w-3 h-3" /> {clock}
-          </p>
+        <div className="relative z-10 text-center max-w-3xl mx-auto px-6">
+          <Reveal>
+            <div className="mb-8">
+              <div className="inline-flex items-center justify-center w-20 h-20 mb-6 rounded-2xl border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 to-indigo-500/10 shadow-[0_0_40px_rgba(6,182,212,0.2)]">
+                <Crosshair className="w-10 h-10 text-cyan-300" />
+              </div>
+              <h2 className="text-4xl md:text-6xl font-orbitron font-black text-white tracking-tight mb-6">
+                Ready to{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-400">
+                  Lead?
+                </span>
+              </h2>
+              <p className="text-lg text-slate-400 font-space mb-10 max-w-lg mx-auto">
+                The board is assembled. The models are trained. The market won't wait.
+                <br />
+                <span className="text-slate-500">Your 20-year countdown starts now.</span>
+              </p>
+            </div>
+          </Reveal>
+
+          <Reveal delay={200}>
+            <button
+              onClick={() => navigate('/enter')}
+              className="group relative px-14 py-6 font-orbitron font-black text-base tracking-[0.2em] uppercase text-slate-950 bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400 rounded-xl shadow-[0_0_40px_rgba(6,182,212,0.5),0_0_80px_rgba(6,182,212,0.2)] hover:shadow-[0_0_60px_rgba(6,182,212,0.8),0_0_120px_rgba(6,182,212,0.3)] hover:scale-105 transition-all duration-500 flex items-center gap-4 mx-auto overflow-hidden"
+            >
+              <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/40 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+              <Terminal className="w-5 h-5 relative z-10" />
+              <span className="relative z-10">Enter Simulation</span>
+              <ChevronRight className="w-5 h-5 relative z-10 group-hover:translate-x-1.5 transition-transform" />
+            </button>
+          </Reveal>
+
+          <Reveal delay={400}>
+            <p className="mt-8 text-[10px] font-mono text-slate-600 tracking-[0.3em] uppercase flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+              <span className="flex items-center gap-1"><Gauge className="w-3 h-3 text-cyan-500/40" /> XGBoost Inference</span>
+              <span className="text-slate-700">•</span>
+              <span className="flex items-center gap-1"><Activity className="w-3 h-3 text-emerald-500/40" /> FastAPI</span>
+              <span className="text-slate-700">•</span>
+              <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3 text-purple-500/40" /> React + Three.js</span>
+              <span className="text-slate-700">•</span>
+              <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-amber-500/40" /> Survive to 2035</span>
+            </p>
+          </Reveal>
         </div>
+      </section>
+
+      {/* Footer strip */}
+      <div className="relative border-t border-slate-800/60 py-6 text-center">
+        <p className="text-[10px] font-mono text-slate-600 tracking-[0.2em] uppercase">
+          The Last CEO © 2024 — Built with React · TypeScript · XGBoost · FastAPI
+        </p>
       </div>
     </div>
   );
