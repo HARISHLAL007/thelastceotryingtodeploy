@@ -164,7 +164,7 @@ export const useGameLoop = () => {
       const organicRevenue = 3500000 + freshState.employees * 200000; // non-AI baseline business (quarterly)
       
       // Smooth Revenue to avoid random spikes
-      const rawAiRevenue = Math.max(0, report.revenue) * AI_REVENUE_SCALE;
+      const rawAiRevenue = Math.max(0, metrics.revenue_impact) * AI_REVENUE_SCALE;
       const quarterlyRevenue = organicRevenue + rawAiRevenue;
 
       const costs = 2000000; // Base operational costs for a quarter
@@ -209,7 +209,7 @@ export const useGameLoop = () => {
 
       // Smooth Morale changes (Max ±10 points per quarter)
       // Productivity gain from ML is a high percentage (e.g. 75%), so we scale it down to a ± impact
-      let rawMoraleImpact = ((report.moraleChange || 50) - 50) / 5; 
+      let rawMoraleImpact = ((metrics.productivity_gain || 50) - 50) / 5; 
       let finalMoraleChange = rawMoraleImpact;
       if (finalMoraleChange > 10) finalMoraleChange = 10;
       if (finalMoraleChange < -10) finalMoraleChange = -10;
