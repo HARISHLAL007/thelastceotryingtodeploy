@@ -21,6 +21,8 @@ const initialState: GameState & { quarterlyPayloads: any[] } = {
   morale: 75,
   roi: 0,
   revenue: 0,
+  valuation: 0,
+  growthRate: 0,
   employees: 10,
   xp: 0,
   level: 1,
@@ -64,18 +66,17 @@ export const useGameStore = create<{
       const startYear = updatedCompany.foundedYear || 2024;
       const initialBudget = updatedCompany.startingBudget || 1000000;
       const initialEmployees = updatedCompany.employees || 10;
-      const mockHistory = [
-        { year: startYear, revenue: 4500000, budget: initialBudget, roi: 0, morale: 75, employees: initialEmployees }
-      ];
+      
       set({
         company: updatedCompany,
         state: {
           ...initialState,
           currentYear: startYear,
+          currentQuarter: 1,
           budget: initialBudget,
           employees: initialEmployees,
           roi: 0,
-          history: mockHistory,
+          history: [],
         },
         lastDecisionOutcome: null,
         currentEvent: null,
@@ -99,9 +100,37 @@ export const useGameStore = create<{
       set((prev) => ({ state: prev.state }));
     },
     updateGameState: (newState) => {
-      set((prev) => ({
-        state: { ...prev.state, ...newState },
-      }));
+      set((prev) => {
+        // Base Company Level completely on raw Valuation (Budget + Revenue*5) to reflect true company size
+        const currentBudget = newState.budget ?? prev.state.budget;
+        const currentRevenue = newState.revenue ?? prev.state.revenue;
+        const currentGrowthRate = newState.growthRate ?? prev.state.growthRate ?? 0;
+        
+        let growthMultiple = 4;
+        if (currentGrowthRate > 30) growthMultiple = 10;
+        else if (currentGrowthRate > 15) growthMultiple = 7;
+        
+        const aiMultiple = 1 + ((prev.company?.aiMaturityScore || 0) / 50); 
+        // For gameStore we assume risk is roughly 50 if we don't have it explicitly since we don't calculate it here.
+        const riskMultiplier = 1 - (50 / 200); 
+        
+        const valuation = newState.valuation ?? (currentBudget + (currentRevenue * growthMultiple * aiMultiple * riskMultiplier));
+        
+        let calculatedLevel = 1;
+        if (valuation > 1_000_000_000) calculatedLevel = 10; // $1B Unicorn
+        else if (valuation > 500_000_000) calculatedLevel = 9;
+        else if (valuation > 250_000_000) calculatedLevel = 8;
+        else if (valuation > 100_000_000) calculatedLevel = 7;
+        else if (valuation > 50_000_000) calculatedLevel = 6;
+        else if (valuation > 20_000_000) calculatedLevel = 5;
+        else if (valuation > 10_000_000) calculatedLevel = 4;
+        else if (valuation > 5_000_000) calculatedLevel = 3;
+        else if (valuation > 2_000_000) calculatedLevel = 2;
+
+        return {
+          state: { ...prev.state, ...newState, level: calculatedLevel, valuation },
+        };
+      });
     },
     updateCompany: (updates) => {
       set((prev) => ({
@@ -118,15 +147,7 @@ export const useGameStore = create<{
       set({ currentEvent: event });
     },
     addXp: (amount) => {
-      set((prev) => {
-        let newXp = prev.state.xp + amount;
-        let newLevel = prev.state.level;
-        if (newXp >= newLevel * 1000) {
-          newXp -= newLevel * 1000;
-          newLevel += 1;
-        }
-        return { state: { ...prev.state, xp: newXp, level: newLevel } };
-      });
+      // Legacy XP system disabled to enforce Valuation-based leveling. Keeps signature to avoid breaking changes.
     },
     resetGame: () => {
       set({

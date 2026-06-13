@@ -160,73 +160,178 @@ export const useGameLoop = () => {
          ];
       }
 
-      const AI_REVENUE_SCALE = 8; // lifts the per-quarter model impact to enterprise scale
-      const organicRevenue = 3500000 + freshState.employees * 200000; // non-AI baseline business (quarterly)
+      const AI_REVENUE_SCALE = 0.1; // Vastly scale down ML absolute numbers
       
-      // Smooth Revenue to avoid random spikes
-      const rawAiRevenue = Math.max(0, metrics.revenue_impact) * AI_REVENUE_SCALE;
-      const quarterlyRevenue = organicRevenue + rawAiRevenue;
+      // INDUSTRY SPECIFIC ECONOMICS
+      const industry = (freshCompany?.industry || 'technology').toLowerCase();
+      let expectedRevenuePerEmployee = 1000000;
+      let organicBase = 12500; // Realistic seed quarter revenue ($50k annual)
+      if (industry === 'healthcare') { expectedRevenuePerEmployee = 400000; organicBase = 10000; }
+      else if (industry === 'manufacturing') { expectedRevenuePerEmployee = 250000; organicBase = 7500; }
+      else if (industry === 'retail') { expectedRevenuePerEmployee = 150000; organicBase = 5000; }
+      else if (industry === 'logistics') { expectedRevenuePerEmployee = 300000; organicBase = 6000; }
+      
+      // Base revenue grows organically. Startups don't get full expected revenue instantly.
+      const previousQuarterRevenue = freshState.revenue / 4; 
+      const pmfMultiplier = previousQuarterRevenue > 1000000 ? 1 : (previousQuarterRevenue > 0 ? 0.25 : 0.05);
+      
+      const employeeRevenueContribution = freshState.employees * (expectedRevenuePerEmployee / 8) * pmfMultiplier;
+      const organicRevenue = (previousQuarterRevenue > 0 ? previousQuarterRevenue : organicBase) + employeeRevenueContribution;
+      
+      // Cap AI revenue impact for small startups so it doesn't add $2M flat to a $50k startup
+      const maxAiGain = previousQuarterRevenue > 0 ? previousQuarterRevenue * 0.5 : 20000;
+      const rawAiRevenue = Math.min(Math.max(0, metrics.revenue_impact) * AI_REVENUE_SCALE, maxAiGain);
+      
+      let quarterlyRevenue = organicRevenue + rawAiRevenue;
 
-      const costs = 2000000; // Base operational costs for a quarter
-      const salaries = freshState.employees * 40000; // 40k per quarter per employee
+      // REVENUE GROWTH RATE & SATURATION CAPS
+      let growthRate = previousQuarterRevenue > 0 ? ((quarterlyRevenue - previousQuarterRevenue) / previousQuarterRevenue) * 100 : 0;
+      
+      let maxGrowth = 25; // 0-20M
+      if (previousQuarterRevenue > 25000000) maxGrowth = 8; // 100M+
+      else if (previousQuarterRevenue > 12500000) maxGrowth = 12; // 50-100M
+      else if (previousQuarterRevenue > 5000000) maxGrowth = 18; // 20-50M
+      
+      // Allow a flat safety net for tiny startups so they can grow from 0
+      const maxAllowedRevenue = Math.max(previousQuarterRevenue * (1 + (maxGrowth / 100)), previousQuarterRevenue + 100000, 50000);
+      if (quarterlyRevenue > maxAllowedRevenue) {
+          quarterlyRevenue = maxAllowedRevenue;
+          growthRate = previousQuarterRevenue > 0 ? ((quarterlyRevenue - previousQuarterRevenue) / previousQuarterRevenue) * 100 : 0;
+      }
 
-      const nextBudget = freshState.budget + quarterlyRevenue - costs - salaries;
       const annualizedRevenue = quarterlyRevenue * 4;
+      const revenuePerEmployee = annualizedRevenue / Math.max(1, freshState.employees);
+
+      // Enterprise Tax
+      let enterpriseCostMultiplier = 1;
+      if (freshState.employees > 200) {
+          if (revenuePerEmployee < expectedRevenuePerEmployee * 0.8) enterpriseCostMultiplier = 3.0;
+          else enterpriseCostMultiplier = 1.5; 
+      } else if (freshState.employees > 50) {
+          if (revenuePerEmployee < expectedRevenuePerEmployee * 0.8) enterpriseCostMultiplier = 2.0;
+          else enterpriseCostMultiplier = 1.2;
+      }
+
+      const scalingCosts = quarterlyRevenue * 0.40; // 40% COGS
+      const baseFixedCosts = 50000 + (freshState.employees * 5000); // Startup-friendly base costs
+      const costs = (baseFixedCosts * enterpriseCostMultiplier) + scalingCosts; 
+      const salaries = freshState.employees * 45000;
+
       const totalAiInvestment = freshCompany?.aiInvestment || 1;
-
-      // Realistic ROI: amortize AI investment over 5 years (20% per year) for ROI calculation
       const amortizedInvestment = totalAiInvestment * 0.20;
-      const totalAnnualExpenses = (costs * 4) + (salaries * 4) + amortizedInvestment;
-      const profit = annualizedRevenue - totalAnnualExpenses;
-      let rawRoi = Math.round((profit / totalAnnualExpenses) * 100);
+      const quarterAiInvestment = amortizedInvestment / 4;
       
-      // Smooth ROI changes (Max ±15% per quarter)
-      const previousRoi = freshState.roi;
-      let roiChange = rawRoi - previousRoi;
-      if (roiChange > 15) roiChange = 15;
-      if (roiChange < -15) roiChange = -15;
-      let calculatedRoi = previousRoi + roiChange;
-      calculatedRoi = Math.max(calculatedRoi, -100);
+      const quarterExpenses = costs + salaries + quarterAiInvestment;
+      const quarterProfit = quarterlyRevenue - quarterExpenses;
+      
+      // STRICT BUDGET EQUATION
+      const nextBudget = freshState.budget + quarterProfit;
 
-      // Workforce & Morale Dynamics
+      const totalAnnualExpenses = quarterExpenses * 4;
+      
+      // ROI CALCULATIONS
+      const quarterRoi = Math.round((quarterProfit / quarterExpenses) * 100);
+      const startingBudget = freshCompany?.startingBudget || 1000000;
+      const totalCapitalInvested = startingBudget + totalAiInvestment;
+      const cumulativeProfit = nextBudget - startingBudget;
+      const cumulativeRoi = Math.round((cumulativeProfit / totalCapitalInvested) * 100);
+
       let nextEmployees = freshState.employees;
       let nextMorale = freshState.morale;
 
-      // Automation replaces jobs naturally if high, slowing employee growth
-      if ((freshCompany?.automationRate || 0) > 50) {
+      // WORKFORCE & MORALE (Dynamic Penalties)
+      if ((freshCompany?.automationRate || 0) > 60) {
          if (nextEmployees > 0) {
-             // Up to 5% attrition based on how far above 50% automation is
-             const automationFactor = (freshCompany.automationRate - 50) / 1000; 
+             const automationFactor = (freshCompany.automationRate - 60) / 2000; 
              const laidOff = Math.ceil(nextEmployees * automationFactor);
+             const layoffPercentage = (laidOff / Math.max(1, nextEmployees)) * 100;
              nextEmployees -= laidOff;
+             
+             if (layoffPercentage >= 30) nextMorale -= 35;
+             else if (layoffPercentage >= 15) nextMorale -= 20;
+             else if (layoffPercentage >= 5) nextMorale -= 10;
+             else if (layoffPercentage > 0) nextMorale -= 5;
          }
       }
 
-      if (nextEmployees <= 0) {
-         nextEmployees = 0;
-         nextMorale += ((freshCompany?.automationRate || 0) >= 90) ? 5 : -5;
+      // STRICT AUTO-HIRING: Max Auto Hire = Available Cash / Annual Cost Per Employee
+      if (annualizedRevenue > nextEmployees * expectedRevenuePerEmployee && (freshCompany?.automationRate || 0) < 95) {
+          const neededStaff = Math.floor((annualizedRevenue / expectedRevenuePerEmployee) - nextEmployees);
+          
+          const annualCostPerEmployee = (45000 * 4) + (5000 * 4); // Salary + fixed cost scaling
+          const maxAffordableHires = Math.max(0, Math.floor(nextBudget / annualCostPerEmployee));
+          
+          const actualHires = Math.min(Math.ceil(neededStaff * 0.10), maxAffordableHires);
+          nextEmployees += actualHires;
       }
 
-      // Smooth Morale changes (Max ±10 points per quarter)
-      // Productivity gain from ML is a high percentage (e.g. 75%), so we scale it down to a ± impact
+      if (nextEmployees <= 0) nextEmployees = 0;
+
       let rawMoraleImpact = ((metrics.productivity_gain || 50) - 50) / 5; 
-      let finalMoraleChange = rawMoraleImpact;
-      if (finalMoraleChange > 10) finalMoraleChange = 10;
-      if (finalMoraleChange < -10) finalMoraleChange = -10;
+      let finalMoraleChange = Math.round(rawMoraleImpact * 0.5);
+      if (finalMoraleChange > 5) finalMoraleChange = 5;
+      if (finalMoraleChange < -5) finalMoraleChange = -5;
       
-      nextMorale = nextMorale + finalMoraleChange;
+      nextMorale = Math.round(nextMorale + finalMoraleChange);
       nextMorale = Math.max(0, Math.min(100, nextMorale));
 
-      const quarterExpenses = costs + salaries + (amortizedInvestment / 4);
+      // DYNAMIC RISK SCORE
+      let calculatedRisk = 50;
+      calculatedRisk -= (nextBudget / 1000000) * 1.5; 
+      calculatedRisk -= (quarterProfit / 1000000) * 3;
+      calculatedRisk -= (freshCompany?.aiMaturityScore || 0) / 4;
+      calculatedRisk -= (freshCompany?.automationRate || 0) / 4;
+      calculatedRisk += (100 - nextMorale) / 2;
+      if (growthRate > 20) calculatedRisk += 10; 
+      calculatedRisk = Math.max(5, Math.min(95, calculatedRisk));
 
-      // Logic override: If the company is bleeding money and budget is low, force a survival recommendation
-      let finalRecommendation = metrics.recommendation;
-      let boardDecision = metrics.board_decision;
+      // VALUATION DEPENDENT ON GROWTH
+      let growthMultiple = 4;
+      if (growthRate > 30) growthMultiple = 10;
+      else if (growthRate > 15) growthMultiple = 7;
       
-      if (quarterlyRevenue < quarterExpenses && nextBudget < 2000000) {
-         finalRecommendation = "CRITICAL WARNING: The company is experiencing severe negative cash flow and is nearing bankruptcy. Immediate cost reduction, automation, and operational efficiency are required. Halt aggressive expansion.";
-         boardDecision = "MANDATE COST REDUCTION";
+      const aiMultiple = 1 + ((freshCompany?.aiMaturityScore || 0) / 50); // 1x to 3x
+      const riskMultiplier = 1 - (calculatedRisk / 200); // 0.525 to 0.975
+      
+      let valuation = nextBudget + (annualizedRevenue * growthMultiple * aiMultiple * riskMultiplier);
+      
+      // If the company is actively bankrupt (negative cash, high risk), crush the valuation to a fraction of revenue
+      if (nextBudget < 0 && calculatedRisk > 80) {
+          valuation = Math.max(10000, annualizedRevenue * 0.2); 
       }
+
+      // EVOLVING BOARD RECOMMENDATIONS
+      let finalRecommendation = "Maintain steady operational growth.";
+      let boardDecision = "CONTINUE OPERATIONS";
+
+      if (quarterProfit < 0 && nextBudget < 2000000) {
+         finalRecommendation = "CRITICAL WARNING: Severe negative cash flow. Immediate cost reduction, automation, and operational efficiency are required. Halt aggressive expansion.";
+         boardDecision = "MANDATE COST REDUCTION";
+      } else if (nextMorale < 40) {
+         finalRecommendation = "Employee morale is critically low. High turnover threatens operations. Address company culture immediately before scaling further.";
+         boardDecision = "IMPROVE CULTURE & RETENTION";
+      } else if (calculatedRisk > 80) {
+         finalRecommendation = "The company is over-leveraged with excessive operational risk. Focus on stabilizing infrastructure and paying down technical debt.";
+         boardDecision = "MITIGATE OPERATIONAL RISKS";
+      } else if (valuation > 5_000_000_000) {
+         finalRecommendation = "Valuation exceeds $5B. Board officially recommends initiating IPO proceedings or exploring mega-merger opportunities.";
+         boardDecision = "PREPARE FOR IPO";
+      } else if (valuation > 1_000_000_000) {
+         finalRecommendation = "Unicorn status achieved. Board advises focusing on market defense and global enterprise scaling.";
+         boardDecision = "DEFEND MARKET SHARE";
+      } else if (valuation > 100_000_000) {
+         finalRecommendation = "Mid-market dominance reached. Shift strategy toward capturing enterprise contracts and scaling strategic acquisitions.";
+         boardDecision = "SCALE ENTERPRISE SALES";
+      } else if (quarterProfit > 2000000) {
+         finalRecommendation = "Cash flow is strongly positive. Reinvest profits into aggressive talent acquisition and cutting-edge R&D.";
+         boardDecision = "AUTHORIZE AGGRESSIVE EXPANSION";
+      } else {
+         finalRecommendation = "Focus on achieving product-market fit and establishing sustainable initial revenue streams.";
+         boardDecision = "FIND PRODUCT-MARKET FIT";
+      }
+
+      // Scale down the XGBoost 10-year ROI prediction so the UI numbers are realistic for the player
+      const scaledMLRoi = Math.round(metrics.roi * 0.15);
 
       const reportPayload: LLMReport = {
         quarter: preQuarter || freshState.currentQuarter,
@@ -234,30 +339,36 @@ export const useGameLoop = () => {
         summary: `Board Decision: ${boardDecision} - ${finalRecommendation}`,
         revenue: Math.round(quarterlyRevenue),
         expenses: Math.round(quarterExpenses),
-        roi: calculatedRoi,
-        moraleChange: Math.round(finalMoraleChange),
+        expenseBreakdown: {
+           salaries: Math.round(salaries),
+           operations: Math.round(costs),
+           aiInvestment: Math.round(quarterAiInvestment)
+        },
+        roi: quarterRoi,
+        cumulativeRoi: cumulativeRoi,
+        moraleChange: finalMoraleChange,
         recommendations,
         risks: [
-          `Projected 10-Year AI ROI: ${Math.round(metrics.roi)}%`,
-          `AI Transformation Score: ${metrics.ai_transformation_score.toFixed(0)}/100`,
-          `Risk Level: ${metrics.readiness_level}`
+          `Company Valuation: $${Math.round(valuation).toLocaleString()}`,
+          `Quarter Revenue Growth: ${growthRate.toFixed(1)}%`,
+          `Cumulative ROI: ${cumulativeRoi}%`
         ]
       };
 
       actions.setReport(reportPayload);
-      
-      // Give XP based on ML metrics
       actions.addXp(Math.round(metrics.ai_transformation_score * 10));
 
       actions.updateGameState({
         revenue: annualizedRevenue,
         budget: nextBudget, 
-        roi: calculatedRoi,
+        roi: cumulativeRoi,
+        growthRate: growthRate,
         morale: nextMorale,
-        employees: nextEmployees
+        employees: nextEmployees,
+        valuation: valuation
       });
       
-      return { nextBudget, calculatedRoi, annualizedRevenue, nextEmployees, nextMorale };
+      return { nextBudget, calculatedRoi: cumulativeRoi, annualizedRevenue, nextEmployees, nextMorale };
     } catch (err) {
       console.warn('Backend API offline. Could not fetch XGBoost prediction.', err);
       setError('Failed to connect to ML Backend.');
@@ -288,11 +399,9 @@ export const useGameLoop = () => {
     });
 
     try {
-      // 1. Update Game State (Budget, Morale, Employees) -> Subtracting AI Investment/Decision Cost here
       const preBudget = state.budget - decision.cost;
       const nextEmployees = state.employees + decision.employeeGain;
 
-      // Smooth Morale impact from decision
       let decisionMoraleImpact = decision.moraleImpact;
       if (decisionMoraleImpact > 10) decisionMoraleImpact = 10;
       if (decisionMoraleImpact < -10) decisionMoraleImpact = -10;
@@ -300,20 +409,32 @@ export const useGameLoop = () => {
 
       const preCompanyState = { ...company };
 
-      // 2. Update Company Core AI Metrics (this feeds ML)
+      let currentMaturity = company?.aiMaturityScore || 0;
+      let maturityMultiplier = 1;
+      if (currentMaturity > 95) maturityMultiplier = 0.1;
+      else if (currentMaturity > 85) maturityMultiplier = 0.25;
+      else if (currentMaturity > 70) maturityMultiplier = 0.5;
+      else if (currentMaturity > 50) maturityMultiplier = 0.8;
+
+      let currentAutomation = company?.automationRate || 0;
+      let automationMultiplier = 1;
+      if (currentAutomation > 95) automationMultiplier = 0.1;
+      else if (currentAutomation > 85) automationMultiplier = 0.25;
+      else if (currentAutomation > 70) automationMultiplier = 0.5;
+      else if (currentAutomation > 50) automationMultiplier = 0.8;
+
       actions.updateCompany({
         aiInvestment: (company?.aiInvestment || 0) + decision.cost,
-        aiMaturityScore: Math.min((company?.aiMaturityScore || 0) + decision.aiMaturityGain, 100),
-        automationRate: Math.min((company?.automationRate || 0) + decision.automationGain, 100),
+        aiMaturityScore: Math.min(currentMaturity + (decision.aiMaturityGain * maturityMultiplier), 100),
+        automationRate: Math.min(currentAutomation + (decision.automationGain * automationMultiplier), 100),
         trainingHours: (company?.trainingHours || 0) + decision.trainingGain,
         deploymentCount: (company?.deploymentCount || 0) + decision.deploymentGain
       });
 
       const nextQuarter = state.currentQuarter + 1;
-      const willYearChange = nextQuarter > 4;
+      const willYearChange = nextQuarter > 2; // FIXED to exactly 2 quarters
       const nextYear = willYearChange ? state.currentYear + 1 : state.currentYear;
 
-      // Interim state update before fetching the report
       actions.updateGameState({
         budget: preBudget,
         morale: preMorale,

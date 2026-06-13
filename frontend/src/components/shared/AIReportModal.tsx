@@ -153,9 +153,27 @@ export const AIReportModal = () => {
                     <div className="text-cyan-600/80 tracking-widest text-[9px] mb-1">REVENUE</div>
                     <div className="text-emerald-400 font-bold"><AnimatedNumber value={report.revenue} prefix="$" /></div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-cyan-600/80 tracking-widest text-[9px] mb-1">EXPENSES</div>
+                  <div className="text-right group relative cursor-help">
+                    <div className="text-cyan-600/80 tracking-widest text-[9px] mb-1 border-b border-cyan-900/30 border-dashed inline-block pb-0.5">TOTAL EXPENSES</div>
                     <div className="text-rose-400 font-bold">-<AnimatedNumber value={report.expenses} prefix="$" /></div>
+                    
+                    {report.expenseBreakdown && (
+                      <div className="absolute top-full right-0 mt-2 bg-slate-900 border border-slate-700 p-3 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 min-w-[200px] text-left">
+                        <div className="text-[10px] tracking-widest text-cyan-600 mb-2 border-b border-cyan-900/50 pb-1">EXPENSE BREAKDOWN</div>
+                        <div className="flex justify-between mb-1">
+                          <span className="text-slate-400">Salaries:</span>
+                          <span className="text-white">${report.expenseBreakdown.salaries.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between mb-1">
+                          <span className="text-slate-400">Operations:</span>
+                          <span className="text-white">${report.expenseBreakdown.operations.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">AI Amortization:</span>
+                          <span className="text-white">${report.expenseBreakdown.aiInvestment.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

@@ -25,6 +25,8 @@ export interface GameState {
   morale: number;
   roi: number;
   revenue: number;
+  valuation: number;
+  growthRate: number;
   employees: number;
   xp: number;
   level: number;
@@ -52,7 +54,13 @@ export interface LLMReport {
   summary: string;
   revenue: number;
   expenses: number;
+  expenseBreakdown?: {
+    salaries: number;
+    operations: number;
+    aiInvestment: number;
+  };
   roi: number;
+  cumulativeRoi: number;
   moraleChange: number;
   recommendations: string[];
   risks: string[];

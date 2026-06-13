@@ -96,6 +96,12 @@ export const GameOverModal = () => {
               }),
               new TableRow({
                 children: [
+                  new TableCell({ children: [new Paragraph("💎 Estimated Valuation")] }),
+                  new TableCell({ children: [new Paragraph({ text: `$${(state.valuation || 0).toLocaleString()}`, bold: true })] }),
+                ]
+              }),
+              new TableRow({
+                children: [
                   new TableCell({ children: [new Paragraph("📅 Final Quarter")] }),
                   new TableCell({ children: [new Paragraph({ text: `${state.currentYear} - Q${state.currentQuarter}`, bold: true })] }),
                 ]
@@ -106,7 +112,7 @@ export const GameOverModal = () => {
 
           new Paragraph({ text: "🎯 EXECUTIVE SUMMARY", heading: HeadingLevel.HEADING_1 }),
           new Paragraph({ text: isVictory 
-            ? "Over the course of the simulation, the company successfully expanded its operations through strategic AI investments and operational decisions. The organization achieved significant capital growth while maintaining maximum employee morale and progressing to the highest possible levels." 
+            ? `Over the course of the simulation, the company successfully expanded its operations through strategic AI investments and operational decisions. The organization achieved an estimated valuation of $${(state.valuation || 0).toLocaleString()} while maintaining an employee morale of ${state.morale}%.`  
             : "The simulation concluded in corporate failure. Operations ceased due to critical insolvency, failing to maintain the necessary capital reserves or operational ROI to sustain market presence." 
           }),
           new Paragraph({ text: "" }),
@@ -226,25 +232,32 @@ export const GameOverModal = () => {
           )}
 
           {/* Vitals summary HUD grid */}
-          <div className="grid grid-cols-3 gap-3 pt-4 font-orbitron">
+          <div className="grid grid-cols-4 gap-2 pt-4 font-orbitron">
             
-            <div className="p-3 bg-slate-950/80 rounded-lg border border-slate-900 flex flex-col justify-center">
-              <span className="text-[9px] text-slate-500 uppercase tracking-widest block">FINAL BUDGET</span>
-              <p className={`text-sm font-bold mt-1 ${isVictory ? 'text-green-400' : 'text-rose-400'}`}>
+            <div className="p-2 bg-slate-950/80 rounded-lg border border-slate-900 flex flex-col justify-center">
+              <span className="text-[8px] text-slate-500 uppercase tracking-widest block">VALUATION</span>
+              <p className={`text-xs font-bold mt-1 ${isVictory ? 'text-yellow-400' : 'text-slate-400'}`}>
+                ${(state.valuation || 0).toLocaleString()}
+              </p>
+            </div>
+
+            <div className="p-2 bg-slate-950/80 rounded-lg border border-slate-900 flex flex-col justify-center">
+              <span className="text-[8px] text-slate-500 uppercase tracking-widest block">BUDGET</span>
+              <p className={`text-xs font-bold mt-1 ${isVictory ? 'text-green-400' : 'text-rose-400'}`}>
                 ${state.budget.toLocaleString()}
               </p>
             </div>
 
-            <div className="p-3 bg-slate-950/80 rounded-lg border border-slate-900 flex flex-col justify-center">
-              <span className="text-[9px] text-slate-500 uppercase tracking-widest block">FINAL ROI</span>
-              <p className="text-sm font-bold text-cyan-400 mt-1">
+            <div className="p-2 bg-slate-950/80 rounded-lg border border-slate-900 flex flex-col justify-center">
+              <span className="text-[8px] text-slate-500 uppercase tracking-widest block">FINAL ROI</span>
+              <p className="text-xs font-bold text-cyan-400 mt-1">
                 {state.roi}%
               </p>
             </div>
 
-            <div className="p-3 bg-slate-950/80 rounded-lg border border-slate-900 flex flex-col justify-center">
-              <span className="text-[9px] text-slate-500 uppercase tracking-widest block">EMPLOYEES</span>
-              <p className="text-sm font-bold text-purple-400 mt-1">
+            <div className="p-2 bg-slate-950/80 rounded-lg border border-slate-900 flex flex-col justify-center">
+              <span className="text-[8px] text-slate-500 uppercase tracking-widest block">EMPLOYEES</span>
+              <p className="text-xs font-bold text-purple-400 mt-1">
                 {state.employees}
               </p>
             </div>

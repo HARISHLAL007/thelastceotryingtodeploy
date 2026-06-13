@@ -78,7 +78,7 @@ export const ALL_ENDINGS: Ending[] = [
   {
     id: 'rogue_ai',
     title: 'ROGUE AI SINGULARITY',
-    description: 'Survive in Technology sector with an ROI > 200%.',
+    description: 'Survive in Technology sector with an ROI > 200% and < 5 employees.',
     badge: '🤖 AI SINGULARITY',
     unlockedMsg: 'WARNING: Autonomous governance threshold exceeded. Executive authority transferred to Neural Core. Human supervision: DISABLED. Enterprise status: POST-HUMAN ORGANIZATION.',
     glowClass: 'border-pink-500/50 shadow-[0_0_20px_rgba(244,63,94,0.15)] bg-pink-500/5',
@@ -114,27 +114,52 @@ export const ALL_ENDINGS: Ending[] = [
 ];
 
 export const getAchievedEnding = (state: GameState, company: CompanyProfile | null): Ending => {
-  if (state.gameResult === 'victory') {
-    if (company?.industry?.toLowerCase() === 'technology' && state.roi > 200) {
+  const currentGrowthRate = state.growthRate || 0;
+  const currentEmployees = state.employees || 0;
+  const currentRevenue = state.revenue || 0;
+  
+  // Estimate profit using the new dynamic startup-friendly costs
+  const baseFixedCosts = 50000 + (currentEmployees * 10000);
+  const currentProfit = currentRevenue - ((baseFixedCosts + (currentRevenue*0.4) + (currentEmployees*45000)) * 4);
+  const aiMaturity = company?.aiMaturityScore || 0;
+  const automation = company?.automationRate || 0;
+
+  // Approximate risk score
+  let risk = 50;
+  risk -= (state.budget / 1000000) * 1.5;
+  risk -= (currentProfit / 1000000) * 3;
+  risk -= aiMaturity / 4;
+  risk -= automation / 4;
+  risk += (100 - state.morale) / 2;
+  if (currentGrowthRate > 20) risk += 10;
+  risk = Math.max(5, Math.min(95, risk));
+
+  const valuation = state.valuation || 0;
+
+  if (state.budget < 0 || risk > 80 || state.gameResult === 'bankruptcy') {
+    return ALL_ENDINGS.find(e => e.id === 'bankruptcy') || ALL_ENDINGS.find(e => e.id === 'crash_burn')!;
+  }
+
+  if (valuation >= 5_000_000_000 && currentGrowthRate > 15 && risk < 20 && currentProfit > 0) {
+     return ALL_ENDINGS.find(e => e.id === 'ipo') || ALL_ENDINGS.find(e => e.id === 'unicorn')!;
+  }
+
+  if (valuation >= 1_000_000_000) {
+    if (automation >= 95 && currentEmployees < 5 && aiMaturity >= 95 && risk < 30 && state.roi > 100) {
       return ALL_ENDINGS.find(e => e.id === 'rogue_ai')!;
     }
-    if (company?.startingBudget === 100000) {
-      return ALL_ENDINGS.find(e => e.id === 'bootstrap_legend')!;
+    if (risk < 40 && currentProfit > 0 && currentGrowthRate > 0 && aiMaturity > 80) {
+       return ALL_ENDINGS.find(e => e.id === 'unicorn')!;
     }
-    if (state.budget > 5000000 && state.roi > 100) {
-      return ALL_ENDINGS.find(e => e.id === 'unicorn')!;
-    }
-    if (state.employees >= 30 && state.budget >= 2000000) {
-      return ALL_ENDINGS.find(e => e.id === 'ipo')!;
-    }
-    if (state.budget > 2000000 && state.roi > 50) {
-      return ALL_ENDINGS.find(e => e.id === 'acquisition')!;
-    }
-    return ALL_ENDINGS.find(e => e.id === 'lifestyle')!;
-  } else {
-    if (state.roi > 50 || state.morale > 80) {
-      return ALL_ENDINGS.find(e => e.id === 'talent_acquired')!;
-    }
-    return ALL_ENDINGS.find(e => e.id === 'crash_burn')!;
   }
+
+  if (valuation >= 300_000_000 && valuation < 1_000_000_000 && currentGrowthRate < 15 && aiMaturity > 60) {
+    return ALL_ENDINGS.find(e => e.id === 'acquisition') || ALL_ENDINGS.find(e => e.id === 'unicorn')!;
+  }
+
+  if (currentRevenue > 100_000_000) {
+    return ALL_ENDINGS.find(e => e.id === 'corporate_behemoth') || ALL_ENDINGS.find(e => e.id === 'unicorn')!;
+  }
+
+  return ALL_ENDINGS.find(e => e.id === 'middle_market') || ALL_ENDINGS.find(e => e.id === 'lifestyle')!;
 };
