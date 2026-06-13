@@ -186,50 +186,62 @@ export const useGameLoop = () => {
       // training and deployment_count, so the AI revenue line now comes straight from
       // its prediction (full weight) instead of the old hardcoded automation/maturity
       // bonuses that double-counted those signals and drowned out the model.
-      const AI_REVENUE_SCALE = 8; // lifts the per-quarter model impact to enterprise scale (tunable)
-      const organicRevenue = 7000000 + freshState.employees * 400000; // non-AI baseline business (half-year)
-      const aiRevenue = Math.max(0, report.revenue) * AI_REVENUE_SCALE; // report.revenue = model's quarterly revenue impact
+      const AI_REVENUE_SCALE = 8; // lifts the per-quarter model impact to enterprise scale
+      const organicRevenue = 3500000 + freshState.employees * 200000; // non-AI baseline business (quarterly)
+      
+      // Smooth Revenue to avoid random spikes
+      const rawAiRevenue = Math.max(0, report.revenue) * AI_REVENUE_SCALE;
+      const quarterlyRevenue = organicRevenue + rawAiRevenue;
 
-      const quarterlyRevenue = organicRevenue + aiRevenue;
-
-      const costs = 4000000; // Base operational costs for a half-year
-      const salaries = freshState.employees * 80000; // 80k per half-year per employee
+      const costs = 2000000; // Base operational costs for a quarter
+      const salaries = freshState.employees * 40000; // 40k per quarter per employee
 
       const nextBudget = freshState.budget + quarterlyRevenue - costs - salaries;
-      const annualizedRevenue = quarterlyRevenue * 2;
+      const annualizedRevenue = quarterlyRevenue * 4;
       const totalAiInvestment = freshCompany?.aiInvestment || 1;
 
-      // Realistic ROI: annual profit / total annual expenses — now reflects the
-      // model-driven revenue above rather than a flat hardcoded baseline.
-      const totalAnnualExpenses = (costs * 2) + (salaries * 2) + totalAiInvestment;
+      // Realistic ROI: amortize AI investment over 5 years (20% per year) for ROI calculation
+      const amortizedInvestment = totalAiInvestment * 0.20;
+      const totalAnnualExpenses = (costs * 4) + (salaries * 4) + amortizedInvestment;
       const profit = annualizedRevenue - totalAnnualExpenses;
-      let calculatedRoi = Math.round((profit / totalAnnualExpenses) * 100);
-      calculatedRoi = Math.max(calculatedRoi, -100); // Floor at -100%, let it fly high naturally
+      let rawRoi = Math.round((profit / totalAnnualExpenses) * 100);
+      
+      // Smooth ROI changes (Max ±15% per quarter)
+      const previousRoi = freshState.roi;
+      let roiChange = rawRoi - previousRoi;
+      if (roiChange > 15) roiChange = 15;
+      if (roiChange < -15) roiChange = -15;
+      let calculatedRoi = previousRoi + roiChange;
+      calculatedRoi = Math.max(calculatedRoi, -100);
 
       // Workforce & Morale Dynamics
       let nextEmployees = freshState.employees;
-      let nextMorale = freshState.morale + report.moraleChange;
+      let nextMorale = freshState.morale;
 
-      // Automation replaces jobs naturally if not actively hiring
+      // Automation replaces jobs naturally if high, slowing employee growth
       if ((freshCompany?.automationRate || 0) > 50) {
          if (nextEmployees > 0) {
-             const laidOff = Math.ceil(nextEmployees * 0.05); // 5% attrition
+             // Up to 5% attrition based on how far above 50% automation is
+             const automationFactor = (freshCompany.automationRate - 50) / 1000; 
+             const laidOff = Math.ceil(nextEmployees * automationFactor);
              nextEmployees -= laidOff;
-             nextMorale -= (laidOff * 2); // Morale drops from layoffs
          }
       }
 
-      // If everyone is fired/automated, morale becomes N/A (represented as 0 or 100 in story, let's keep it at 100 for Post-Human)
       if (nextEmployees <= 0) {
          nextEmployees = 0;
-         if ((freshCompany?.automationRate || 0) >= 90) {
-             nextMorale = 100; // Post-human machine perfection
-         } else {
-             nextMorale = 0; // Dead company
-         }
-      } else {
-         nextMorale = Math.max(Math.min(nextMorale, 100), 0);
+         nextMorale += ((freshCompany?.automationRate || 0) >= 90) ? 5 : -5;
       }
+
+      // Smooth Morale changes (Max ±10 points per quarter)
+      // Productivity gain from ML is a high percentage (e.g. 75%), so we scale it down to a ± impact
+      let rawMoraleImpact = ((report.moraleChange || 50) - 50) / 5; 
+      let finalMoraleChange = rawMoraleImpact;
+      if (finalMoraleChange > 10) finalMoraleChange = 10;
+      if (finalMoraleChange < -10) finalMoraleChange = -10;
+      
+      nextMorale = nextMorale + finalMoraleChange;
+      nextMorale = Math.max(0, Math.min(100, nextMorale));
 
       actions.updateGameState({
         revenue: annualizedRevenue,
@@ -272,8 +284,13 @@ export const useGameLoop = () => {
     try {
       // 1. Update Game State (Budget, Morale, Employees) -> Subtracting AI Investment/Decision Cost here
       const preBudget = state.budget - decision.cost;
-      const preMorale = Math.min(state.morale + decision.moraleImpact, 100);
       const nextEmployees = state.employees + decision.employeeGain;
+
+      // Smooth Morale impact from decision
+      let decisionMoraleImpact = decision.moraleImpact;
+      if (decisionMoraleImpact > 10) decisionMoraleImpact = 10;
+      if (decisionMoraleImpact < -10) decisionMoraleImpact = -10;
+      const preMorale = Math.max(0, Math.min(state.morale + decisionMoraleImpact, 100));
 
       const preCompanyState = { ...company };
 
@@ -287,7 +304,7 @@ export const useGameLoop = () => {
       });
 
       const nextQuarter = state.currentQuarter + 1;
-      const willYearChange = nextQuarter > 2;
+      const willYearChange = nextQuarter > 4;
       const nextYear = willYearChange ? state.currentYear + 1 : state.currentYear;
 
       // Interim state update before fetching the report
@@ -312,26 +329,33 @@ export const useGameLoop = () => {
       let isGameOver = false;
       let gameResult: 'victory' | 'bankruptcy' | null = null;
 
-      if (finalBudget <= 0) {
+      // Bankruptcy only if budget is severely negative (giving them a chance to recover)
+      if (finalBudget <= -5000000) {
         isGameOver = true;
         gameResult = 'bankruptcy';
-      } else if (nextYear >= 2035) {
+      } else if (state.currentYear >= 2035) {
         isGameOver = true;
         gameResult = 'victory';
       }
 
       // History tracking: log a data point for EVERY quarter that just completed
       // (state.* here is the pre-advance closure, i.e. the quarter we just played)
+      // Check to prevent duplicate quarter entries
       const updatedHistory = [...state.history];
-      updatedHistory.push({
-        year: state.currentYear,
-        quarter: state.currentQuarter,
-        revenue: finalRevenue,
-        budget: finalBudget,
-        roi: finalRoi,
-        morale: freshState.morale,
-        employees: nextEmployees
-      });
+      const isDuplicate = updatedHistory.some(h => h.year === state.currentYear && h.quarter === state.currentQuarter);
+      
+      if (!isDuplicate) {
+        updatedHistory.push({
+          year: state.currentYear,
+          quarter: state.currentQuarter,
+          revenue: finalRevenue,
+          budget: finalBudget,
+          roi: finalRoi,
+          morale: freshState.morale,
+          employees: reportResults?.nextEmployees ?? nextEmployees,
+          decision: decision.title
+        });
+      }
 
       actions.updateGameState({
         history: updatedHistory,
