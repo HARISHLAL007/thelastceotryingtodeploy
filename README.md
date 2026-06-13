@@ -70,7 +70,9 @@ The Last CEO provides an interactive simulation where players act as CEOs respon
 
 These predictions integrate with business rules to update company performance after each quarter.
 
-> **Note:** The bundled models are trained with **scikit-learn 1.9** for compatibility with current environments. The revenue model uses tuned hyperparameters, outlier removal, and engineered interaction features (R² ≈ 0.70); the productivity model reaches R² ≈ 0.96.
+> **Note:** The bundled models are serialized with **scikit-learn 1.6.1** (pinned in `backend/requirements.txt` so the `.joblib` artifacts load correctly — newer scikit-learn versions fail to unpickle them). The revenue model uses tuned hyperparameters, outlier removal, and engineered interaction features (R² ≈ 0.70); the productivity model reaches R² ≈ 0.96.
+>
+> **Input normalization:** The training data stores normalized values (AI adoption 0–1, automation 0–1, maturity 0–10), while the UI works in human-readable scales (0–5, 0–100, 0–100). At inference time the backend rescales incoming inputs to the training distribution before prediction, so the model always receives in-range features.
 
 ---
 
@@ -79,7 +81,7 @@ These predictions integrate with business rules to update company performance af
 1. **Onboarding Flow:** Landing → board meeting interview → avatar design → dashboard. The player sets up the initial company profile during the board meeting, then styles their CEO.
 2. **Dashboard Initialization:** Displays current KPIs and financial health, with a toggleable navigation sidebar.
 3. **Strategic Decisions:** Player selects AI-related actions for the current quarter.
-4. **Feature Engineering:** Decisions and state are formatted for ML models.
+4. **Feature Engineering & Normalization:** Decisions and state are formatted and rescaled to the model's training distribution before inference.
 5. **Dynamic Event Engine:** Random market and industry events are applied.
 6. **Machine Learning Prediction:** XGBoost predicts revenue growth and productivity gain.
 7. **Business Rules Processing:** Simulation updates KPIs, risks, and scores.
@@ -192,8 +194,8 @@ Open a terminal and navigate to the project root:
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install dependencies (assuming you have a requirements.txt or install manually)
-pip install fastapi uvicorn pandas scikit-learn xgboost joblib sqlalchemy pydantic
+# Install pinned dependencies (scikit-learn 1.6.1 is required for the bundled models)
+pip install -r backend/requirements.txt
 
 # Run the FastAPI server
 cd backend
