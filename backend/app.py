@@ -132,8 +132,9 @@ def predict_scenario(sample_data, investment_multiplier):
     
     invest = sample_data['ai_investment_usd'] * investment_multiplier
     
-    # Calculate realistic ROI using Annual Revenue vs Total Investment
-    raw_roi = ((annual_rev - invest) / invest) * 100 if invest > 0 else 0
+    # Calculate realistic ROI using a 10-year Lifetime Value (LTV) of the AI Revenue
+    lifetime_rev = annual_rev * 10
+    raw_roi = ((lifetime_rev - invest) / invest) * 100 if invest > 0 else 0
     roi = raw_roi # Removed artificial cap to reflect true scale
     
     return float(rev_impact), float(roi)
