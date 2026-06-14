@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, BarChart3, Trophy, Database, Target, BrainCircuit, ChevronRight, PanelLeftClose } from 'lucide-react';
+import { Home, BarChart3, Trophy, Database, Target, ChevronRight, PanelLeftClose } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/store/gameStore';
 
@@ -32,7 +32,7 @@ export const Sidebar = ({ onClose }: { onClose?: () => void }) => {
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="p-2 bg-cyan-500/10 rounded-lg border border-cyan-400/30 shadow-[0_0_15px_rgba(34,211,238,0.25)]">
-              <BrainCircuit className="h-5 w-5 text-cyan-300" />
+              <img src="/Logo.png" alt="The Last CEO" className="h-5 w-5 object-contain" />
             </div>
             <span className="absolute -bottom-1 -right-1 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-[#05070f] shadow-[0_0_8px_rgba(52,211,153,0.9)] animate-[blink_2s_ease-in-out_infinite]" />
           </div>

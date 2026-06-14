@@ -427,7 +427,7 @@ export const Landing = () => {
             <span className="absolute inset-0 rounded-full blur-3xl bg-cyan-500/10" />
             <span className="absolute inset-4 rounded-full blur-xl bg-indigo-500/8" />
             <div className="relative p-5 bg-gradient-to-br from-cyan-500/15 to-indigo-500/10 rounded-2xl border border-cyan-500/25 shadow-[0_0_40px_rgba(6,182,212,0.25)] hover:shadow-[0_0_60px_rgba(6,182,212,0.4)] hover:scale-110 transition-all duration-700">
-              <BrainCircuit className="w-14 h-14 md:w-16 md:h-16 text-cyan-300" />
+              <img src="/Logo.png" alt="The Last CEO" className="w-14 h-14 md:w-16 md:h-16 object-contain" />
             </div>
           </div>
 
