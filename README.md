@@ -25,6 +25,8 @@ An AI-powered business strategy simulator where you lead a company through the A
 - [Key Features](#-key-features)
 - [Tech Stack](#-tech-stack)
 - [Machine Learning](#-machine-learning)
+- [Game Economy](#-game-economy)
+- [Controls](#-controls)
 - [System Architecture](#-system-architecture)
 - [Project Structure](#-project-structure)
 - [Getting Started](#-getting-started)
@@ -58,7 +60,7 @@ As organizations adopt Artificial Intelligence, business leaders face high-stake
 | 🏢 | **Guided Onboarding** | A cinematic flow — Landing → Boardroom Interview → Avatar Design → Live Dashboard |
 | 🏛️ | **Conversational Board Meeting** | An interview with the Chairman, CFO, CTO, CHRO & CRO defines your company and AI posture |
 | 🎭 | **CEO Avatar Skins** | 6 purely cosmetic skins (Cyberpunk Exec, AI Researcher, Quant, Stealth Agent, and more) |
-| 🕹️ | **3D Playable Office** | Walk a voxel CEO around an isometric office (WASD / arrows / joystick) to commit decisions |
+| 🕹️ | **3D Playable Office** | Walk a voxel CEO around an isometric office — **WASD / arrow keys / on-screen joystick**, left-click to pan, with fullscreen & ambient-audio toggles — and step up to stations to commit decisions |
 | 🛠️ | **Adaptive Decision Engine** | 21 strategic moves across 9 categories; the hand re-rolls each quarter and adapts to your state |
 | 📈 | **Executive Dashboard** | Revenue, ROI, budget, AI maturity, automation, workforce & risk in a cyber-HUD console |
 | 🤖 | **Live ML Predictions** | XGBoost forecasts revenue impact and productivity gain on every decision |
@@ -100,6 +102,31 @@ The simulation is driven by two gradient-boosted regression models trained on a 
 > **Model compatibility:** The bundled `.joblib` models are serialized with **scikit-learn 1.6.1** (pinned in `backend/requirements.txt`). Newer scikit-learn versions cannot unpickle them — install the pinned dependencies to load them correctly.
 >
 > **Input normalization:** The training data is normalized (AI adoption `0–1`, automation `0–1`, maturity `0–10`) while the UI uses human-readable scales (`0–5`, `0–100`, `0–100`). The backend rescales incoming inputs to the training distribution before inference, so the model always receives in-range features.
+
+---
+
+## 💰 Game Economy
+
+Each quarter, the XGBoost prediction feeds a deterministic business-rules engine that updates your company's finances:
+
+- **Model-driven revenue** — quarterly revenue is anchored to the model's predicted AI revenue impact (plus an organic, headcount-based baseline), so smarter AI strategy directly grows the top line.
+- **10-year LTV ROI** — return on investment is measured against a **10-year Lifetime Value** of the predicted AI revenue versus capital invested, rather than a single-year snapshot, to reflect the long horizon of AI bets.
+- **Industry-specific economics** — revenue scaling, cost structure, and growth differ by sector (Technology, Healthcare, Finance, Retail, Manufacturing, Logistics).
+- **Workforce dynamics** — automation drives attrition while hiring decisions add headcount; morale reacts to layoffs and productivity gains.
+- **Win / lose** — survive to **2035** to trigger an ending, or hit insolvency for bankruptcy. Your final budget, ROI, headcount, morale, and sector decide which of the 8 endings you unlock.
+
+---
+
+## 🎮 Controls
+
+The 3D office is fully playable. Walk the CEO to a station (HR, ML, or Boardroom) to commit each quarter's initiative.
+
+| Action | Input |
+| :--- | :--- |
+| Move | `W` `A` `S` `D` or arrow keys, or the on-screen joystick |
+| Pan camera | Left-click + drag |
+| Fullscreen | Toggle button (top-right of the office) |
+| Ambient audio | Music toggle button |
 
 ---
 
