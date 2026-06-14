@@ -278,7 +278,7 @@ Eight outcomes depending on your leadership style and financials by 2035:
 | **[@shreyascode11](https://github.com/shreyascode11)** | Frontend & full-stack — game engine, UI, 3D office, integration |
 | **[@Harishlal-me](https://github.com/Harishlal-me)** | Backend & architecture — FastAPI, XGBoost inference, deployment |
 | **[@KhannakPGupta](https://github.com/KhannakPGupta)** | Machine learning & documentation — model tuning, notebook, docs |
-| **Saif Imaaz** · [@stmdsaifimaaz-maker](https://github.com/stmdsaifimaaz-maker) | Frontend UI — cinematic landing page redesign & animations |
+| **[@stmdsaifimaaz-maker](https://github.com/stmdsaifimaaz-maker)** | Frontend UI — cinematic landing page redesign & animations |
 
 ---
 
