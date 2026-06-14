@@ -15,7 +15,6 @@ import {
   Smile,
   AlertTriangle,
   Terminal,
-  Brain,
   Radio,
   Maximize2,
   Minimize2,
@@ -173,7 +172,7 @@ export const QuarterlyDecision = () => {
                 ) : !selectedDecision ? (
                   <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
                     <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center animate-pulse">
-                      <Brain className="w-8 h-8 text-slate-600" />
+                      <img src="/Logo.png" alt="logo" className="w-8 h-8" />
                     </div>
                     <div className="space-y-2">
                       <p className="text-slate-300 font-space font-bold uppercase tracking-widest text-sm">Awaiting CEO Directive</p>

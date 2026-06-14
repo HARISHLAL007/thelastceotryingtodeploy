@@ -15,7 +15,6 @@ import {
   Users, 
   Heart,
   Terminal,
-  Brain,
   Cpu
 } from 'lucide-react';
 

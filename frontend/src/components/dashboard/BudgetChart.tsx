@@ -1,7 +1,6 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useGameStore } from '@/store/gameStore';
-import { BrainCircuit } from 'lucide-react';
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -84,7 +83,7 @@ export const BudgetChart = () => {
         {/* Graph Inference Instructions */}
         <div className="mt-5 rounded-xl border border-emerald-500/20 bg-slate-950/60 p-4 relative overflow-hidden">
           <div className="flex items-center gap-2 mb-2 relative z-10">
-            <BrainCircuit className="w-4 h-4 text-emerald-400" />
+            <img src="/Logo.png" alt="logo" className="w-4 h-4" />
             <span className="text-[10px] font-mono tracking-[0.3em] text-emerald-400/80 uppercase">
               Data Inference <span className="text-slate-600">//</span> Capital
             </span>
