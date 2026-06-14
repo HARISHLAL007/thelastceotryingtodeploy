@@ -112,41 +112,114 @@ const ParticleField = () => {
 /* ═══════════════════════════════════════════════════
    GLITCH TEXT — periodic distortion on the title
    ═══════════════════════════════════════════════════ */
-const GlitchText = ({ text, className = '' }: { text: string; className?: string }) => {
+const GlitchText = ({ text, alternateText, className = '' }: { text: string; alternateText?: string; className?: string }) => {
+  const [showAlt, setShowAlt] = useState(false);
   const [glitching, setGlitching] = useState(false);
+  const [g, setG] = useState({ clip1: '', clip2: '', clip3: '', x1: 0, x2: 0, skew: 0, scale: 1, blur: 0 });
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    if (!alternateText) return;
+    
+    let timeoutId: number;
+    let glitchTimeoutId: number;
+    let isShowingAlt = false;
+
+    const runCycle = () => {
+      // Trigger extreme glitch
       setGlitching(true);
-      setTimeout(() => setGlitching(false), 200);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
+      const h1 = Math.random() * 80;
+      const h2 = Math.random() * 80;
+      const h3 = Math.random() * 80;
+      setG({
+        clip1: `polygon(0 ${h1}%, 100% ${h1}%, 100% ${h1 + 15}%, 0 ${h1 + 15}%)`,
+        clip2: `polygon(0 ${h2}%, 100% ${h2}%, 100% ${h2 + 20}%, 0 ${h2 + 20}%)`,
+        clip3: `polygon(0 ${h3}%, 100% ${h3}%, 100% ${h3 + 10}%, 0 ${h3 + 10}%)`,
+        x1: (Math.random() - 0.5) * 15,
+        x2: (Math.random() - 0.5) * 15,
+        skew: (Math.random() - 0.5) * 20,
+        scale: 1 + Math.random() * 0.05, // zoom up to 1.05
+        blur: Math.random() * 2
+      });
+      
+      // End glitch and swap
+      glitchTimeoutId = window.setTimeout(() => {
+        setGlitching(false);
+        
+        isShowingAlt = !isShowingAlt;
+        setShowAlt(isShowingAlt);
+        
+        // 'YOU' shows for 1.0s, 'CEO' for 5s
+        const nextDuration = isShowingAlt ? 1000 : 5000;
+        timeoutId = window.setTimeout(runCycle, nextDuration);
+        
+      }, 80 + Math.random() * 50);
+    };
+    
+    // Initial wait on 'CEO'
+    timeoutId = window.setTimeout(runCycle, 5000);
+    
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.clearTimeout(glitchTimeoutId);
+    };
+  }, [alternateText]);
+
+  const currentText = showAlt && alternateText ? alternateText : text;
 
   return (
-    <span className={`relative inline-block ${className}`}>
-      <span className="relative z-10">{text}</span>
+    <span className="relative inline-block">
+      <span 
+        className={`relative z-10 inline-block transition-none ${className}`} 
+        style={{ 
+          transform: glitching ? `skew(${g.skew}deg) scale(${g.scale})` : 'none', 
+          opacity: glitching ? 0.7 : 1,
+          filter: glitching ? `blur(${g.blur}px) hue-rotate(${Math.random() * 90}deg)` : 'none'
+        }}
+      >
+        {currentText}
+      </span>
       {glitching && (
         <>
           <span
-            className="absolute inset-0 z-20"
+            className="absolute top-0 left-0 right-0 z-20 mix-blend-screen"
             style={{
-              color: 'rgba(6, 182, 212, 0.8)',
-              clipPath: 'polygon(0 15%, 100% 15%, 100% 40%, 0 40%)',
-              transform: 'translate(-3px, 1px)',
+              color: '#0ff', // cyan
+              clipPath: g.clip1,
+              transform: `translate(${g.x1}px, 4px) scale(${g.scale * 1.05})`,
+              textShadow: '-4px 0 #f0f' // magenta
             }}
           >
-            {text}
+            {currentText}
           </span>
           <span
-            className="absolute inset-0 z-20"
+            className="absolute top-0 left-0 right-0 z-20 mix-blend-screen"
             style={{
-              color: 'rgba(244, 63, 94, 0.6)',
-              clipPath: 'polygon(0 65%, 100% 65%, 100% 85%, 0 85%)',
-              transform: 'translate(3px, -1px)',
+              color: '#f0f', // magenta
+              clipPath: g.clip2,
+              transform: `translate(${g.x2}px, -4px) skew(${g.skew * -1}deg)`,
+              textShadow: '4px 0 #0ff' // cyan
             }}
           >
-            {text}
+            {currentText}
+          </span>
+          <span
+            className="absolute top-0 left-0 right-0 z-30 opacity-80 mix-blend-color-dodge text-yellow-300"
+            style={{
+              clipPath: g.clip3,
+              transform: `translate(${(Math.random() - 0.5) * 50}px, 0px) scale(1.1)`,
+              filter: 'blur(1px)'
+            }}
+          >
+            {currentText}
+          </span>
+          <span
+            className="absolute top-0 left-0 right-0 z-30 opacity-40 mix-blend-overlay text-white"
+            style={{
+              clipPath: `polygon(0 ${Math.random() * 100}%, 100% ${Math.random() * 100}%, 100% ${Math.random() * 100 + 10}%, 0 ${Math.random() * 100 + 10}%)`,
+              transform: `translate(${(Math.random() - 0.5) * 60}px, 0px)`,
+            }}
+          >
+            {currentText}
           </span>
         </>
       )}
@@ -337,7 +410,7 @@ export const Landing = () => {
   const navigate = useNavigate();
   const [logCount, setLogCount] = useState(0);
   const [uptime, setUptime] = useState(0);
-  const [typed, setTyped] = useState(0);
+  const [typed, setTyped] = useState(12); // Skip typing effect
   const [heroReady, setHeroReady] = useState(false);
   const startedAt = useRef(Date.now());
   const TITLE = 'THE LAST CEO';
@@ -420,14 +493,21 @@ export const Landing = () => {
         <div className={`relative z-10 text-center max-w-5xl mx-auto px-6 transition-all duration-1500 ${heroReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           {/* Holographic ring logo */}
           <div className="relative inline-flex items-center justify-center w-36 h-36 md:w-44 md:h-44 mb-6">
-            <span className="absolute inset-0 rounded-full border border-cyan-500/15 animate-[spin_20s_linear_infinite]" />
-            <span className="absolute inset-3 rounded-full border border-indigo-500/15 animate-[spin_12s_linear_infinite_reverse]" />
-            <span className="absolute inset-6 rounded-full border-t-2 border-b-2 border-cyan-400/30 animate-[spin_4s_linear_infinite]" />
-            <span className="absolute inset-8 rounded-full border-l-2 border-r-2 border-indigo-400/25 animate-[spin_6s_linear_infinite_reverse]" />
+            <style>{`
+              @keyframes shortPing {
+                75%, 100% {
+                  transform: scale(1.5);
+                  opacity: 0;
+                }
+              }
+            `}</style>
             <span className="absolute inset-0 rounded-full blur-3xl bg-cyan-500/10" />
             <span className="absolute inset-4 rounded-full blur-xl bg-indigo-500/8" />
-            <div className="relative p-5 bg-gradient-to-br from-cyan-500/15 to-indigo-500/10 rounded-2xl border border-cyan-500/25 shadow-[0_0_40px_rgba(6,182,212,0.25)] hover:shadow-[0_0_60px_rgba(6,182,212,0.4)] hover:scale-110 transition-all duration-700">
-              <img src="/Logo.png" alt="The Last CEO" className="w-14 h-14 md:w-16 md:h-16 object-contain" />
+            <div className="relative p-5 bg-gradient-to-br from-cyan-500/15 to-indigo-500/10 rounded-full border border-cyan-500/25 shadow-[0_0_40px_rgba(6,182,212,0.25)] hover:shadow-[0_0_60px_rgba(6,182,212,0.4)] hover:scale-110 transition-all duration-700">
+              <span className="absolute inset-0 rounded-full border border-cyan-500/50" style={{ animation: 'shortPing 3s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
+              <span className="absolute inset-0 rounded-full border border-indigo-500/40" style={{ animation: 'shortPing 3s cubic-bezier(0, 0, 0.2, 1) infinite 1s' }} />
+              <span className="absolute inset-0 rounded-full border border-cyan-400/30" style={{ animation: 'shortPing 3s cubic-bezier(0, 0, 0.2, 1) infinite 2s' }} />
+              <img src="/Logo.png" alt="The Last CEO" className="relative z-10 w-14 h-14 md:w-16 md:h-16 object-contain" />
             </div>
           </div>
 
@@ -444,9 +524,10 @@ export const Landing = () => {
           <h1 className="text-6xl md:text-8xl lg:text-9xl font-orbitron font-black tracking-tight text-white uppercase mb-6 leading-[0.9]">
             {titleDone ? (
               <>
-                <span className="block text-glow-cyan">The Last</span>
+                <span className="block text-glow-cyan text-transparent bg-clip-text bg-gradient-to-b from-sky-100 to-cyan-500">The Last</span>
                 <GlitchText
                   text="CEO"
+                  alternateText="YOU"
                   className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400"
                 />
               </>
