@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   BrainCircuit, Database, LineChart, Target, Server, Cpu, Activity, ShieldAlert,
   BarChart, Network, ChevronRight, Terminal, Gauge, Layers, Zap, TrendingUp,
-  Users, Shield, Crosshair, Clock, ArrowDown, Sparkles, Play
+  Users, Shield, Crosshair, Clock, ArrowDown, Sparkles
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════
@@ -119,7 +119,7 @@ const GlitchText = ({ text, className = '' }: { text: string; className?: string
     const interval = setInterval(() => {
       setGlitching(true);
       setTimeout(() => setGlitching(false), 200);
-    }, 4000 + Math.random() * 3000);
+    }, 2000);
     return () => clearInterval(interval);
   }, []);
 
@@ -469,16 +469,7 @@ export const Landing = () => {
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-            <button
-              onClick={() => navigate('/enter')}
-              className="group relative px-10 py-5 font-orbitron font-black text-sm tracking-[0.2em] uppercase text-slate-950 bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400 rounded-xl shadow-[0_0_30px_rgba(6,182,212,0.5)] hover:shadow-[0_0_60px_rgba(6,182,212,0.8)] hover:scale-105 transition-all duration-300 flex items-center gap-3 overflow-hidden"
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/40 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-              <Play className="w-5 h-5 relative z-10 fill-slate-950" />
-              <span className="relative z-10">Begin Simulation</span>
-              <ChevronRight className="w-4 h-4 relative z-10 group-hover:translate-x-1 transition-transform" />
-            </button>
+          <div className="flex items-center justify-center gap-4 mb-8">
             <a
               href="#features"
               className="group px-8 py-4 font-space font-bold text-sm tracking-wider uppercase text-slate-300 border border-slate-700/80 bg-slate-900/40 backdrop-blur-sm rounded-xl hover:border-cyan-500/50 hover:text-cyan-300 hover:bg-slate-800/50 transition-all duration-300 flex items-center gap-2"
@@ -503,11 +494,6 @@ export const Landing = () => {
           </div>
         </div>
 
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 animate-bounce">
-          <span className="text-[9px] font-mono text-slate-600 tracking-[0.3em] uppercase">Scroll</span>
-          <ArrowDown className="w-4 h-4 text-cyan-500/50" />
-        </div>
       </section>
 
       {/* ═══════════════════════════════════════════
