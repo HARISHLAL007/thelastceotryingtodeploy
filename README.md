@@ -279,7 +279,7 @@ Eight outcomes depending on your leadership style and financials by 2035:
 | **[@Harishlal-me](https://github.com/Harishlal-me)** | Backend & architecture — FastAPI, XGBoost inference, deployment |
 | **[@KhannakPGupta](https://github.com/KhannakPGupta)** | Machine learning & documentation — model tuning, notebook, docs |
 | **[@stmdsaifimaaz-maker](https://github.com/stmdsaifimaaz-maker)** | Frontend UI — cinematic landing page redesign & animations |
-| **Akshdeep Singh** | Branding & QA — application logo and bug fixes |
+| **[@its-akshdeep06](https://github.com/its-akshdeep06)** | Branding & QA — application logo and bug fixes |
 
 ---
 
