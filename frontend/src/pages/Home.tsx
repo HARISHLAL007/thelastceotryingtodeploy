@@ -131,6 +131,17 @@ export const Home = () => {
   const [showReport, setShowReport] = useState(false);
   const [pendingSkin, setPendingSkin] = useState<string>(SKINS[0].id);
   const [hoveredSkin, setHoveredSkin] = useState<string | null>(null);
+  const [voicesLoaded, setVoicesLoaded] = useState(false);
+
+  useEffect(() => {
+    // Preload voices
+    if (window.speechSynthesis.getVoices().length > 0) {
+      setVoicesLoaded(true);
+    }
+    const handleVoices = () => setVoicesLoaded(true);
+    window.speechSynthesis.addEventListener('voiceschanged', handleVoices);
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', handleVoices);
+  }, []);
 
   const currentQ = QUESTIONS[qIndex];
   const activeSpeaker = BOARD_MEMBERS.find(m => m.id === currentQ?.speakerId);
@@ -224,7 +235,7 @@ export const Home = () => {
       clearInterval(timer);
       window.speechSynthesis.cancel();
     };
-  }, [qIndex, showIntro, formData.skin]);
+  }, [qIndex, showIntro, formData.skin, voicesLoaded]);
 
   const validateInput = (val: string | number) => {
     const q = QUESTIONS[qIndex];

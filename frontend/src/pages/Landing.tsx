@@ -403,6 +403,8 @@ const TECH_STACK = [
   { name: 'Zustand', color: 'text-rose-400' },
 ];
 
+
+
 /* ═══════════════════════════════════════════════════
    MAIN LANDING COMPONENT
    ═══════════════════════════════════════════════════ */
@@ -859,12 +861,13 @@ export const Landing = () => {
           <Reveal delay={200}>
             <button
               onClick={() => navigate('/enter')}
-              className="group relative px-14 py-6 font-orbitron font-black text-base tracking-[0.2em] uppercase text-slate-950 bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400 rounded-xl shadow-[0_0_40px_rgba(6,182,212,0.5),0_0_80px_rgba(6,182,212,0.2)] hover:shadow-[0_0_60px_rgba(6,182,212,0.8),0_0_120px_rgba(6,182,212,0.3)] hover:scale-105 transition-all duration-500 flex items-center gap-4 mx-auto overflow-hidden"
+              className="group relative px-14 py-3 font-orbitron font-black text-sm tracking-[0.3em] text-slate-950 bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400 rounded-2xl shadow-[0_0_40px_rgba(6,182,212,0.5),0_0_80px_rgba(6,182,212,0.2)] hover:shadow-[0_0_60px_rgba(6,182,212,0.8),0_0_120px_rgba(6,182,212,0.3)] hover:scale-105 transition-all duration-300 flex items-center gap-3 mx-auto overflow-hidden"
             >
+              {/* Shimmer effect */}
               <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/40 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
               <Terminal className="w-5 h-5 relative z-10" />
-              <span className="relative z-10">Enter Simulation</span>
-              <ChevronRight className="w-5 h-5 relative z-10 group-hover:translate-x-1.5 transition-transform" />
+              <span className="relative z-10 pt-1">ENTER SIMULATION</span>
+              <ChevronRight className="w-5 h-5 relative z-10 group-hover:translate-x-2 transition-transform" />
             </button>
           </Reveal>
 
