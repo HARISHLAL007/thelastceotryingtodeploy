@@ -6,23 +6,14 @@ import { AIReportModal } from '@/components/shared/AIReportModal';
 import { GameOverModal } from '@/components/shared/GameOverModal';
 import { QuarterlyDecision } from '@/components/game/QuarterlyDecision';
 import { GameTimeline } from '@/components/game/GameTimeline';
-import { StatCard } from '@/components/dashboard/StatCard';
 import { ROIChart } from '@/components/dashboard/ROIChart';
 import { BudgetChart } from '@/components/dashboard/BudgetChart';
-import { 
-  DollarSign, 
-  TrendingUp, 
-  Users, 
-  Heart,
-  Terminal,
-  Cpu
-} from 'lucide-react';
 
 export const Engine = () => {
   const state = useGameStore((s) => s.state);
   const company = useGameStore((s) => s.company);
   const currentReport = useGameStore((s) => s.currentReport);
-  const { isLoading, fetchQuarterReport, rollDecisions } = useGameLoop();
+  const { isLoading, rollDecisions } = useGameLoop();
 
   useEffect(() => {
     if (company) {
