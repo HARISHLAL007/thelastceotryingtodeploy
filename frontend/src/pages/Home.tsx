@@ -132,6 +132,8 @@ export const Home = () => {
   const [pendingSkin, setPendingSkin] = useState<string>(SKINS[0].id);
   const [hoveredSkin, setHoveredSkin] = useState<string | null>(null);
   const [voicesLoaded, setVoicesLoaded] = useState(false);
+  const [showAvatarCinematic, setShowAvatarCinematic] = useState(true);
+  const [avatarIntroStage, setAvatarIntroStage] = useState(0);
 
   useEffect(() => {
     // Preload voices
@@ -479,6 +481,32 @@ export const Home = () => {
   // Skin / Avatar selection — shown AFTER the boardroom meeting concludes.
   // Purely cosmetic: grants no bonuses or abilities.
   if (!currentQ && !formData.skin) {
+    if (showAvatarCinematic) {
+      return (
+        <div className="h-screen w-full bg-black text-white font-space flex items-center justify-center p-8 scanlines cursor-pointer" onClick={() => setShowAvatarCinematic(false)}>
+          <div className="max-w-3xl text-center space-y-8 animate-in fade-in duration-[1500ms]">
+            {avatarIntroStage >= 0 && (
+              <Typewriter 
+                text="EXECUTIVE PROFILE ACCEPTED." 
+                speed={50}
+                className="text-xl md:text-2xl font-mono tracking-[0.2em] text-slate-500 mb-8 uppercase"
+                onComplete={() => setTimeout(() => setAvatarIntroStage(1), 1000)}
+              />
+            )}
+            
+            {avatarIntroStage >= 1 && (
+              <Typewriter 
+                text="GO AHEAD AND FORGE YOUR AVATAR AND BEGIN YOUR JOURNEY TO 2035." 
+                speed={40}
+                className="text-2xl md:text-4xl font-black tracking-[0.1em] text-cyan-400 mb-8 text-glow-cyan"
+                onComplete={() => setTimeout(() => setShowAvatarCinematic(false), 2500)}
+              />
+            )}
+          </div>
+        </div>
+      );
+    }
+
     const activeId = hoveredSkin || pendingSkin;
     const active = SKINS.find((s) => s.id === activeId) || SKINS[0];
     return (
@@ -678,7 +706,7 @@ export const Home = () => {
 
               {/* The Holographic Question Console - Renders DIRECTLY beneath the active profile! */}
               {isActive && currentQ && (
-                <div className="absolute top-[105%] left-1/2 -translate-x-1/2 w-[90vw] max-w-[600px] flex flex-col items-center animate-in fade-in slide-in-from-top-8 duration-700 delay-300">
+                <div className="absolute top-[105%] left-1/2 -translate-x-1/2 w-[90vw] max-w-[600px] flex flex-col items-center animate-in fade-in slide-in-from-top-8 duration-700 fill-mode-both">
                   
                   {/* Subtle connecting line from portrait to console */}
                   <div className={cn("w-[2px] h-8 bg-gradient-to-b to-transparent mb-2", member.color.replace('text', 'from'))} />
@@ -713,7 +741,7 @@ export const Home = () => {
                     )}
 
                     {!isScanning && (
-                      <div className="w-full max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+                      <div className="w-full max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both">
                         {currentQ.type === 'text' && (
                           <div className="flex flex-col sm:flex-row gap-4 items-stretch justify-center">
                             <button onClick={toggleRecording} className={cn("p-4 rounded-xl border backdrop-blur-md transition-all duration-300 shrink-0 flex justify-center items-center", isRecording ? "bg-rose-500/20 border-rose-500 text-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.3)] animate-pulse" : "bg-slate-900/80 border-slate-700 text-slate-400 hover:border-cyan-500/50 hover:text-cyan-400")}>

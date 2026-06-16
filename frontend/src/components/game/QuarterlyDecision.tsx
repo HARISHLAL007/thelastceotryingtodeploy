@@ -19,7 +19,9 @@ import {
   Maximize2,
   Minimize2,
   Volume2,
-  VolumeX
+  VolumeX,
+  Info,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -51,6 +53,7 @@ export const QuarterlyDecision = () => {
   const state = useGameStore((s) => s.state);
   const company = useGameStore((s) => s.company);
   const currentEvent = useGameStore((s) => s.currentEvent);
+  const [showDossier, setShowDossier] = useState(false);
   const { isLoading, makeQuarterDecision, error } = useGameLoop();
   const [selectedDecision, setSelectedDecision] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -59,13 +62,19 @@ export const QuarterlyDecision = () => {
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
-    if (audioRef.current) {
+    const audio = audioRef.current;
+    if (audio) {
       if (isMusicOn) {
-        audioRef.current.play().catch(err => console.error("Audio playback failed", err));
+        audio.play().catch(err => console.error("Audio playback failed", err));
       } else {
-        audioRef.current.pause();
+        audio.pause();
       }
     }
+    return () => {
+      if (audio) {
+        audio.pause();
+      }
+    };
   }, [isMusicOn]);
 
   useEffect(() => {
@@ -114,12 +123,64 @@ export const QuarterlyDecision = () => {
           <span className="font-space text-sm font-black tracking-widest text-cyan-400 text-glow-cyan">
             // BOARD MEETING // STRATEGY DIRECTIVE
           </span>
-          <span className="text-xs font-space font-semibold bg-slate-950 px-2.5 py-1 rounded border border-slate-800 text-purple-400">
-            QUARTER: Q{state.currentQuarter} <span className="text-slate-600">//</span> YEAR: {state.currentYear}
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowDossier(true)}
+              title="View your company dossier (board-meeting choices)"
+              className="flex items-center justify-center w-7 h-7 rounded border border-slate-800 bg-slate-950 text-cyan-400 hover:border-cyan-500/60 hover:text-cyan-300 transition-colors"
+            >
+              <Info className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-space font-semibold bg-slate-950 px-2.5 py-1 rounded border border-slate-800 text-purple-400">
+              QUARTER: Q{state.currentQuarter} <span className="text-slate-600">//</span> YEAR: {state.currentYear}
+            </span>
+          </div>
         </CardTitle>
       </CardHeader>
-      
+
+      {/* Company Dossier — recap of board-meeting choices */}
+      {showDossier && company && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          onClick={() => setShowDossier(false)}
+        >
+          <div
+            className="relative w-full max-w-md cyber-glass cyber-border-cyan rounded-2xl p-6 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowDossier(false)}
+              className="absolute top-3 right-3 text-slate-500 hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <h3 className="text-sm font-space font-black tracking-widest text-cyan-400 text-glow-cyan uppercase mb-1">
+              Company Dossier
+            </h3>
+            <p className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.25em] mb-5">
+              Your board-meeting mandate
+            </p>
+            <div className="space-y-2.5">
+              {([
+                ['Founder', company.founderName || '—'],
+                ['Company', company.name || '—'],
+                ['Industry', company.industry || '—'],
+                ['Headquarters', company.country || '—'],
+                ['Starting Budget', `$${(company.startingBudget || 0).toLocaleString()}`],
+                ['AI Investment', `$${(company.aiInvestment || 0).toLocaleString()}`],
+                ['Initial Workforce', `${company.employees ?? '—'} employees`],
+                ['Founded', `${company.foundedYear ?? '—'}`],
+              ] as [string, string][]).map(([label, value]) => (
+                <div key={label} className="flex items-center justify-between gap-4 border-b border-slate-800/70 pb-2">
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500 shrink-0">{label}</span>
+                  <span className="text-sm font-space font-semibold text-slate-200 text-right truncate">{value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <CardContent className="pt-6 relative z-10">
         {/* Story briefing — rotates and escalates each quarter */}
         <div className="mb-6 relative overflow-hidden rounded-xl border border-cyan-500/20 bg-gradient-to-r from-slate-950/90 via-slate-900/50 to-slate-950/90 p-4 animate-in fade-in slide-in-from-top-2 duration-500">
@@ -275,6 +336,7 @@ export const QuarterlyDecision = () => {
                 <CEOModel
                   playable={true}
                   archetype={company?.skin || 'researcher'}
+                  quarter={state.currentQuarter}
                   selectedStation={selectedDecision ? 
                     (selectedDecision === unlockedDecisions[0]?.id ? 'hr' : 
                      selectedDecision === unlockedDecisions[1]?.id ? 'boardroom' : 

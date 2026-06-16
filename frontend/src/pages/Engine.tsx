@@ -8,6 +8,15 @@ import { QuarterlyDecision } from '@/components/game/QuarterlyDecision';
 import { GameTimeline } from '@/components/game/GameTimeline';
 import { ROIChart } from '@/components/dashboard/ROIChart';
 import { BudgetChart } from '@/components/dashboard/BudgetChart';
+import { WhatIfSimulator } from '@/components/dashboard/WhatIfSimulator';
+import { 
+  DollarSign, 
+  TrendingUp, 
+  Users, 
+  Heart,
+  Terminal,
+  Cpu
+} from 'lucide-react';
 
 export const Engine = () => {
   const state = useGameStore((s) => s.state);
@@ -56,6 +65,11 @@ export const Engine = () => {
           <div className="flex flex-col h-full">
             <ROIChart />
           </div>
+        </div>
+
+        {/* ML What-If Simulator */}
+        <div className="animate-in fade-in slide-in-from-bottom-12 duration-700 delay-700 fill-mode-both">
+          <WhatIfSimulator />
         </div>
       </div>
 

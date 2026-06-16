@@ -28,3 +28,8 @@ backend/.venv/
 
 # SQLite databases (runtime artifacts — regenerated on run)
 *.db
+
+# Secrets / API keys
+.env
+*.env
+!*.env.example

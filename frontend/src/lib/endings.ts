@@ -137,29 +137,34 @@ export const getAchievedEnding = (state: GameState, company: CompanyProfile | nu
   const valuation = state.valuation || 0;
 
   if (state.budget < 0 || risk > 80 || state.gameResult === 'bankruptcy') {
-    return ALL_ENDINGS.find(e => e.id === 'bankruptcy') || ALL_ENDINGS.find(e => e.id === 'crash_burn')!;
-  }
-
-  if (valuation >= 5_000_000_000 && currentGrowthRate > 15 && risk < 20 && currentProfit > 0) {
-     return ALL_ENDINGS.find(e => e.id === 'ipo') || ALL_ENDINGS.find(e => e.id === 'unicorn')!;
-  }
-
-  if (valuation >= 1_000_000_000) {
-    if (automation >= 95 && currentEmployees < 5 && aiMaturity >= 95 && risk < 30 && state.roi > 100) {
-      return ALL_ENDINGS.find(e => e.id === 'rogue_ai')!;
+    if (state.roi > 50 || state.morale > 80) {
+      return ALL_ENDINGS.find(e => e.id === 'talent_acquired')!;
     }
-    if (risk < 40 && currentProfit > 0 && currentGrowthRate > 0 && aiMaturity > 80) {
-       return ALL_ENDINGS.find(e => e.id === 'unicorn')!;
-    }
+    return ALL_ENDINGS.find(e => e.id === 'crash_burn')!;
   }
 
-  if (valuation >= 300_000_000 && valuation < 1_000_000_000 && currentGrowthRate < 15 && aiMaturity > 60) {
-    return ALL_ENDINGS.find(e => e.id === 'acquisition') || ALL_ENDINGS.find(e => e.id === 'unicorn')!;
+  // Survived to 2035
+  const isTech = (company?.industry || '').toLowerCase() === 'technology';
+  
+  if (isTech && state.roi > 200 && currentEmployees < 5) {
+    return ALL_ENDINGS.find(e => e.id === 'rogue_ai')!;
   }
 
-  if (currentRevenue > 100_000_000) {
-    return ALL_ENDINGS.find(e => e.id === 'corporate_behemoth') || ALL_ENDINGS.find(e => e.id === 'unicorn')!;
+  if ((company?.startingBudget || 1000000) <= 100000) {
+    return ALL_ENDINGS.find(e => e.id === 'bootstrap_legend')!;
   }
 
-  return ALL_ENDINGS.find(e => e.id === 'middle_market') || ALL_ENDINGS.find(e => e.id === 'lifestyle')!;
+  if (state.budget > 5000000 && state.roi > 100) {
+    return ALL_ENDINGS.find(e => e.id === 'unicorn')!;
+  }
+
+  if (currentEmployees >= 30 && state.budget >= 2000000) {
+    return ALL_ENDINGS.find(e => e.id === 'ipo')!;
+  }
+
+  if (state.budget > 2000000 && state.roi > 50) {
+    return ALL_ENDINGS.find(e => e.id === 'acquisition')!;
+  }
+
+  return ALL_ENDINGS.find(e => e.id === 'lifestyle')!;
 };

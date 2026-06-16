@@ -10,6 +10,7 @@ type CEOModelProps = {
   playable?: boolean;
   selectedStation?: string;
   onStationChange?: (station: string) => void;
+  quarter?: number;
 };
 
 // Footstep trail tuning
@@ -85,7 +86,7 @@ const CameraController = ({ playable }: { playable: boolean }) => {
 const GlowingFloorTiles = () => {
   const count = 20; // Number of glowing tiles
   const tilesRef = useRef<any[]>([]);
-  
+
   // Random starting positions and phases
   const tileData = useRef(Array.from({ length: count }, () => ({
     x: Math.floor(Math.random() * 18) - 9 + 0.5,
@@ -101,9 +102,9 @@ const GlowingFloorTiles = () => {
       if (!tile) return;
       const data = tileData.current[i];
       // pulsing opacity
-      const opacity = (Math.sin(time * data.speed + data.phase) + 1) / 2; 
+      const opacity = (Math.sin(time * data.speed + data.phase) + 1) / 2;
       tile.material.opacity = opacity * 0.3;
-      
+
       // Randomly move invisible tiles
       if (opacity < 0.1 && Math.random() < 0.04) {
         data.x = Math.floor(Math.random() * 18) - 9 + 0.5;
@@ -167,7 +168,7 @@ const OfficeRoom = ({ selectedStation }: { selectedStation?: string }) => {
         <planeGeometry args={[20, 4]} />
         <meshStandardMaterial color="#020617" roughness={0.9} />
       </mesh>
-      
+
       {/* Neon Back Wall Glowing Trim */}
       <mesh position={[0, 1.2, -8.15]}>
         <boxGeometry args={[20, 0.04, 0.04]} />
@@ -185,7 +186,7 @@ const OfficeRoom = ({ selectedStation }: { selectedStation?: string }) => {
           <ringGeometry args={selectedStation === 'hr' ? [0.88, 1.02, 32] : [0.92, 1.0, 32]} />
           <meshBasicMaterial color={selectedStation === 'hr' ? '#6ee7b7' : '#10b981'} side={2} transparent opacity={selectedStation === 'hr' ? 1.0 : 0.3} />
         </mesh>
-        
+
         {/* Spot/Point Light */}
         <pointLight position={[0, 1, 0]} color="#10b981" intensity={selectedStation === 'hr' ? 3.5 : 2} distance={3.5} />
 
@@ -194,7 +195,7 @@ const OfficeRoom = ({ selectedStation }: { selectedStation?: string }) => {
           <boxGeometry args={[1.2, 0.8, 0.8]} />
           <meshStandardMaterial color="#064e3b" roughness={0.4} />
         </mesh>
-        
+
         {/* Hologram Terminal Monitor */}
         <mesh position={[0, 0.9, 0.1]}>
           <boxGeometry args={[0.6, 0.35, 0.05]} />
@@ -204,7 +205,7 @@ const OfficeRoom = ({ selectedStation }: { selectedStation?: string }) => {
           <boxGeometry args={[0.15, 0.1, 0.1]} />
           <meshStandardMaterial color="#0f172a" />
         </mesh>
-        
+
         {/* Floating Sector Label Sign */}
         <group position={[0, 1.4, 0]}>
           <mesh>
@@ -286,13 +287,13 @@ const OfficeRoom = ({ selectedStation }: { selectedStation?: string }) => {
           <boxGeometry args={[2.2, 0.6, 1.0]} />
           <meshStandardMaterial color="#7c2d12" roughness={0.4} metalness={0.1} />
         </mesh>
-        
+
         {/* Hologram Board Projector Screen Glow */}
         <mesh position={[0, 0.61, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[1.4, 0.7]} />
           <meshBasicMaterial color="#fbbf24" transparent opacity={0.25} />
         </mesh>
-        
+
         {/* Office Chairs */}
         <mesh position={[-1.3, 0.3, 0]}>
           <boxGeometry args={[0.2, 0.8, 0.3]} />
@@ -320,11 +321,12 @@ const OfficeRoom = ({ selectedStation }: { selectedStation?: string }) => {
 };
 
 // Internal Character Component inside the Canvas
-const CEOCharacter = ({ 
-  archetype = 'researcher', 
+const CEOCharacter = ({
+  archetype = 'researcher',
   mood = 'default',
   playable = false,
-  onStationChange
+  onStationChange,
+  quarter = 1
 }: CEOModelProps) => {
   const groupRef = useRef<any>();
   const bodyGroupRef = useRef<any>();
@@ -348,6 +350,28 @@ const CEOCharacter = ({
   const lastStepDist = useRef(0);
   const stepSide = useRef(1);
 
+  const chairRef = useRef<any>();
+  const deskRef = useRef<any>();
+  const hasMoved = useRef(false);
+
+  useEffect(() => {
+    if (playable) {
+      hasMoved.current = false;
+      if (chairRef.current) chairRef.current.visible = true;
+      if (deskRef.current) deskRef.current.visible = true;
+      playerPos.current = { x: 0, z: 2.5 };
+      playerRot.current = Math.PI; // Face the stations
+      if (groupRef.current) {
+        groupRef.current.position.set(0, -0.4, 2.5);
+        groupRef.current.rotation.y = Math.PI; // Face the stations
+      }
+    } else {
+      // Hide chair and desk in menus/selection screens
+      if (chairRef.current) chairRef.current.visible = false;
+      if (deskRef.current) deskRef.current.visible = false;
+    }
+  }, [quarter, playable]);
+
   useEffect(() => {
     if (!playable) return;
 
@@ -355,14 +379,14 @@ const CEOCharacter = ({
       // Disable movement inputs if user is currently typing in an input element
       const el = document.activeElement;
       const isInputActive = el && (
-        el.tagName === 'INPUT' || 
-        el.tagName === 'TEXTAREA' || 
+        el.tagName === 'INPUT' ||
+        el.tagName === 'TEXTAREA' ||
         el.hasAttribute('contenteditable')
       );
       if (isInputActive) return;
 
       const key = e.key.toLowerCase();
-      
+
       const isForward = key === 'arrowup' || key === 'w';
       const isBackward = key === 'arrowdown' || key === 's';
       const isLeft = key === 'arrowleft' || key === 'a';
@@ -380,7 +404,7 @@ const CEOCharacter = ({
 
     const handleKeyUp = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
-      
+
       const isForward = key === 'arrowup' || key === 'w';
       const isBackward = key === 'arrowdown' || key === 's';
       const isLeft = key === 'arrowleft' || key === 'a';
@@ -473,6 +497,12 @@ const CEOCharacter = ({
           }
         }
 
+        if (isMoving && !hasMoved.current) {
+          hasMoved.current = true;
+          if (chairRef.current) chairRef.current.visible = false;
+          if (deskRef.current) deskRef.current.visible = false;
+        }
+
         // Apply updated absolute coordinates
         groupRef.current.position.set(playerPos.current.x, -0.4, playerPos.current.z);
 
@@ -484,16 +514,41 @@ const CEOCharacter = ({
         // Walking / Bobbing skeletal animation logic
         if (isMoving) {
           const walkTime = state.clock.getElapsedTime() * 12;
-          if (leftLegRef.current) leftLegRef.current.rotation.x = Math.sin(walkTime) * 0.6;
-          if (rightLegRef.current) rightLegRef.current.rotation.x = -Math.sin(walkTime) * 0.6;
+          if (leftLegRef.current) {
+            leftLegRef.current.rotation.x = Math.sin(walkTime) * 0.6;
+            leftLegRef.current.position.set(-0.2, 0.6, 0);
+          }
+          if (rightLegRef.current) {
+            rightLegRef.current.rotation.x = -Math.sin(walkTime) * 0.6;
+            rightLegRef.current.position.set(0.2, 0.6, 0);
+          }
           if (leftArmRef.current) leftArmRef.current.rotation.x = -Math.sin(walkTime) * 0.6;
           if (rightArmRef.current) rightArmRef.current.rotation.x = Math.sin(walkTime) * 0.6;
           if (bodyGroupRef.current) bodyGroupRef.current.position.y = Math.abs(Math.sin(walkTime)) * 0.08;
+        } else if (playable && !hasMoved.current) {
+          // Sitting animation
+          if (leftLegRef.current) {
+            leftLegRef.current.rotation.x = -Math.PI / 2 + 0.1;
+            leftLegRef.current.position.set(-0.2, 0.55, 0.3);
+          }
+          if (rightLegRef.current) {
+            rightLegRef.current.rotation.x = -Math.PI / 2 + 0.1;
+            rightLegRef.current.position.set(0.2, 0.55, 0.3);
+          }
+          if (leftArmRef.current) leftArmRef.current.rotation.x = -0.2;
+          if (rightArmRef.current) rightArmRef.current.rotation.x = -0.2;
+          if (bodyGroupRef.current) bodyGroupRef.current.position.y = -0.15;
         } else {
           // Idle breathing subtle animation
           const idleTime = state.clock.getElapsedTime() * 2;
-          if (leftLegRef.current) leftLegRef.current.rotation.x = 0;
-          if (rightLegRef.current) rightLegRef.current.rotation.x = 0;
+          if (leftLegRef.current) {
+            leftLegRef.current.rotation.x = 0;
+            leftLegRef.current.position.set(-0.2, 0.6, 0);
+          }
+          if (rightLegRef.current) {
+            rightLegRef.current.rotation.x = 0;
+            rightLegRef.current.position.set(0.2, 0.6, 0);
+          }
           if (leftArmRef.current) leftArmRef.current.rotation.x = 0;
           if (rightArmRef.current) rightArmRef.current.rotation.x = 0;
           if (bodyGroupRef.current) bodyGroupRef.current.position.y = Math.sin(idleTime) * 0.02;
@@ -542,7 +597,7 @@ const CEOCharacter = ({
       } else {
         // Continuous rotation for static viewports
         groupRef.current.rotation.y += 0.006;
-        
+
         // Gentle floating animation (bobbing up and down)
         if (mood === 'singularity') {
           groupRef.current.position.y = -0.4 + Math.sin(state.clock.getElapsedTime() * 2) * 0.15;
@@ -637,226 +692,380 @@ const CEOCharacter = ({
 
   return (
     <>
-    <group ref={groupRef} position={[0, -0.4, 0]}>
-      {/* Halo for Victory or Singularity */}
-      {(mood === 'victory' || mood === 'singularity') && (
-        <mesh position={[0, 2.3, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.35, 0.4, 32]} />
-          <meshBasicMaterial color={mood === 'victory' ? '#eab308' : '#22c55e'} side={2} />
-        </mesh>
-      )}
-
-      {/* Main Spine / Body rotation group */}
-      <group ref={bodyGroupRef} rotation={[spineRotationX, 0, 0]}>
-        {/* Head */}
-        <group position={[0, headPositionY, 0]} rotation={[headRotationX, 0, 0]}>
-          {/* Hair/Helmet block */}
-          <mesh position={[0, 0.28, 0]}>
-            <boxGeometry args={[0.52, 0.1, 0.52]} />
-            <meshStandardMaterial color={mood === 'bankruptcy' ? '#334155' : hairColor} roughness={0.7} />
+      <group ref={groupRef} position={[0, -0.4, 0]}>
+        {/* CEO Chair - visible only when sitting */}
+        <group ref={chairRef} position={[0, 0, -0.35]} visible={playable && !hasMoved.current}>
+          {/* Seat Base */}
+          <mesh position={[0, 0.4, 0]}>
+            <boxGeometry args={[0.7, 0.15, 0.7]} />
+            <meshStandardMaterial color="#00E5FF" emissive="#00E5FF" emissiveIntensity={0.4} transparent opacity={0.85} roughness={0.1} />
           </mesh>
 
-          {/* Main Head Block */}
-          <mesh position={[0, 0, 0]}>
-            <boxGeometry args={[0.5, 0.45, 0.5]} />
-            <meshStandardMaterial color={skinColor} roughness={0.6} />
+          {/* Backrest */}
+          <mesh position={[0, 0.95, -0.28]}>
+            <boxGeometry args={[0.65, 1.0, 0.15]} />
+            <meshStandardMaterial color="#00E5FF" emissive="#00E5FF" emissiveIntensity={0.4} transparent opacity={0.85} roughness={0.1} />
           </mesh>
 
-          {/* Visor / Eyes / Glasses */}
-          <mesh position={[0, 0.08, 0.26]}>
-            <boxGeometry args={[0.42, 0.12, 0.05]} />
-            <meshBasicMaterial color={eyeColor} />
+          {/* Headrest */}
+          <mesh position={[0, 1.55, -0.22]}>
+            <boxGeometry args={[0.4, 0.2, 0.1]} />
+            <meshStandardMaterial color="#00E5FF" emissive="#00E5FF" emissiveIntensity={0.5} transparent opacity={0.9} roughness={0.2} />
           </mesh>
 
-          {/* Stealth Agent — low-brim hat */}
-          {archetype === 'stealth' && mood !== 'bankruptcy' && (
-            <group position={[0, 0.36, 0]}>
-              <mesh>
-                <cylinderGeometry args={[0.52, 0.52, 0.04, 24]} />
-                <meshStandardMaterial color="#0a0a0a" roughness={0.6} />
-              </mesh>
-              <mesh position={[0, 0.13, 0]}>
-                <cylinderGeometry args={[0.3, 0.33, 0.26, 24]} />
-                <meshStandardMaterial color="#0a0a0a" roughness={0.6} />
-              </mesh>
-              <mesh position={[0, 0.03, 0]}>
-                <cylinderGeometry args={[0.34, 0.34, 0.06, 24]} />
-                <meshBasicMaterial color={eyeColor} />
-              </mesh>
-            </group>
-          )}
+          {/* Backrest Frame/Support (Cyan glow) */}
+          <mesh position={[0, 0.95, -0.37]}>
+            <boxGeometry args={[0.1, 0.8, 0.05]} />
+            <meshBasicMaterial color="#00E5FF" />
+          </mesh>
 
-          {/* Space Entrepreneur — sealed helmet dome */}
-          {archetype === 'space' && mood !== 'bankruptcy' && (
-            <group position={[0, 0.05, 0]}>
-              <mesh>
-                <sphereGeometry args={[0.42, 24, 24]} />
-                <meshStandardMaterial color="#cbd5e1" transparent opacity={0.28} roughness={0.1} metalness={0.7} />
-              </mesh>
-              <mesh position={[0, -0.05, 0.3]} rotation={[Math.PI / 2, 0, 0]}>
-                <torusGeometry args={[0.12, 0.03, 12, 24]} />
-                <meshBasicMaterial color={accessoryColor} />
-              </mesh>
-            </group>
-          )}
+          {/* Left Armrest */}
+          <group position={[-0.4, 0.65, 0.05]}>
+            <mesh position={[0, 0, 0]}>
+              <boxGeometry args={[0.1, 0.05, 0.5]} />
+              <meshStandardMaterial color="#00E5FF" emissive="#00E5FF" emissiveIntensity={0.3} transparent opacity={0.8} roughness={0.3} />
+            </mesh>
+            <mesh position={[0, -0.15, -0.15]}>
+              <cylinderGeometry args={[0.03, 0.03, 0.3, 8]} />
+              <meshStandardMaterial color="#00E5FF" metalness={0.8} />
+            </mesh>
+          </group>
 
-          {/* Hacker — dark hood framing the face */}
-          {archetype === 'hacker' && mood !== 'bankruptcy' && (
-            <group>
-              <mesh position={[0, 0.08, -0.2]}>
-                <boxGeometry args={[0.62, 0.7, 0.18]} />
-                <meshStandardMaterial color="#030712" roughness={0.95} />
-              </mesh>
-              <mesh position={[0, 0.36, -0.02]}>
-                <boxGeometry args={[0.62, 0.16, 0.5]} />
-                <meshStandardMaterial color="#030712" roughness={0.95} />
-              </mesh>
-              <mesh position={[-0.31, 0.08, -0.02]}>
-                <boxGeometry args={[0.08, 0.56, 0.5]} />
-                <meshStandardMaterial color="#030712" roughness={0.95} />
-              </mesh>
-              <mesh position={[0.31, 0.08, -0.02]}>
-                <boxGeometry args={[0.08, 0.56, 0.5]} />
-                <meshStandardMaterial color="#030712" roughness={0.95} />
-              </mesh>
-            </group>
-          )}
+          {/* Right Armrest */}
+          <group position={[0.4, 0.65, 0.05]}>
+            <mesh position={[0, 0, 0]}>
+              <boxGeometry args={[0.1, 0.05, 0.5]} />
+              <meshStandardMaterial color="#00E5FF" emissive="#00E5FF" emissiveIntensity={0.3} transparent opacity={0.8} roughness={0.3} />
+            </mesh>
+            <mesh position={[0, -0.15, -0.15]}>
+              <cylinderGeometry args={[0.03, 0.03, 0.3, 8]} />
+              <meshStandardMaterial color="#00E5FF" metalness={0.8} />
+            </mesh>
+          </group>
 
-          {/* Cyberpunk Executive — neon cheek strips */}
-          {archetype === 'cyberpunk' && mood !== 'bankruptcy' && (
-            <group>
-              <mesh position={[-0.2, -0.08, 0.26]}>
-                <boxGeometry args={[0.04, 0.18, 0.02]} />
-                <meshBasicMaterial color={accessoryColor} />
-              </mesh>
-              <mesh position={[0.2, -0.08, 0.26]}>
-                <boxGeometry args={[0.04, 0.18, 0.02]} />
-                <meshBasicMaterial color={accessoryColor} />
-              </mesh>
-            </group>
-          )}
+          {/* Stem */}
+          <mesh position={[0, 0.2, 0]}>
+            <cylinderGeometry args={[0.06, 0.06, 0.4, 16]} />
+            <meshStandardMaterial color="#00E5FF" metalness={0.9} roughness={0.1} emissive="#00E5FF" emissiveIntensity={0.2} />
+          </mesh>
+
+          {/* Star Base */}
+          {Array.from({ length: 5 }).map((_, i) => (
+            <mesh key={`base-${i}`} position={[0, 0.05, 0]} rotation={[0, (Math.PI * 2 / 5) * i, 0]}>
+              <boxGeometry args={[0.08, 0.04, 0.6]} />
+              <meshStandardMaterial color="#00E5FF" metalness={0.8} emissive="#00E5FF" emissiveIntensity={0.2} />
+            </mesh>
+          ))}
         </group>
 
-        {/* Torso (Suit Jacket) */}
-        <mesh position={[0, 1.05, 0]}>
-          <boxGeometry args={[0.8, 0.9, 0.45]} />
-          <meshStandardMaterial color={suitColor} roughness={0.5} />
-        </mesh>
+        {/* CEO Personal Desk - visible only when sitting */}
+        <group ref={deskRef} position={[0, 0, 0.6]} visible={playable && !hasMoved.current}>
+          {/* Desk Surface */}
+          <mesh position={[0, 0.75, 0]}>
+            <boxGeometry args={[2.2, 0.05, 0.6]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.6} />
+          </mesh>
+          {/* Glowing Desk Edge */}
+          <mesh position={[0, 0.75, -0.28]}>
+            <boxGeometry args={[2.22, 0.01, 0.02]} />
+            <meshBasicMaterial color="#00E5FF" />
+          </mesh>
+          <mesh position={[0, 0.75, 0.28]}>
+            <boxGeometry args={[2.22, 0.01, 0.02]} />
+            <meshBasicMaterial color="#00E5FF" />
+          </mesh>
+          {/* Desk Legs */}
+          <mesh position={[-1.0, 0.375, 0]}>
+            <boxGeometry args={[0.05, 0.75, 0.5]} />
+            <meshStandardMaterial color="#1e293b" metalness={0.5} />
+          </mesh>
+          <mesh position={[1.0, 0.375, 0]}>
+            <boxGeometry args={[0.05, 0.75, 0.5]} />
+            <meshStandardMaterial color="#1e293b" metalness={0.5} />
+          </mesh>
 
-        {/* Shirt Collar (White V-shape) */}
-        <mesh position={[0, 1.4, 0.23]}>
-          <boxGeometry args={[0.18, 0.12, 0.02]} />
-          <meshStandardMaterial color="#ffffff" roughness={0.9} />
-        </mesh>
+          {/* Papers */}
+          <mesh position={[-0.6, 0.78, 0.05]} rotation={[0, 0.15, 0]}>
+            <boxGeometry args={[0.22, 0.01, 0.28]} />
+            <meshStandardMaterial color="#f8fafc" roughness={0.9} />
+          </mesh>
+          <mesh position={[-0.55, 0.79, -0.05]} rotation={[0, -0.1, 0]}>
+            <boxGeometry args={[0.22, 0.01, 0.28]} />
+            <meshStandardMaterial color="#e2e8f0" roughness={0.9} />
+          </mesh>
+          <mesh position={[-0.58, 0.8, 0]} rotation={[0, 0.05, 0]}>
+            <boxGeometry args={[0.22, 0.01, 0.28]} />
+            <meshStandardMaterial color="#cbd5e1" roughness={0.9} />
+          </mesh>
 
-        {/* Tie */}
-        <mesh position={[0, 1.15, 0.24]}>
-          <boxGeometry args={[0.08, 0.4, 0.02]} />
-          <meshStandardMaterial color={tieColor} roughness={0.8} />
-        </mesh>
+          {/* Luxury Pen */}
+          <mesh position={[-0.4, 0.78, 0.15]} rotation={[Math.PI / 2, 0, 0.6]}>
+            <cylinderGeometry args={[0.006, 0.006, 0.14, 8]} />
+            <meshStandardMaterial color="#fcd34d" metalness={0.9} roughness={0.1} />
+          </mesh>
 
-        {/* Left Arm */}
-        <group ref={leftArmRef} position={[-0.55, 1.35, 0]} rotation={[0, 0, leftArmRotationZ]}>
-          <mesh position={[0, -0.35, 0]}>
-            <boxGeometry args={[0.22, 0.7, 0.22]} />
+          {/* CEO Coffee Mug */}
+          <group position={[0.7, 0.78, 0.1]}>
+            {/* Mug Body */}
+            <mesh position={[0, 0.06, 0]}>
+              <cylinderGeometry args={[0.04, 0.04, 0.12, 16]} />
+              <meshStandardMaterial color="#f8fafc" roughness={0.2} />
+            </mesh>
+            {/* Mug Handle */}
+            <mesh position={[0.04, 0.06, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <torusGeometry args={[0.03, 0.01, 8, 16]} />
+              <meshStandardMaterial color="#f8fafc" roughness={0.2} />
+            </mesh>
+            {/* Coffee Liquid */}
+            <mesh position={[0, 0.118, 0]}>
+              <cylinderGeometry args={[0.036, 0.036, 0.005, 16]} />
+              <meshStandardMaterial color="#3E2723" roughness={0.8} />
+            </mesh>
+            {/* CEO Text */}
+            <Text
+              position={[-0.041, 0.06, 0]}
+              rotation={[0, -Math.PI / 2, 0]}
+              fontSize={0.04}
+              color="#020617"
+              fontWeight={900}
+              anchorX="center"
+              anchorY="middle"
+              letterSpacing={0.05}
+            >
+              CEO
+            </Text>
+          </group>
+
+          {/* Holographic Tablet Display */}
+          <mesh position={[0, 0.95, 0.0]} rotation={[0.5, 0, 0]}>
+            <planeGeometry args={[0.7, 0.35]} />
+            <meshBasicMaterial color="#00E5FF" transparent opacity={0.25} side={2} />
+          </mesh>
+          <mesh position={[0, 0.95, -0.001]} rotation={[0.5, 0, 0]}>
+            <planeGeometry args={[0.72, 0.37]} />
+            <meshBasicMaterial color="#00E5FF" transparent opacity={0.6} wireframe />
+          </mesh>
+        </group>
+
+        {/* Halo for Victory or Singularity */}
+        {(mood === 'victory' || mood === 'singularity') && (
+          <mesh position={[0, 2.3, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.35, 0.4, 32]} />
+            <meshBasicMaterial color={mood === 'victory' ? '#eab308' : '#22c55e'} side={2} />
+          </mesh>
+        )}
+
+        {/* Main Spine / Body rotation group */}
+        <group ref={bodyGroupRef} rotation={[spineRotationX, 0, 0]}>
+          {/* Head */}
+          <group position={[0, headPositionY, 0]} rotation={[headRotationX, 0, 0]}>
+            {/* Hair/Helmet block */}
+            <mesh position={[0, 0.28, 0]}>
+              <boxGeometry args={[0.52, 0.1, 0.52]} />
+              <meshStandardMaterial color={mood === 'bankruptcy' ? '#334155' : hairColor} roughness={0.7} />
+            </mesh>
+
+            {/* Main Head Block */}
+            <mesh position={[0, 0, 0]}>
+              <boxGeometry args={[0.5, 0.45, 0.5]} />
+              <meshStandardMaterial color={skinColor} roughness={0.6} />
+            </mesh>
+
+            {/* Visor / Eyes / Glasses */}
+            <mesh position={[0, 0.08, 0.26]}>
+              <boxGeometry args={[0.42, 0.12, 0.05]} />
+              <meshBasicMaterial color={eyeColor} />
+            </mesh>
+
+            {/* Stealth Agent — low-brim hat */}
+            {archetype === 'stealth' && mood !== 'bankruptcy' && (
+              <group position={[0, 0.36, 0]}>
+                <mesh>
+                  <cylinderGeometry args={[0.52, 0.52, 0.04, 24]} />
+                  <meshStandardMaterial color="#0a0a0a" roughness={0.6} />
+                </mesh>
+                <mesh position={[0, 0.13, 0]}>
+                  <cylinderGeometry args={[0.3, 0.33, 0.26, 24]} />
+                  <meshStandardMaterial color="#0a0a0a" roughness={0.6} />
+                </mesh>
+                <mesh position={[0, 0.03, 0]}>
+                  <cylinderGeometry args={[0.34, 0.34, 0.06, 24]} />
+                  <meshBasicMaterial color={eyeColor} />
+                </mesh>
+              </group>
+            )}
+
+            {/* Space Entrepreneur — sealed helmet dome */}
+            {archetype === 'space' && mood !== 'bankruptcy' && (
+              <group position={[0, 0.05, 0]}>
+                <mesh>
+                  <sphereGeometry args={[0.42, 24, 24]} />
+                  <meshStandardMaterial color="#cbd5e1" transparent opacity={0.28} roughness={0.1} metalness={0.7} />
+                </mesh>
+                <mesh position={[0, -0.05, 0.3]} rotation={[Math.PI / 2, 0, 0]}>
+                  <torusGeometry args={[0.12, 0.03, 12, 24]} />
+                  <meshBasicMaterial color={accessoryColor} />
+                </mesh>
+              </group>
+            )}
+
+            {/* Hacker — dark hood framing the face */}
+            {archetype === 'hacker' && mood !== 'bankruptcy' && (
+              <group>
+                <mesh position={[0, 0.08, -0.2]}>
+                  <boxGeometry args={[0.62, 0.7, 0.18]} />
+                  <meshStandardMaterial color="#030712" roughness={0.95} />
+                </mesh>
+                <mesh position={[0, 0.36, -0.02]}>
+                  <boxGeometry args={[0.62, 0.16, 0.5]} />
+                  <meshStandardMaterial color="#030712" roughness={0.95} />
+                </mesh>
+                <mesh position={[-0.31, 0.08, -0.02]}>
+                  <boxGeometry args={[0.08, 0.56, 0.5]} />
+                  <meshStandardMaterial color="#030712" roughness={0.95} />
+                </mesh>
+                <mesh position={[0.31, 0.08, -0.02]}>
+                  <boxGeometry args={[0.08, 0.56, 0.5]} />
+                  <meshStandardMaterial color="#030712" roughness={0.95} />
+                </mesh>
+              </group>
+            )}
+
+            {/* Cyberpunk Executive — neon cheek strips */}
+            {archetype === 'cyberpunk' && mood !== 'bankruptcy' && (
+              <group>
+                <mesh position={[-0.2, -0.08, 0.26]}>
+                  <boxGeometry args={[0.04, 0.18, 0.02]} />
+                  <meshBasicMaterial color={accessoryColor} />
+                </mesh>
+                <mesh position={[0.2, -0.08, 0.26]}>
+                  <boxGeometry args={[0.04, 0.18, 0.02]} />
+                  <meshBasicMaterial color={accessoryColor} />
+                </mesh>
+              </group>
+            )}
+          </group>
+
+          {/* Torso (Suit Jacket) */}
+          <mesh position={[0, 1.05, 0]}>
+            <boxGeometry args={[0.8, 0.9, 0.45]} />
             <meshStandardMaterial color={suitColor} roughness={0.5} />
           </mesh>
-          {/* Hand with Encryption Tattoo */}
-          <group position={[0, -0.75, 0]}>
-            <mesh>
+
+          {/* Shirt Collar (White V-shape) */}
+          <mesh position={[0, 1.4, 0.23]}>
+            <boxGeometry args={[0.18, 0.12, 0.02]} />
+            <meshStandardMaterial color="#ffffff" roughness={0.9} />
+          </mesh>
+
+          {/* Tie */}
+          <mesh position={[0, 1.15, 0.24]}>
+            <boxGeometry args={[0.08, 0.4, 0.02]} />
+            <meshStandardMaterial color={tieColor} roughness={0.8} />
+          </mesh>
+
+          {/* Left Arm */}
+          <group ref={leftArmRef} position={[-0.55, 1.35, 0]} rotation={[0, 0, leftArmRotationZ]}>
+            <mesh position={[0, -0.35, 0]}>
+              <boxGeometry args={[0.22, 0.7, 0.22]} />
+              <meshStandardMaterial color={suitColor} roughness={0.5} />
+            </mesh>
+            {/* Hand with Encryption Tattoo */}
+            <group position={[0, -0.75, 0]}>
+              <mesh>
+                <boxGeometry args={[0.18, 0.12, 0.18]} />
+                <meshStandardMaterial color={skinColor} roughness={0.6} />
+              </mesh>
+              <Text
+                position={[0, 0, -0.095]}
+                rotation={[0, Math.PI, 0]}
+                fontSize={0.06}
+                color="#000000"
+                anchorX="center"
+                anchorY="middle"
+                fontWeight="bold"
+              >
+                {handTattoo}
+              </Text>
+            </group>
+          </group>
+
+          {/* Right Arm */}
+          <group ref={rightArmRef} position={[0.55, 1.35, 0]} rotation={[0, 0, rightArmRotationZ]}>
+            <mesh position={[0, -0.35, 0]}>
+              <boxGeometry args={[0.22, 0.7, 0.22]} />
+              <meshStandardMaterial color={suitColor} roughness={0.5} />
+            </mesh>
+            {/* Hand */}
+            <mesh position={[0, -0.75, 0]}>
               <boxGeometry args={[0.18, 0.12, 0.18]} />
               <meshStandardMaterial color={skinColor} roughness={0.6} />
             </mesh>
-            <Text
-              position={[0, 0, -0.095]}
-              rotation={[0, Math.PI, 0]}
-              fontSize={0.06}
-              color="#000000"
-              anchorX="center"
-              anchorY="middle"
-              fontWeight="bold"
-            >
-              {handTattoo}
-            </Text>
+            {/* Quant Trader — handheld market slate */}
+            {archetype === 'quant' && mood !== 'bankruptcy' && (
+              <mesh position={[0.15, -0.8, 0.18]} rotation={[0.4, 0, 0]}>
+                <boxGeometry args={[0.22, 0.3, 0.03]} />
+                <meshBasicMaterial color="#22c55e" />
+              </mesh>
+            )}
           </group>
-        </group>
 
-        {/* Right Arm */}
-        <group ref={rightArmRef} position={[0.55, 1.35, 0]} rotation={[0, 0, rightArmRotationZ]}>
-          <mesh position={[0, -0.35, 0]}>
-            <boxGeometry args={[0.22, 0.7, 0.22]} />
-            <meshStandardMaterial color={suitColor} roughness={0.5} />
-          </mesh>
-          {/* Hand */}
-          <mesh position={[0, -0.75, 0]}>
-            <boxGeometry args={[0.18, 0.12, 0.18]} />
-            <meshStandardMaterial color={skinColor} roughness={0.6} />
-          </mesh>
-          {/* Quant Trader — handheld market slate */}
-          {archetype === 'quant' && mood !== 'bankruptcy' && (
-            <mesh position={[0.15, -0.8, 0.18]} rotation={[0.4, 0, 0]}>
-              <boxGeometry args={[0.22, 0.3, 0.03]} />
-              <meshBasicMaterial color="#22c55e" />
-            </mesh>
+          {/* Cyberpunk Executive — neon back emitters */}
+          {archetype === 'cyberpunk' && accessoryColor && mood !== 'bankruptcy' && (
+            <group position={[0, 1.1, -0.3]}>
+              <mesh position={[-0.4, 0.1, 0]} rotation={[0, 0, -0.3]}>
+                <boxGeometry args={[0.15, 0.6, 0.08]} />
+                <meshBasicMaterial color={accessoryColor} />
+              </mesh>
+              <mesh position={[0.4, 0.1, 0]} rotation={[0, 0, 0.3]}>
+                <boxGeometry args={[0.15, 0.6, 0.08]} />
+                <meshBasicMaterial color={accessoryColor} />
+              </mesh>
+            </group>
           )}
         </group>
 
-        {/* Cyberpunk Executive — neon back emitters */}
-        {archetype === 'cyberpunk' && accessoryColor && mood !== 'bankruptcy' && (
-          <group position={[0, 1.1, -0.3]}>
-            <mesh position={[-0.4, 0.1, 0]} rotation={[0, 0, -0.3]}>
-              <boxGeometry args={[0.15, 0.6, 0.08]} />
-              <meshBasicMaterial color={accessoryColor} />
+        {/* Legs (Pants) */}
+        <group position={[0, 0, 0]}>
+          {/* Left Leg */}
+          <group ref={leftLegRef} position={[-0.2, 0.6, 0]}>
+            <mesh position={[0, -0.3, 0]}>
+              <boxGeometry args={[0.28, 0.6, 0.3]} />
+              <meshStandardMaterial color={suitColor} roughness={0.5} />
             </mesh>
-            <mesh position={[0.4, 0.1, 0]} rotation={[0, 0, 0.3]}>
-              <boxGeometry args={[0.15, 0.6, 0.08]} />
-              <meshBasicMaterial color={accessoryColor} />
+            <mesh position={[0, -0.65, 0.05]}>
+              <boxGeometry args={[0.28, 0.1, 0.4]} />
+              <meshStandardMaterial color={mood === 'bankruptcy' ? '#1e293b' : '#0f172a'} roughness={0.2} />
             </mesh>
           </group>
-        )}
-      </group>
 
-      {/* Legs (Pants) */}
-      <group position={[0, 0, 0]}>
-        {/* Left Leg */}
-        <group ref={leftLegRef} position={[-0.2, 0.6, 0]}>
-          <mesh position={[0, -0.3, 0]}>
-            <boxGeometry args={[0.28, 0.6, 0.3]} />
-            <meshStandardMaterial color={suitColor} roughness={0.5} />
-          </mesh>
-          <mesh position={[0, -0.65, 0.05]}>
-            <boxGeometry args={[0.28, 0.1, 0.4]} />
-            <meshStandardMaterial color={mood === 'bankruptcy' ? '#1e293b' : '#0f172a'} roughness={0.2} />
-          </mesh>
-        </group>
-
-        {/* Right Leg */}
-        <group ref={rightLegRef} position={[0.2, 0.6, 0]}>
-          <mesh position={[0, -0.3, 0]}>
-            <boxGeometry args={[0.28, 0.6, 0.3]} />
-            <meshStandardMaterial color={suitColor} roughness={0.5} />
-          </mesh>
-          <mesh position={[0, -0.65, 0.05]}>
-            <boxGeometry args={[0.28, 0.1, 0.4]} />
-            <meshStandardMaterial color={mood === 'bankruptcy' ? '#1e293b' : '#0f172a'} roughness={0.2} />
-          </mesh>
+          {/* Right Leg */}
+          <group ref={rightLegRef} position={[0.2, 0.6, 0]}>
+            <mesh position={[0, -0.3, 0]}>
+              <boxGeometry args={[0.28, 0.6, 0.3]} />
+              <meshStandardMaterial color={suitColor} roughness={0.5} />
+            </mesh>
+            <mesh position={[0, -0.65, 0.05]}>
+              <boxGeometry args={[0.28, 0.1, 0.4]} />
+              <meshStandardMaterial color={mood === 'bankruptcy' ? '#1e293b' : '#0f172a'} roughness={0.2} />
+            </mesh>
+          </group>
         </group>
       </group>
-    </group>
 
-    {/* Footstep trail — pooled glowing prints left on the floor as the CEO walks */}
-    {playable && Array.from({ length: FOOT_COUNT }).map((_, i) => (
-      <mesh
-        key={i}
-        ref={(el) => { footRefs.current[i] = el; }}
-        position={[0, -0.39, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        visible={false}
-      >
-        <planeGeometry args={[0.12, 0.2]} />
-        <meshBasicMaterial color={eyeColor} transparent opacity={0} depthWrite={false} />
-      </mesh>
-    ))}
+      {/* Footstep trail — pooled glowing prints left on the floor as the CEO walks */}
+      {playable && Array.from({ length: FOOT_COUNT }).map((_, i) => (
+        <mesh
+          key={i}
+          ref={(el) => { footRefs.current[i] = el; }}
+          position={[0, -0.39, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          visible={false}
+        >
+          <planeGeometry args={[0.12, 0.2]} />
+          <meshBasicMaterial color={eyeColor} transparent opacity={0} depthWrite={false} />
+        </mesh>
+      ))}
     </>
   );
 };
@@ -866,7 +1075,8 @@ export const CEOModel = ({
   mood = 'default',
   playable = false,
   selectedStation = 'none',
-  onStationChange
+  onStationChange,
+  quarter = 1
 }: CEOModelProps) => {
   return (
     <div className="h-full w-full select-none relative" onContextMenu={(e) => e.preventDefault()}>
@@ -879,34 +1089,35 @@ export const CEOModel = ({
         <pointLight position={[10, 10, 10]} intensity={1.5} />
         <directionalLight position={[-5, 5, 5]} intensity={1.2} />
         <spotLight position={[0, 6, 0]} intensity={1.0} />
-        
+
         <CameraController playable={playable} />
-        
+
         {!playable && <OrbitControls enableZoom={true} enablePan={false} minDistance={2} maxDistance={6} target={[0, 0.6, 0]} />}
         {playable && (
-          <OrbitControls 
-            enableRotate={true} 
-            enablePan={true} 
-            enableZoom={true} 
-            minDistance={3} 
-            maxDistance={15} 
+          <OrbitControls
+            enableRotate={true}
+            enablePan={true}
+            enableZoom={true}
+            minDistance={3}
+            maxDistance={15}
             maxPolarAngle={Math.PI / 2 - 0.05} // Prevent looking from below the floor
             mouseButtons={{
               LEFT: THREE.MOUSE.PAN, // Left click to pan/move the view
               MIDDLE: THREE.MOUSE.DOLLY,
               RIGHT: THREE.MOUSE.ROTATE // Right click to rotate
             }}
-            target={[0, -0.6, -1.8]} 
+            target={[0, -0.6, -1.8]}
           />
         )}
-        
+
         {playable && <OfficeRoom selectedStation={selectedStation} />}
-        
-        <CEOCharacter 
-          archetype={archetype} 
-          mood={mood} 
+
+        <CEOCharacter
+          archetype={archetype}
+          mood={mood}
           playable={playable}
           onStationChange={onStationChange}
+          quarter={quarter}
         />
       </Canvas>
     </div>

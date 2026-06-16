@@ -455,12 +455,26 @@ export const useGameLoop = () => {
 
       let isGameOver = false;
       let gameResult: 'victory' | 'bankruptcy' | null = null;
+      let newEmergencyQuarters = state.emergencyQuarters || 0;
 
-      // Bankruptcy only if budget is severely negative (giving them a chance to recover)
-      if (finalBudget <= -5000000) {
+      // Bankruptcy logic: 
+      // 1. Immediate game over if cash drops below -$500k
+      // 2. Emergency quarter triggered if cash is <= 0
+      // 3. Two consecutive emergency quarters = bankruptcy
+      if (finalBudget <= -500000) {
         isGameOver = true;
         gameResult = 'bankruptcy';
-      } else if (state.currentYear >= 2035) {
+      } else if (finalBudget <= 0) {
+        newEmergencyQuarters += 1;
+        if (newEmergencyQuarters >= 2) {
+          isGameOver = true;
+          gameResult = 'bankruptcy';
+        }
+      } else {
+        newEmergencyQuarters = 0;
+      }
+
+      if (!isGameOver && state.currentYear >= 2035) {
         isGameOver = true;
         gameResult = 'victory';
       }
@@ -486,6 +500,7 @@ export const useGameLoop = () => {
 
       actions.updateGameState({
         history: updatedHistory,
+        emergencyQuarters: newEmergencyQuarters,
         isGameOver,
         gameResult
       });

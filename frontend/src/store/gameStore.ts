@@ -32,6 +32,7 @@ const initialState: GameState & { quarterlyPayloads: any[] } = {
   gameResult: null,
   history: [],
   quarterlyPayloads: [],
+  emergencyQuarters: 0,
 };
 
 export const useGameStore = create<{

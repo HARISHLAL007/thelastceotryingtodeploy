@@ -36,6 +36,10 @@ export const api = {
     return apiClient.post('/predict', payload);
   },
 
+  async explainPrediction(payload: any) {
+    return apiClient.post('/explain', payload);
+  },
+
   async getPredictions() {
     return apiClient.get('/predictions');
   },

@@ -4,6 +4,8 @@ from pydantic import BaseModel
 from typing import Optional
 import joblib
 import pandas as pd
+import numpy as np
+import shap
 import os
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
@@ -75,6 +77,28 @@ revenue_model = revenue_package['model']
 productivity_preprocessor = productivity_package['preprocessor']
 productivity_model = productivity_package['model']
 
+# SHAP explainer for the revenue model — built once at startup (explainable AI).
+revenue_explainer = shap.TreeExplainer(revenue_model)
+
+# Human-readable labels for the model's features (raw + engineered).
+FEATURE_LABELS = {
+    "year": "Year",
+    "ai_adoption_level": "AI Adoption",
+    "ai_investment_usd": "AI Investment",
+    "automation_rate": "Automation",
+    "employee_ai_training_hours": "Training Hours",
+    "ai_maturity_score": "AI Maturity",
+    "deployment_count": "Deployments",
+    "investment_per_deployment": "Investment / Deployment",
+    "training_per_deployment": "Training / Deployment",
+    "investment_maturity": "Investment x Maturity",
+    "automation_maturity": "Automation x Maturity",
+    "training_adoption": "Training x Adoption",
+    "investment_training": "Investment x Training",
+    "automation_investment": "Automation x Investment",
+    "deployment_training": "Deployment x Training",
+}
+
 class PredictionRequest(BaseModel):
     industry: str = "Technology"
     country: str = "United States"
@@ -132,10 +156,10 @@ def predict_scenario(sample_data, investment_multiplier):
     
     invest = sample_data['ai_investment_usd'] * investment_multiplier
     
-    # Calculate realistic ROI using a 10-year Lifetime Value (LTV) of the AI Revenue
-    lifetime_rev = annual_rev * 10
-    raw_roi = ((lifetime_rev - invest) / invest) * 100 if invest > 0 else 0
-    roi = raw_roi # Removed artificial cap to reflect true scale
+    # Calculate Quarterly ROI for the management game
+    quarterly_rev = annual_rev / 4.0
+    raw_roi = ((quarterly_rev - invest) / invest) * 100 if invest > 0 else 0
+    roi = raw_roi
     
     return float(rev_impact), float(roi)
 
@@ -199,6 +223,47 @@ def process_prediction(request: PredictionRequest):
             "C": {"multiplier": 1.5, "revenue": rev_C, "roi": roi_C}
         }
     }
+
+def explain_prediction(request: PredictionRequest, top_n: int = 7):
+    """Per-prediction SHAP explanation for the revenue model.
+
+    Returns the top feature contributions (in quarterly $) so the UI can show
+    *why* the model forecast what it did. One-hot industry/country columns are
+    aggregated back into single "Industry"/"Country" buckets.
+    """
+    import scipy.sparse
+
+    df = build_model_frame(request.dict(), 1.0)
+    X = revenue_preprocessor.transform(df)
+    X_dense = X.toarray() if scipy.sparse.issparse(X) else np.asarray(X)
+
+    shap_vals = revenue_explainer.shap_values(X_dense)[0]      # contributions per feature (annual $)
+    names = list(revenue_preprocessor.get_feature_names_out())
+    annual_rev = float(revenue_model.predict(X_dense)[0])
+
+    buckets = {}
+    for name, val in zip(names, shap_vals):
+        raw = name.split("__", 1)[-1]
+        if raw.startswith("industry_"):
+            label = "Industry"
+        elif raw.startswith("country_"):
+            label = "Country"
+        else:
+            label = FEATURE_LABELS.get(raw, raw)
+        buckets[label] = buckets.get(label, 0.0) + (float(val) / 4.0)  # annual -> quarterly
+
+    contributions = [{"feature": k, "impact": round(v, 2)} for k, v in buckets.items()]
+    contributions.sort(key=lambda c: abs(c["impact"]), reverse=True)
+
+    return {
+        "base_value": round(float(revenue_explainer.expected_value) / 4.0, 2),
+        "prediction": round(annual_rev / 4.0, 2),
+        "contributions": contributions[:top_n],
+    }
+
+@app.post("/api/explain")
+def explain(request: PredictionRequest):
+    return explain_prediction(request)
 
 @app.post("/api/predict")
 def predict(request: PredictionRequest, db: Session = Depends(get_db)):
