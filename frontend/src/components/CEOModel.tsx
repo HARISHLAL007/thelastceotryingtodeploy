@@ -352,6 +352,7 @@ const CEOCharacter = ({
 
   const chairRef = useRef<any>();
   const deskRef = useRef<any>();
+  const chairSpinTarget = useRef(0);
   const hasMoved = useRef(false);
 
   useEffect(() => {
@@ -431,6 +432,18 @@ const CEOCharacter = ({
   }, [playable]);
 
   useFrame((state, delta) => {
+    // Smoothly spin the chair if clicked
+    if (chairRef.current) {
+      chairRef.current.rotation.y += (chairSpinTarget.current - chairRef.current.rotation.y) * 5 * delta;
+    }
+    if (bodyGroupRef.current) {
+      if (!hasMoved.current && playable) {
+        bodyGroupRef.current.rotation.y += (chairSpinTarget.current - bodyGroupRef.current.rotation.y) * 5 * delta;
+      } else {
+        bodyGroupRef.current.rotation.y += (0 - bodyGroupRef.current.rotation.y) * 10 * delta;
+      }
+    }
+
     if (groupRef.current) {
       if (playable) {
         // 1. Keyboard direction polling
@@ -694,7 +707,14 @@ const CEOCharacter = ({
     <>
       <group ref={groupRef} position={[0, -0.4, 0]}>
         {/* CEO Chair - visible only when sitting */}
-        <group ref={chairRef} position={[0, 0, -0.35]} visible={playable && !hasMoved.current}>
+        <group 
+          ref={chairRef} 
+          position={[0, 0, -0.35]} 
+          visible={playable && !hasMoved.current}
+          onClick={(e) => { e.stopPropagation(); chairSpinTarget.current += Math.PI * 2; }}
+          onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
+          onPointerOut={() => { document.body.style.cursor = 'auto'; }}
+        >
           {/* Seat Base */}
           <mesh position={[0, 0.4, 0]}>
             <boxGeometry args={[0.7, 0.15, 0.7]} />

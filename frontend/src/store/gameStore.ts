@@ -24,6 +24,8 @@ const initialState: GameState & { quarterlyPayloads: any[] } = {
   valuation: 0,
   growthRate: 0,
   employees: 10,
+  bestDecisionStreak: 0,
+  ceoHelpTriggered: false,
   xp: 0,
   level: 1,
   unlockedTech: [],

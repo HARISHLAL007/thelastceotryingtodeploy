@@ -64,6 +64,34 @@ def get_db():
     finally:
         db.close()
 
+import urllib.request
+import json
+
+class AdvisorRequest(BaseModel):
+    prompt: str
+
+@app.post("/api/advisor")
+def get_advisor_insights(req: AdvisorRequest):
+    import os
+    groq_api_key = os.environ.get("GROQ_API_KEY", "")
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    data = json.dumps({
+        "model": "llama3-8b-8192",
+        "messages": [{"role": "user", "content": req.prompt}]
+    }).encode("utf-8")
+    
+    req_obj = urllib.request.Request(url, data=data, headers={
+        "Authorization": f"Bearer {groq_api_key}",
+        "Content-Type": "application/json"
+    }, method="POST")
+    
+    try:
+        with urllib.request.urlopen(req_obj, timeout=30) as response:
+            response_body = response.read()
+            return json.loads(response_body)
+    except Exception as e:
+        return {"error": str(e)}
+
 # Load models
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 rev_model_path = os.path.join(BASE_DIR, 'models', 'revenue_model.joblib')
@@ -157,8 +185,10 @@ def predict_scenario(sample_data, investment_multiplier):
     invest = sample_data['ai_investment_usd'] * investment_multiplier
     
     # Calculate Quarterly ROI for the management game
+    # Amortize the capital AI investment over 5 years (20 quarters)
     quarterly_rev = annual_rev / 4.0
-    raw_roi = ((quarterly_rev - invest) / invest) * 100 if invest > 0 else 0
+    quarterly_invest = invest / 20.0
+    raw_roi = ((quarterly_rev - quarterly_invest) / quarterly_invest) * 100 if quarterly_invest > 0 else 0
     roi = raw_roi
     
     return float(rev_impact), float(roi)

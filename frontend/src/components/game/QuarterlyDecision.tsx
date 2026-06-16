@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useGameLoop } from '@/hooks/useGameLoop';
 import { useGameStore } from '@/store/gameStore';
-import { DECISIONS } from '@/data/decisions';
+import { DECISIONS, getDynamicCost } from '@/data/decisions';
 import CEOModel from '@/components/CEOModel';
 import { Joystick } from './Joystick';
 import {
@@ -49,6 +49,32 @@ const DIRECTIVE_PROMPTS = [
   'Power is leverage applied at the right moment. Pick yours.',
 ];
 
+// Typewriter effect component for the CEO popup
+const TypewriterText = ({ text, delay = 0, speed = 20 }: { text: string, delay?: number, speed?: number }) => {
+  const [displayedText, setDisplayedText] = useState("");
+  useEffect(() => {
+    setDisplayedText("");
+    let i = 0;
+    let timer: NodeJS.Timeout;
+    const startTyping = () => {
+      timer = setInterval(() => {
+        if (i < text.length) {
+          setDisplayedText((prev) => prev + text.charAt(i));
+          i++;
+        } else {
+          clearInterval(timer);
+        }
+      }, speed);
+    };
+    const delayTimer = setTimeout(startTyping, delay);
+    return () => {
+      clearTimeout(delayTimer);
+      clearInterval(timer);
+    };
+  }, [text, delay, speed]);
+  return <span>{displayedText}</span>;
+};
+
 export const QuarterlyDecision = () => {
   const state = useGameStore((s) => s.state);
   const company = useGameStore((s) => s.company);
@@ -60,6 +86,29 @@ export const QuarterlyDecision = () => {
   const [showBoundaryMessage, setShowBoundaryMessage] = useState(false);
   const [isMusicOn, setIsMusicOn] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [showCeoHelp, setShowCeoHelp] = useState(false);
+  const [ceoHelpData, setCeoHelpData] = useState<{name: string, description: string, hintOption: string} | null>(null);
+
+  useEffect(() => {
+    if (state.ceoHelpTriggered && state.currentDecisions.length > 0) {
+      const ceos = [
+        { name: "Satya Nadella (Microsoft)", description: "Praised for his transformative leadership, pivoted Microsoft heavily into cloud computing (Azure) and artificial intelligence, steering the company to a valuation well over $3 trillion." },
+        { name: "Jensen Huang (NVIDIA)", description: "A visionary leader who turned NVIDIA into the global powerhouse of AI hardware, accelerated computing, and data center technologies." },
+        { name: "Tim Cook (Apple)", description: "Recognized for supreme supply chain management and expanding Apple’s services ecosystem, while returning hundreds of billions to shareholders." },
+        { name: "Mark Zuckerberg (Meta Platforms)", description: "Leading Meta’s massive investment in AI integration, virtual reality, and heavily refined ad-targeting to sustain long-term growth." },
+        { name: "Andy Jassy (Amazon)", description: "Known for driving customer obsession and scaling Amazon Web Services (AWS) into the premier global cloud platform." }
+      ];
+      const randomCeo = ceos[Math.floor(Math.random() * ceos.length)];
+      
+      const unlockedDecisions = DECISIONS.filter(d => state.currentDecisions.includes(d.id));
+      const best = [...unlockedDecisions].sort((a, b) => b.roiImpact - a.roiImpact)[0];
+      
+      setCeoHelpData({ ...randomCeo, hintOption: best?.title.replace(/_/g, ' ') || 'an option' });
+      setShowCeoHelp(true);
+      
+      useGameStore.getState().actions.updateGameState({ ceoHelpTriggered: false });
+    }
+  }, [state.ceoHelpTriggered, state.currentDecisions]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -85,6 +134,39 @@ export const QuarterlyDecision = () => {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
+  useEffect(() => {
+    if (showCeoHelp) {
+      try {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        const ctx = new AudioContext();
+        const playRing = (startTime: number) => {
+           const osc1 = ctx.createOscillator();
+           const osc2 = ctx.createOscillator();
+           const gain = ctx.createGain();
+           osc1.type = 'sine';
+           osc1.frequency.value = 440;
+           osc2.type = 'sine';
+           osc2.frequency.value = 480;
+           osc1.connect(gain);
+           osc2.connect(gain);
+           gain.connect(ctx.destination);
+           gain.gain.setValueAtTime(0, startTime);
+           gain.gain.linearRampToValueAtTime(0.15, startTime + 0.1);
+           gain.gain.setValueAtTime(0.15, startTime + 1.0);
+           gain.gain.linearRampToValueAtTime(0, startTime + 1.1);
+           osc1.start(startTime);
+           osc2.start(startTime);
+           osc1.stop(startTime + 1.1);
+           osc2.stop(startTime + 1.1);
+        };
+        playRing(ctx.currentTime);
+        playRing(ctx.currentTime + 2.0);
+      } catch (e) {
+        console.error('AudioContext not supported', e);
+      }
+    }
+  }, [showCeoHelp]);
+
   const toggleFullscreen = () => {
     const el = document.getElementById('game-container');
     if (!document.fullscreenElement && el) {
@@ -95,7 +177,10 @@ export const QuarterlyDecision = () => {
   };
 
   // Filter decisions based on current decisions hand
-  const unlockedDecisions = DECISIONS.filter(d => state.currentDecisions.includes(d.id));
+  const unlockedDecisions = DECISIONS.filter(d => state.currentDecisions.includes(d.id)).map(d => ({
+    ...d,
+    cost: getDynamicCost(d.cost, state.revenue)
+  }));
 
   // Monotonic quarter counter drives an escalating story so each turn reads fresh.
   const turn = state.currentYear * 4 + state.currentQuarter;
@@ -137,6 +222,46 @@ export const QuarterlyDecision = () => {
           </div>
         </CardTitle>
       </CardHeader>
+
+      {/* CEO Help Modal */}
+      {showCeoHelp && ceoHelpData && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-300"
+          onClick={() => setShowCeoHelp(false)}
+        >
+          <div
+            className="relative w-full max-w-lg cyber-glass border border-emerald-500/50 rounded-2xl p-8 text-center animate-in zoom-in-95 duration-500 shadow-[0_0_50px_-12px_rgba(16,185,129,0.3)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent rounded-2xl pointer-events-none" />
+            <div className="mx-auto w-16 h-16 rounded-full bg-slate-950 border-2 border-emerald-500 mb-6 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.5)] animate-pulse">
+               <span className="text-2xl">👑</span>
+            </div>
+            <h2 className="text-2xl font-space font-black tracking-widest text-emerald-400 uppercase mb-2 min-h-[2rem]">
+              <TypewriterText text={`Incoming Call: ${ceoHelpData.name}`} speed={40} />
+            </h2>
+            <p className="text-xs font-mono text-emerald-500/80 mb-6 uppercase tracking-widest min-h-[3rem]">
+              <TypewriterText text={ceoHelpData.description} delay={1000} speed={20} />
+            </p>
+            <div className="bg-slate-950/70 border border-emerald-500/30 rounded-xl p-6 mb-6 relative overflow-hidden">
+               <div className="absolute inset-0 cyber-sweep-overlay opacity-20 pointer-events-none" />
+               <p className="text-slate-300 font-space text-sm leading-relaxed italic relative z-10 min-h-[5rem]">
+                 <TypewriterText text={`"Good luck for doing perfect for one whole year! This is my help from my side: Based on my experience, I think focusing on `} delay={3500} speed={30} />
+                 <span className="text-emerald-400 font-bold drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]">
+                   <TypewriterText text={ceoHelpData.hintOption} delay={8000} speed={40} />
+                 </span>
+                 <TypewriterText text={` might be the way to go right now."`} delay={9000} speed={30} />
+               </p>
+            </div>
+            <Button
+              onClick={() => setShowCeoHelp(false)}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-space uppercase tracking-widest shadow-[0_0_15px_rgba(16,185,129,0.2)] hover:shadow-[0_0_25px_rgba(16,185,129,0.4)] transition-all duration-300"
+            >
+              Acknowledge
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Company Dossier — recap of board-meeting choices */}
       {showDossier && company && (

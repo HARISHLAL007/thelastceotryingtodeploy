@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/apiClient';
 import { useGameStore } from '@/store/gameStore';
 import type { LLMReport } from '@/types';
-import { DECISIONS, EVENTS } from '@/data/decisions';
+import { DECISIONS, EVENTS, getDynamicCost } from '@/data/decisions';
 
 export const useGameLoop = () => {
   const navigate = useNavigate();
@@ -17,7 +17,12 @@ export const useGameLoop = () => {
     const c = snapshot.company;
     const prev = freshState.currentDecisions;
 
-    const available = DECISIONS.filter(d => freshState.level >= d.requiredLevel);
+    const available = DECISIONS.filter(d => {
+      if (freshState.level < d.requiredLevel) return false;
+      // Do not offer firing options if the company has less than 5 employees
+      if ((d.id === 'minor-layoffs' || d.id === 'aggressive-downsizing') && freshState.employees < 5) return false;
+      return true;
+    });
 
     // Current vitals — these were shaped by the player's PREVIOUS decisions,
     // so scoring against them makes the hand respond to how the game is going.
@@ -30,11 +35,19 @@ export const useGameLoop = () => {
 
     const score = (d: typeof DECISIONS[number]) => {
       let sc = Math.random() * 5; // keep some surprise
+      const dynamicCost = getDynamicCost(d.cost, freshState.revenue);
+
+      // Crisis Mode: Losing money & low budget
+      const profit = (freshState.revenue / 4) - freshState.expenses;
+      if (profit < 0 && freshState.budget < 500_000) {
+        if (dynamicCost > 150_000) sc -= 20; // ban expensive expansions
+        if (d.category === 'defense' || d.category === 'automation') sc += 15; // favor recovery
+      }
 
       // Struggling morale → surface options that lift the team
       if (morale < 45 && d.moraleImpact > 0) sc += 7;
       // Tight on cash → favor cheap plays, punish big spends
-      if (budget < 1_000_000) sc += d.cost < 500_000 ? 5 : -4;
+      if (budget < 1_000_000) sc += dynamicCost < 500_000 ? 5 : -4;
       // Thin headcount → favor hiring/acquisition
       if (employees < 6 && d.employeeGain > 0) sc += 5;
       // Weak AI maturity → favor capability builders
@@ -126,11 +139,7 @@ export const useGameLoop = () => {
       
       let recommendations = [];
       if (chosenDecision && unpickedDecisions.length > 0 && preCompanyState) {
-          recommendations.push(`Chosen: ${chosenDecision.title}: ROI ${Math.round(metrics.roi)}%, Revenue $${(metrics.revenue_impact/1000000).toFixed(2)}M`);
-
-          // "What if" lines for the un-chosen options. Fire them in parallel instead
-          // of awaiting each one sequentially, then keep the original order.
-          const altLines = await Promise.all(unpickedDecisions.map(async (dec) => {
+          const altOptions = await Promise.all(unpickedDecisions.map(async (dec) => {
              const altPayload = {
                 industry: preCompanyState.industry || "Technology",
                 country: preCompanyState.country || "United States",
@@ -145,13 +154,32 @@ export const useGameLoop = () => {
              };
              try {
                 const altRes = await api.getQuarterReport(altPayload);
-                const altMetrics = altRes.data.metrics;
-                return `If Chose: ${dec.title}: ROI ${Math.round(altMetrics.roi)}%, Revenue $${(altMetrics.revenue_impact/1000000).toFixed(2)}M`;
+                return { title: dec.title, roi: Math.round(altRes.data.metrics.roi), rev: altRes.data.metrics.revenue_impact };
              } catch (e) {
-                return `If Chose: ${dec.title}: (Prediction Failed)`;
+                return { title: dec.title, roi: -999, rev: 0, failed: true };
              }
           }));
-          recommendations.push(...altLines);
+
+          const allOptions = [
+             { isChosen: true, title: chosenDecision.title, roi: Math.round(metrics.roi), rev: metrics.revenue_impact, failed: false },
+             ...altOptions.map(o => ({ isChosen: false, ...o }))
+          ];
+
+          // Guarantee at least one recoverable path
+          if (allOptions.every(opt => opt.roi < 0 && !opt.failed)) {
+             const best = allOptions.reduce((prev, curr) => (prev.roi > curr.roi) ? prev : curr);
+             best.roi = Math.floor(Math.random() * 13) + 8; // 8% to 20%
+             
+             // If the best option happens to be the one the player chose, patch the main metrics!
+             if (best.isChosen) {
+                 metrics.roi = best.roi;
+             }
+          }
+
+          recommendations.push(`Chosen: ${chosenDecision.title}: ROI ${allOptions[0].roi}%, Revenue $${(allOptions[0].rev/1000000).toFixed(2)}M`);
+          recommendations.push(...allOptions.slice(1).map(opt => 
+             opt.failed ? `If Chose: ${opt.title}: (Prediction Failed)` : `If Chose: ${opt.title}: ROI ${opt.roi}%, Revenue $${(opt.rev/1000000).toFixed(2)}M`
+          ));
       } else {
          recommendations = [
             `Scenario A (Maintain): ROI ${Math.round(scenarios.A.roi)}%, Revenue $${(scenarios.A.revenue/1000000).toFixed(2)}M`,
@@ -352,7 +380,9 @@ export const useGameLoop = () => {
           `Company Valuation: $${Math.round(valuation).toLocaleString()}`,
           `Quarter Revenue Growth: ${growthRate.toFixed(1)}%`,
           `Cumulative ROI: ${cumulativeRoi}%`
-        ]
+        ],
+        riskScore: metrics.risk_score || 0,
+        readinessScore: metrics.ai_transformation_score || 0
       };
 
       actions.setReport(reportPayload);
@@ -382,8 +412,10 @@ export const useGameLoop = () => {
     setIsLoading(true);
     setError(null);
 
-    const decision = DECISIONS.find(d => d.id === decisionId);
-    if (!decision) return;
+    const baseDecision = DECISIONS.find(d => d.id === decisionId);
+    if (!baseDecision) return;
+    const dynamicCost = getDynamicCost(baseDecision.cost, state.revenue);
+    const decision = { ...baseDecision, cost: dynamicCost };
 
     actions.setLastDecisionOutcome({
       id: decision.id,
@@ -435,12 +467,24 @@ export const useGameLoop = () => {
       const willYearChange = nextQuarter > 2; // FIXED to exactly 2 quarters
       const nextYear = willYearChange ? state.currentYear + 1 : state.currentYear;
 
+      const allCurrentOptions = DECISIONS.filter(d => state.currentDecisions.includes(d.id));
+      const maxRoi = Math.max(...allCurrentOptions.map(d => d.roiImpact));
+      const isBest = decision.roiImpact === maxRoi;
+      
+      let nextStreak = isBest ? state.bestDecisionStreak + 1 : 0;
+      let nextCeoHelpTriggered = false;
+      if (nextStreak === 3) {
+        nextCeoHelpTriggered = true;
+        nextStreak = 0;
+      }
+
       actions.updateGameState({
         budget: preBudget,
         morale: preMorale,
         employees: nextEmployees,
         currentQuarter: willYearChange ? 1 : nextQuarter,
         currentYear: nextYear,
+        bestDecisionStreak: nextStreak,
       });
 
       const unpickedDecisions = DECISIONS.filter(d => state.currentDecisions.includes(d.id) && d.id !== decisionId);
@@ -518,6 +562,10 @@ export const useGameLoop = () => {
       
       // 5. Trigger Random Event for next quarter
       triggerRandomEvent();
+
+      if (nextCeoHelpTriggered) {
+        actions.updateGameState({ ceoHelpTriggered: true });
+      }
 
     } finally {
       setIsLoading(false);

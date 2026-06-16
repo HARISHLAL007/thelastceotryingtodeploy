@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   BrainCircuit, Database, LineChart, Target, Server, Activity, 
   BarChart, Network, ChevronRight, Terminal, Gauge, Layers, Zap, TrendingUp,
-  Users, Shield, Crosshair, Clock, ArrowDown, Sparkles
+  Users, Shield, Crosshair, Clock, ArrowDown, Sparkles, Github
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════
@@ -261,7 +261,7 @@ const Counter = ({ end, suffix = '', duration = 2000 }: { end: number; suffix?: 
 /* ═══════════════════════════════════════════════════
    SCROLL-REVEAL WRAPPER
    ═══════════════════════════════════════════════════ */
-const Reveal = ({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) => {
+const Reveal = ({ children, className = '', delay = 0, threshold = 0.1 }: { children: React.ReactNode; className?: string; delay?: number; threshold?: number }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -270,15 +270,15 @@ const Reveal = ({ children, className = '', delay = 0 }: { children: React.React
     if (!el) return;
     const obs = new IntersectionObserver(([e]) => {
       if (e.isIntersecting) { setVisible(true); obs.disconnect(); }
-    }, { threshold: 0.15 });
+    }, { threshold, rootMargin: '0px 0px -50px 0px' });
     obs.observe(el);
     return () => obs.disconnect();
-  }, []);
+  }, [threshold]);
 
   return (
     <div
       ref={ref}
-      className={`transition-all duration-1000 ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'} ${className}`}
+      className={`transition-all duration-[1500ms] ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'} ${className}`}
       style={{ transitionDelay: `${delay}ms` }}
     >
       {children}
@@ -683,7 +683,7 @@ export const Landing = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             {FEATURES.map((f, i) => (
-              <Reveal key={f.code} delay={i * 100}>
+              <Reveal key={f.code} delay={i * 150}>
                 <div
                   className={`group relative p-6 bg-slate-900/40 backdrop-blur-sm rounded-2xl border ${f.border} ${f.hoverBorder} hover:-translate-y-2 hover:shadow-lg transition-all duration-500 cursor-default overflow-hidden h-full`}
                 >
@@ -741,7 +741,7 @@ export const Landing = () => {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {ENDINGS.map((e, i) => (
-              <Reveal key={e.name} delay={i * 80}>
+              <Reveal key={e.name} delay={i * 100}>
                 <div className="group relative p-5 bg-slate-900/50 border border-slate-800/60 rounded-xl hover:border-slate-600/80 hover:-translate-y-1 transition-all duration-500 text-center overflow-hidden cursor-default">
                   {/* Gradient glow on hover */}
                   <div className={`absolute inset-0 bg-gradient-to-br ${e.color} opacity-0 group-hover:opacity-[0.06] transition-opacity duration-500`} />
@@ -891,10 +891,32 @@ export const Landing = () => {
       </section>
 
       {/* Footer strip */}
-      <div className="relative border-t border-slate-800/60 py-6 text-center">
+      <div className="relative border-t border-slate-800/60 py-8 text-center space-y-6">
         <p className="text-[10px] font-mono text-slate-600 tracking-[0.2em] uppercase">
           The Last CEO © 2024 — Built with React · TypeScript · XGBoost · FastAPI
         </p>
+        <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 text-[10px] font-mono text-slate-500 uppercase tracking-widest">
+           <span className="text-indigo-400/80 font-bold">SRM Insiders Club</span>
+           <span className="hidden md:inline text-slate-700">•</span>
+           <span className="text-cyan-400/80">Team 5</span>
+           <span className="hidden md:inline text-slate-700">•</span>
+           <div className="flex flex-wrap items-center justify-center gap-3">
+              <span className="text-rose-400/90 hover:text-rose-300 font-semibold transition-colors cursor-default">Khannak</span>
+              <span className="text-slate-700">|</span>
+              <span className="text-amber-400/90 hover:text-amber-300 font-semibold transition-colors cursor-default">Harishlal</span>
+              <span className="text-slate-700">|</span>
+              <span className="text-emerald-400/90 hover:text-emerald-300 font-semibold transition-colors cursor-default">Shreyas</span>
+              <span className="text-slate-700">|</span>
+              <span className="text-purple-400/90 hover:text-purple-300 font-semibold transition-colors cursor-default">Saif</span>
+              <span className="text-slate-700">|</span>
+              <span className="text-cyan-400/90 hover:text-cyan-300 font-semibold transition-colors cursor-default">Akshdeep</span>
+              <span className="text-slate-700">|</span>
+              <a href="https://github.com/shreyascode11/The-Last-CEO" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-indigo-400/80 font-bold hover:text-indigo-300 transition-colors">
+                <Github className="w-3 h-3" />
+                <span>GitHub</span>
+              </a>
+           </div>
+        </div>
       </div>
     </div>
   );

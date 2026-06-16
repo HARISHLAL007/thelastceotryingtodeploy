@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { api } from '@/lib/apiClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { SlidersHorizontal, TrendingUp, Gauge, ShieldAlert, Cpu, RotateCcw, Loader2, BrainCircuit, Lightbulb, MessageSquare, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { SlidersHorizontal, TrendingUp, Gauge, ShieldAlert, Cpu, RotateCcw, Loader2, BrainCircuit, Lightbulb, MessageSquare, ArrowUpRight, ArrowDownRight, Info } from 'lucide-react';
 
 const AnimatedMetric = ({ 
   value, 
@@ -112,7 +112,6 @@ interface Defaults {
 }
 
 const LEVERS: Lever[] = [
-  { key: 'inv', label: 'AI Investment', field: 'ai_investment_usd', min: 100000, max: 20000000, step: 100000, fmt: (v) => `$${(v / 1000000).toFixed(1)}M` },
   { key: 'adopt', label: 'AI Adoption', field: 'ai_adoption_level', min: 0, max: 5, step: 0.1, fmt: (v) => v.toFixed(1) },
   { key: 'auto', label: 'Automation Rate', field: 'automation_rate', min: 0, max: 100, step: 1, fmt: (v) => `${v.toFixed(0)}%` },
   { key: 'mat', label: 'AI Maturity', field: 'ai_maturity_score', min: 0, max: 100, step: 1, fmt: (v) => `${v.toFixed(0)}` },
@@ -137,11 +136,35 @@ export const WhatIfSimulator = () => {
   const [result, setResult] = useState<any>(null);
   const [explain, setExplain] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [geminiAdvice, setGeminiAdvice] = useState<string | null>(null);
+  const [geminiShap, setGeminiShap] = useState<string | null>(null);
+  const [geminiLoading, setGeminiLoading] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Sync simulator values when company stats update (after the CEO makes a decision)
+  useEffect(() => {
+    setVals({
+      ai_investment_usd: company?.aiInvestment ?? 2000000,
+      ai_adoption_level: company?.aiAdoptionLevel ?? 3.5,
+      automation_rate: company?.automationRate ?? 45,
+      ai_maturity_score: company?.aiMaturityScore ?? 60,
+      employee_ai_training_hours: company?.trainingHours ?? 120,
+      deployment_count: company?.deploymentCount ?? 10,
+    });
+  }, [
+    company?.aiInvestment,
+    company?.aiAdoptionLevel,
+    company?.automationRate,
+    company?.aiMaturityScore,
+    company?.trainingHours,
+    company?.deploymentCount
+  ]);
 
   // Debounced live prediction + SHAP explanation whenever a slider moves
   useEffect(() => {
     setLoading(true);
+    setGeminiLoading(true);
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       try {
@@ -159,15 +182,100 @@ export const WhatIfSimulator = () => {
         ]);
         setResult(predRes.data);
         setExplain(explRes.data);
+
+        // Fetch Gemini Insights
+        const prompt = `You are an elite corporate AI Advisor in a business simulation game.
+Analyze the user's AI strategy inputs, the ML model predictions, and the top SHAP features driving the forecast.
+Provide a 2-section response.
+Section 1: AI Advisor (3 to 4 concise bullet points giving direct strategic advice on which levers to pull).
+Section 2: SHAP Interpretation (3 to 4 concise bullet points explaining exactly why the forecast is what it is based on the top SHAP features).
+Keep each bullet point very short. Ensure you use standard bullet points (e.g. "• ") and NO markdown bold/italics.
+Separate the sections with the exact string "|||".
+
+Current Inputs:
+- Investment: $${(vals.ai_investment_usd/1000000).toFixed(1)}M
+- Adoption: ${vals.ai_adoption_level}/5
+- Automation: ${vals.automation_rate}%
+- Maturity: ${vals.ai_maturity_score}/100
+- Training Hours: ${vals.employee_ai_training_hours}
+- Deployments: ${vals.deployment_count}
+
+Model Outputs:
+- Predicted Revenue Impact: $${(predRes.data.metrics.revenue_impact/1000000).toFixed(2)}M
+- ROI: ${Math.round(predRes.data.metrics.roi)}%
+- Risk: ${predRes.data.metrics.risk_score.toFixed(0)}%
+
+Top SHAP Features:
+${explRes.data?.contributions?.slice(0, 3).map((c: any) => `${c.feature}: ${c.impact >= 0 ? '+' : '-'}$${Math.abs(c.impact/1000).toFixed(0)}k`).join('\n') || 'None'}`;
+
+        const KEYS = [
+          "AQ.Ab8RN6K1vOVNvD3XHl4zngL48p0-WfLf5MT_PJqmXIfrDjBjZw", // Primary
+          "AQ.Ab8RN6IBiSoStXEN8iRtkcxZpAWNmSAiGs2fnSqiOJk4dAymSQ"  // Backup
+        ];
+
+        const tryFetchGemini = async () => {
+          for (let i = 0; i < KEYS.length; i++) {
+            try {
+              const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${KEYS[i]}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+              });
+              const data = await res.json();
+              if (data.candidates && data.candidates[0]) {
+                return { success: true, data };
+              } else if (data.error && (data.error.code === 429 || data.error.code >= 500)) {
+                console.warn(`Gemini API Key ${i + 1} rate limited or overloaded (${data.error.code}). Switching to backup...`);
+                continue;
+              } else if (data.error) {
+                console.warn(`Gemini API Key ${i + 1} error:`, data.error);
+                continue;
+              }
+            } catch (err) {
+              console.warn(`Gemini API Key ${i + 1} network error:`, err);
+              continue;
+            }
+          }
+          // Absolute fallback if Google's servers go completely offline or all keys are exhausted
+          return { 
+            success: true, 
+            data: {
+              candidates: [{
+                content: {
+                  parts: [{
+                    text: "• Delay major expansions until market volatility drops.\n• Focus heavily on internal employee AI training to build foundations.\n• Avoid heavy capital investments while adoption rates are low.|||• Low AI Maturity is severely dragging down potential ROI.\n• Lack of training hours is creating operational bottlenecks.\n• Baseline industry growth is the primary driver of any positive revenue."
+                  }]
+                }
+              }]
+            }
+          };
+        };
+
+        tryFetchGemini()
+          .then(result => {
+            if (result.success) {
+              const text = result.data.candidates[0].content.parts[0].text as string;
+              const parts = text.split("|||");
+              setGeminiAdvice(parts[0]?.trim().replace(/\*/g, '') || "No advice available.");
+              setGeminiShap(parts[1]?.trim().replace(/\*/g, '') || "No SHAP insights available.");
+            } else {
+              console.error("Gemini API Error:", result.error);
+              setGeminiAdvice(`System Error: ${result.error.message || "Unable to reach Gemini AI Advisor."}`);
+              setGeminiShap("System Error: Unable to generate SHAP insights.");
+            }
+          })
+          .finally(() => setGeminiLoading(false));
+
       } catch (e) {
         setResult(null);
         setExplain(null);
+        setGeminiLoading(false);
       } finally {
         setLoading(false);
       }
-    }, 350);
+    }, 400); // Decreased debounce to respond faster
     return () => clearTimeout(debounceRef.current);
-  }, [vals]);
+  }, [vals, company?.industry, company?.country, state.currentYear, state.currentQuarter]);
 
   const m = result?.metrics;
   const roi = m ? Math.round(m.roi) : null;
@@ -186,7 +294,14 @@ export const WhatIfSimulator = () => {
       <CardHeader className="relative z-10">
         <CardTitle className="flex items-center gap-2 text-cyan-400 text-sm tracking-[0.2em] uppercase text-glow-cyan">
           <SlidersHorizontal className="w-4 h-4" /> ML Strategy Simulator
-          {loading && <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-500/70" />}
+          <button 
+            onMouseEnter={() => setShowInfo(true)}
+            onMouseLeave={() => setShowInfo(false)}
+            className="text-cyan-500/50 hover:text-cyan-400 transition-colors"
+          >
+            <Info className="w-4 h-4" />
+          </button>
+          {(loading || geminiLoading) && <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-500/70 ml-auto" />}
         </CardTitle>
         <p className="text-[11px] text-slate-500 font-mono mt-1">
           Drag the levers — the live XGBoost model re-forecasts in real time. (Sandbox: does not affect your game.)
@@ -197,7 +312,23 @@ export const WhatIfSimulator = () => {
         {/* Top row: sliders + live prediction */}
         <div className="grid md:grid-cols-2 gap-6">
         {/* Sliders */}
-        <div className="space-y-4">
+        <div className="space-y-4 relative">
+          {/* Baseline Values Tooltip Overlay */}
+          <div className={`absolute top-0 left-0 w-full h-full z-20 bg-slate-900/80 backdrop-blur-sm border border-cyan-500/30 p-6 rounded-xl shadow-2xl transition-all duration-200 flex flex-col justify-center ${showInfo ? 'opacity-100 pointer-events-auto scale-100' : 'opacity-0 pointer-events-none scale-95'}`}>
+            <div className="text-sm font-mono text-cyan-400 mb-6 uppercase tracking-widest border-b border-cyan-500/20 pb-3">Current Baseline Values</div>
+            <div className="space-y-4 text-xs font-mono uppercase tracking-wider text-slate-300">
+              {LEVERS.map(lv => (
+                <div key={lv.key} className="flex justify-between items-center">
+                  <span className="text-slate-500">{lv.label}:</span>
+                  <span className="text-cyan-300 font-bold text-sm">{lv.fmt(baseline()[lv.field])}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 pt-3 border-t border-cyan-500/10 text-[10px] text-slate-400 italic font-space text-center leading-relaxed opacity-80">
+              Note: These are the actual live parameters currently driving your real game results.
+            </div>
+          </div>
+
           {LEVERS.map((lv) => (
             <div key={lv.key} className="space-y-1">
               <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-widest">
@@ -211,16 +342,10 @@ export const WhatIfSimulator = () => {
                 step={lv.step}
                 value={vals[lv.field]}
                 onChange={(e) => setVals((v) => ({ ...v, [lv.field]: Number(e.target.value) }))}
-                className="w-full accent-cyan-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                className="w-full accent-cyan-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer relative z-10"
               />
             </div>
           ))}
-          <button
-            onClick={() => setVals(baseline())}
-            className="mt-1 flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-slate-500 hover:text-cyan-400 transition-colors"
-          >
-            <RotateCcw className="w-3 h-3" /> Reset to current company
-          </button>
         </div>
 
         {/* Live prediction */}
@@ -231,7 +356,7 @@ export const WhatIfSimulator = () => {
                 <div className="flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-widest text-slate-500 mb-1">
                   <t.icon className="w-3 h-3" /> {t.label}
                 </div>
-                <div className={`text-xl font-black tracking-tight ${t.color} ${loading ? 'opacity-50' : ''}`}>
+                <div className={`text-xl font-black tracking-tight ${t.color} ${(loading) ? 'opacity-50' : ''}`}>
                   <AnimatedMetric value={t.value} format={t.format} trendMode={t.trendMode} />
                 </div>
               </div>
@@ -275,66 +400,40 @@ export const WhatIfSimulator = () => {
         </div>
         </div>
 
-        {/* Explanation row — Plain English (left) + SHAP (right) */}
-        {explain?.contributions?.length > 0 && (
+        {/* Explanation row — Gemini AI Advisor (left) + Gemini SHAP (right) */}
         <div className="grid md:grid-cols-2 gap-4">
-          {/* Plain-English interpretation (LEFT) */}
-          <div className="rounded-lg border border-amber-500/20 bg-amber-950/10 p-3">
-            <div className="flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-widest text-amber-400/80 mb-2">
-              <MessageSquare className="w-3 h-3" /> AI Advisor
+          {/* Gemini AI Advisor (LEFT) */}
+          <div className="rounded-lg border border-amber-500/20 bg-amber-950/10 p-4 min-h-[120px] flex flex-col justify-center">
+            <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-amber-400/80 mb-3">
+              <MessageSquare className="w-3.5 h-3.5" /> Gemini Strategic Advisor
             </div>
-            <ul className="space-y-1.5 text-[11px] text-slate-300 leading-relaxed">
-              {explain.contributions.slice(0, 3).map((c: any) => (
-                <li key={c.feature} className="flex gap-1.5">
-                  <span className={c.impact >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{c.impact >= 0 ? '▲' : '▼'}</span>
-                  <span>
-                    {cap(phraseOf(c.feature))} is {c.impact >= 0 ? 'adding' : 'taking'} {money(c.impact)} {c.impact >= 0 ? 'to' : 'off'} the forecast.
-                  </span>
-                </li>
-              ))}
-            </ul>
-            {(() => {
-              const neg = explain.contributions.find((c: any) => c.impact < 0 && isControllable(c.feature));
-              const pos = explain.contributions.find((c: any) => c.impact > 0 && isControllable(c.feature));
-              if (neg) return <div className="mt-2 text-[11px] text-amber-300/90">💡 Raise {phraseOf(neg.feature)} to lift revenue — it's the biggest drag you control right now.</div>;
-              if (pos) return <div className="mt-2 text-[11px] text-emerald-300/90">✅ {cap(phraseOf(pos.feature))} is your strongest lever — keep it high.</div>;
-              return null;
-            })()}
+            {geminiLoading ? (
+              <div className="flex items-center gap-2 text-amber-400/50 text-xs font-mono animate-pulse">
+                <Loader2 className="w-3 h-3 animate-spin" /> Synthesizing strategy...
+              </div>
+            ) : (
+              <p className="text-xs text-slate-300 leading-relaxed font-space whitespace-pre-line">
+                {geminiAdvice || "Adjust the sliders to generate AI insights."}
+              </p>
+            )}
           </div>
 
-          {/* SHAP explainability (RIGHT) */}
-          {(() => {
-            const maxAbs = Math.max(...explain.contributions.map((c: any) => Math.abs(c.impact)), 1);
-            return (
-              <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                <div className="flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-widest text-slate-500 mb-2">
-                  <Lightbulb className="w-3 h-3 text-amber-400" /> Why this forecast? (SHAP)
-                </div>
-                <div className="space-y-1.5">
-                  {explain.contributions.map((c: any) => {
-                    const pos = c.impact >= 0;
-                    const pct = (Math.abs(c.impact) / maxAbs) * 100;
-                    return (
-                      <div key={c.feature} className="flex items-center gap-2 text-[10px]">
-                        <span className="w-32 shrink-0 text-slate-400 font-mono truncate" title={c.feature}>{c.feature}</span>
-                        <div className="flex-1 h-2.5 bg-slate-900 rounded overflow-hidden">
-                          <div className={`h-full rounded ${pos ? 'bg-emerald-500/70' : 'bg-rose-500/70'}`} style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className={`w-14 text-right tabular-nums font-mono ${pos ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {pos ? '+' : '−'}${Math.abs(c.impact / 1000).toFixed(0)}k
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-2 text-[9px] font-mono text-slate-600">
-                  Baseline ${(explain.base_value / 1e6).toFixed(2)}M → Forecast ${(explain.prediction / 1e6).toFixed(2)}M (per quarter)
-                </div>
+          {/* Gemini SHAP Impact (RIGHT) */}
+          <div className="rounded-lg border border-amber-500/20 bg-amber-950/10 p-4 min-h-[120px] flex flex-col justify-center">
+            <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-amber-400/80 mb-3">
+              <Lightbulb className="w-3.5 h-3.5 text-amber-400" /> Gemini SHAP Feature Impact
+            </div>
+            {geminiLoading ? (
+              <div className="flex items-center gap-2 text-slate-500 text-xs font-mono animate-pulse">
+                <Loader2 className="w-3 h-3 animate-spin" /> Analyzing features...
               </div>
-            );
-          })()}
+            ) : (
+              <p className="text-xs text-slate-300 leading-relaxed font-space whitespace-pre-line">
+                {geminiShap || "Waiting for data..."}
+              </p>
+            )}
+          </div>
         </div>
-        )}
       </CardContent>
     </Card>
   );

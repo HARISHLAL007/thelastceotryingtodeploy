@@ -60,6 +60,10 @@ export const api = {
   async getDecisions() {
     return apiClient.get('/decisions');
   },
+
+  async getAdvisorInsights(prompt: string) {
+    return apiClient.post('/advisor', { prompt });
+  }
 };
 
 export default apiClient;

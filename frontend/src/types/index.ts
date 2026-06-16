@@ -65,6 +65,8 @@ export interface LLMReport {
   moraleChange: number;
   recommendations: string[];
   risks: string[];
+  riskScore?: number;
+  readinessScore?: number;
 }
 
 // Decision options

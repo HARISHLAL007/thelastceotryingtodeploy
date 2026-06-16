@@ -93,20 +93,37 @@ export const AIReportModal = () => {
   
   const summaryText = report.summary || "";
   const [statusRaw, ...rationaleParts] = summaryText.split(" - ");
-  const status = statusRaw.replace("Board Decision: ", "").toUpperCase();
+  let status = statusRaw.replace("Board Decision: ", "").toUpperCase();
   const rationale = rationaleParts.join(" - ") || "Strategic shift required to meet operational targets.";
 
-  const riskScoreMatch = report.risks?.[1]?.match(/(\d+)/);
-  const riskScore = riskScoreMatch ? parseInt(riskScoreMatch[1]) : Math.floor(Math.random() * 100);
-  const readiness = report.risks?.[2]?.split(': ')?.[1]?.toUpperCase() || "UNKNOWN";
+  // Backward compatibility for old saves
+  const fallbackRisk = parseInt(report.risks?.[1]?.match(/(\d+)/)?.[1] || "0");
+  const fallbackReadiness = parseInt(report.risks?.[2]?.match(/(-?\d+)/)?.[1] || "0");
+
+  const riskScore = Math.max(0, Math.min(100, report.riskScore ?? fallbackRisk));
+  const readiness = Math.max(0, Math.min(100, report.readinessScore ?? fallbackReadiness));
+
+  if (netQuarterChange < 0 && report.roi < 0) {
+    status = "EMERGENCY COST REDUCTION";
+  }
 
   // Dynamic board recommendations
-  const boardRecs = [
+  let boardRecs = [
     company && company.aiMaturityScore < 50 ? "Increase AI capability" : "Maintain AI dominance",
     company && company.trainingHours < 200 ? "Improve workforce training" : "Optimize human-AI collaboration",
     company && company.automationRate < 60 ? "Optimize automation" : "Monitor automation stability",
     "Re-evaluate next quarter"
   ];
+
+  if (netQuarterChange < 0 && report.roi < 0) {
+    boardRecs = [
+      "Freeze AI expansion",
+      "Reduce operating expenses",
+      "Optimize workforce",
+      "Improve cash flow",
+      "Review investments next quarter"
+    ];
+  }
 
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 overflow-hidden">
@@ -142,10 +159,11 @@ export const AIReportModal = () => {
               <div className="bg-slate-900/50 rounded-lg p-4 border border-cyan-900/30 animate-in slide-in-from-left-4 duration-700 delay-100 fill-mode-both">
                 <div className="text-[10px] tracking-[0.3em] text-cyan-600/80 font-bold uppercase mb-2">Net Quarterly Profit</div>
                 <div className={cn(
-                  "text-3xl font-black tracking-wider mb-4",
+                  "text-3xl font-black tracking-wider mb-4 flex items-center gap-3",
                   netQuarterChange >= 0 ? "text-emerald-400 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]" : "text-rose-500 drop-shadow-[0_0_15px_rgba(244,63,94,0.5)]"
                 )}>
                   <AnimatedNumber value={Math.abs(netQuarterChange)} prefix="$" isNegative={netQuarterChange < 0} />
+                  <span>{netQuarterChange >= 0 ? "🟢" : "🔴"}</span>
                 </div>
 
                 <div className="flex justify-between items-center text-xs border-t border-cyan-900/30 pt-3">
@@ -200,18 +218,20 @@ export const AIReportModal = () => {
                     
                     if (matchNew) {
                       const isChosen = matchNew[1] === 'Chosen';
+                      const roiValue = parseInt(matchNew[3]);
+                      const isNegative = roiValue < 0;
                       return (
                         <div key={i} className={cn(
                           "flex justify-between items-center px-3 py-1.5 border rounded",
-                          isChosen ? "bg-cyan-500/10 border-cyan-500/50" : "bg-slate-900/40 border-slate-700/50"
+                          isChosen ? "bg-cyan-500/10 border-cyan-500/50" : (isNegative ? "bg-rose-950/20 border-rose-900/30" : "bg-slate-900/40 border-slate-700/50")
                         )}>
-                          <span className={cn("truncate flex-1 min-w-[100px]", isChosen ? "text-cyan-300 font-bold" : "text-slate-400")}>
-                            {isChosen ? ">> " : ""}{matchNew[2]}
+                          <span className={cn("truncate flex-1 min-w-[100px]", isChosen ? "text-cyan-300 font-bold" : (isNegative ? "text-rose-400/70" : "text-slate-400"))}>
+                            {isChosen ? ">> " : (isNegative ? "⚠ " : "")}{matchNew[2]}
                           </span>
-                          <span className={cn("font-bold text-[10px] w-16 text-center", isChosen ? "text-white" : "text-slate-400")}>
+                          <span className={cn("font-bold text-[10px] w-16 text-center", isChosen ? "text-white" : (isNegative ? "text-rose-500" : "text-slate-400"))}>
                             ROI {matchNew[3]}%
                           </span>
-                          <span className={cn("text-right w-16 truncate", isChosen ? "text-emerald-400" : "text-slate-500")}>
+                          <span className={cn("text-right w-16 truncate", isChosen ? "text-emerald-400" : (isNegative ? "text-rose-500/50" : "text-slate-500"))}>
                             {matchNew[4]}
                           </span>
                         </div>
@@ -219,11 +239,13 @@ export const AIReportModal = () => {
                     }
                     
                     if (matchOld) {
+                      const roiValue = parseInt(matchOld[2]);
+                      const isNegative = roiValue < 0;
                       return (
-                        <div key={i} className="flex justify-between items-center bg-cyan-950/20 px-3 py-1.5 border border-cyan-900/30 rounded">
-                          <span className="text-cyan-300 w-24 truncate">{matchOld[1]}</span>
-                          <span className="text-white font-bold text-[10px]">ROI {matchOld[2]}%</span>
-                          <span className="text-emerald-400 text-right w-20 truncate">{matchOld[3]}</span>
+                        <div key={i} className={cn("flex justify-between items-center px-3 py-1.5 border rounded", isNegative ? "bg-rose-950/20 border-rose-900/30" : "bg-cyan-950/20 border-cyan-900/30")}>
+                          <span className={cn("w-24 truncate", isNegative ? "text-rose-400/70" : "text-cyan-300")}>{matchOld[1]}</span>
+                          <span className={cn("font-bold text-[10px]", isNegative ? "text-rose-500" : "text-white")}>ROI {matchOld[2]}%</span>
+                          <span className={cn("text-right w-20 truncate", isNegative ? "text-rose-500/50" : "text-emerald-400")}>{matchOld[3]}</span>
                         </div>
                       );
                     }
@@ -297,12 +319,12 @@ export const AIReportModal = () => {
                 </div>
 
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-cyan-700 tracking-widest">READINESS</span>
+                  <span className="text-cyan-700 tracking-widest">AI READINESS</span>
                   <span className={cn(
                     "font-bold tracking-widest",
-                    readiness === "LOW" ? "text-rose-500" : readiness === "MEDIUM" ? "text-amber-500" : "text-emerald-500"
+                    readiness < 30 ? "text-rose-500" : readiness < 70 ? "text-amber-500" : "text-emerald-500"
                   )}>
-                    {readiness}
+                    {readiness.toFixed(0)}%
                   </span>
                 </div>
               </div>
