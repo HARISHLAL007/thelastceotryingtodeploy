@@ -16,7 +16,7 @@ const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <div className="flex bg-[#040610] min-h-screen text-slate-100">
+    <div className="flex bg-[#040610] h-screen text-slate-100">
       {sidebarAvailable && sidebarOpen && <Sidebar onClose={() => setSidebarOpen(false)} />}
       {sidebarAvailable && !sidebarOpen && (
         <button
@@ -27,7 +27,7 @@ const Layout = () => {
           <PanelLeftOpen className="h-5 w-5" />
         </button>
       )}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto h-screen">
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/enter" element={<Home />} />

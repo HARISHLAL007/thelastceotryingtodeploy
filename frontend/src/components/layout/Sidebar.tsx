@@ -17,7 +17,7 @@ export const Sidebar = ({ onClose }: { onClose?: () => void }) => {
   ];
 
   return (
-    <aside className="w-56 shrink-0 min-h-screen relative flex flex-col z-50 font-space overflow-hidden border-r border-cyan-500/20 bg-gradient-to-b from-[#070b16] via-[#05070f] to-[#070b16]">
+    <aside className="fixed left-0 top-0 w-56 h-screen relative flex flex-col z-50 font-space overflow-hidden border-r border-cyan-500/20 bg-gradient-to-b from-[#070b16] via-[#05070f] to-[#070b16]">
       {/* Animated scan sweep + grid texture */}
       <div className="cyber-sweep-overlay opacity-60" />
       <div
@@ -32,7 +32,7 @@ export const Sidebar = ({ onClose }: { onClose?: () => void }) => {
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="p-2 bg-cyan-500/10 rounded-lg border border-cyan-400/30 shadow-[0_0_15px_rgba(34,211,238,0.25)]">
-              <img src="/Logo.png" alt="The Last CEO" className="h-5 w-5 object-contain" />
+              <img src="/Logo.png" alt="The Last CEO" className="h-10 w-15 object-contain" />
             </div>
             <span className="absolute -bottom-1 -right-1 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-[#05070f] shadow-[0_0_8px_rgba(52,211,153,0.9)] animate-[blink_2s_ease-in-out_infinite]" />
           </div>
@@ -44,9 +44,9 @@ export const Sidebar = ({ onClose }: { onClose?: () => void }) => {
             <button
               onClick={onClose}
               title="Hide sidebar"
-              className="ml-auto p-1.5 rounded-md text-slate-500 hover:text-cyan-300 hover:bg-slate-800/60 transition-all"
+              className="ml-auto p-2 rounded-lg text-slate-400 bg-slate-900/40 border border-slate-700/50 hover:text-cyan-300 hover:bg-slate-800/80 hover:border-cyan-400/70 shadow-lg hover:shadow-[0_0_20px_rgba(6,182,212,0.6),0_0_40px_rgba(6,182,212,0.3)] transition-all duration-200"
             >
-              <PanelLeftClose className="h-4 w-4" />
+              <PanelLeftClose className="h-4 w-4 group-hover:drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] transition-all" />
             </button>
           )}
         </div>

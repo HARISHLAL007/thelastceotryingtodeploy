@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  BrainCircuit, Database, LineChart, Target, Server, Cpu, Activity, ShieldAlert,
+  BrainCircuit, Database, LineChart, Target, Server, Activity, 
   BarChart, Network, ChevronRight, Terminal, Gauge, Layers, Zap, TrendingUp,
   Users, Shield, Crosshair, Clock, ArrowDown, Sparkles
 } from 'lucide-react';
@@ -119,7 +119,7 @@ const GlitchText = ({ text, alternateText, className = '' }: { text: string; alt
 
   useEffect(() => {
     if (!alternateText) return;
-    
+
     let timeoutId: number;
     let glitchTimeoutId: number;
     let isShowingAlt = false;
@@ -140,24 +140,24 @@ const GlitchText = ({ text, alternateText, className = '' }: { text: string; alt
         scale: 1 + Math.random() * 0.05, // zoom up to 1.05
         blur: Math.random() * 2
       });
-      
+
       // End glitch and swap
       glitchTimeoutId = window.setTimeout(() => {
         setGlitching(false);
-        
+
         isShowingAlt = !isShowingAlt;
         setShowAlt(isShowingAlt);
-        
+
         // 'YOU' shows for 1.0s, 'CEO' for 5s
         const nextDuration = isShowingAlt ? 1000 : 5000;
         timeoutId = window.setTimeout(runCycle, nextDuration);
-        
+
       }, 80 + Math.random() * 50);
     };
-    
+
     // Initial wait on 'CEO'
     timeoutId = window.setTimeout(runCycle, 5000);
-    
+
     return () => {
       window.clearTimeout(timeoutId);
       window.clearTimeout(glitchTimeoutId);
@@ -168,10 +168,10 @@ const GlitchText = ({ text, alternateText, className = '' }: { text: string; alt
 
   return (
     <span className="relative inline-block">
-      <span 
-        className={`relative z-10 inline-block transition-none ${className}`} 
-        style={{ 
-          transform: glitching ? `skew(${g.skew}deg) scale(${g.scale})` : 'none', 
+      <span
+        className={`relative z-10 inline-block transition-none ${className}`}
+        style={{
+          transform: glitching ? `skew(${g.skew}deg) scale(${g.scale})` : 'none',
           opacity: glitching ? 0.7 : 1,
           filter: glitching ? `blur(${g.blur}px) hue-rotate(${Math.random() * 90}deg)` : 'none'
         }}
@@ -492,9 +492,9 @@ export const Landing = () => {
         <GridFloor />
 
         {/* Hero content */}
-        <div className={`relative z-10 text-center max-w-5xl mx-auto px-6 transition-all duration-1500 ${heroReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+        <div className={`relative z-10 text-center max-w-5xl mx-auto px-6 pt-32 transition-all duration-1500 ${heroReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           {/* Holographic ring logo */}
-          <div className="relative inline-flex items-center justify-center w-36 h-36 md:w-44 md:h-44 mb-6">
+          <div className="relative inline-flex items-center justify-center w-36 h-36 md:w-44 md:h-44 mb-6 -mt-[70px]">
             <style>{`
               @keyframes shortPing {
                 75%, 100% {
@@ -502,14 +502,19 @@ export const Landing = () => {
                   opacity: 0;
                 }
               }
-            `}</style>
+            `}
+            </style>
             <span className="absolute inset-0 rounded-full blur-3xl bg-cyan-500/10" />
             <span className="absolute inset-4 rounded-full blur-xl bg-indigo-500/8" />
-            <div className="relative p-5 bg-gradient-to-br from-cyan-500/15 to-indigo-500/10 rounded-full border border-cyan-500/25 shadow-[0_0_40px_rgba(6,182,212,0.25)] hover:shadow-[0_0_60px_rgba(6,182,212,0.4)] hover:scale-110 transition-all duration-700">
-              <span className="absolute inset-0 rounded-full border border-cyan-500/50" style={{ animation: 'shortPing 3s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
-              <span className="absolute inset-0 rounded-full border border-indigo-500/40" style={{ animation: 'shortPing 3s cubic-bezier(0, 0, 0.2, 1) infinite 1s' }} />
-              <span className="absolute inset-0 rounded-full border border-cyan-400/30" style={{ animation: 'shortPing 3s cubic-bezier(0, 0, 0.2, 1) infinite 2s' }} />
-              <img src="/Logo.png" alt="The Last CEO" className="relative z-10 w-14 h-14 md:w-16 md:h-16 object-contain" />
+            <div className="relative flex items-center justify-center p-5 bg-gradient-to-br from-cyan-500/15 to-indigo-500/10 rounded-full border border-cyan-500/25 shadow-[0_0_40px_rgba(6,182,212,0.25)] hover:shadow-[0_0_60px_rgba(6,182,212,0.4)] hover:scale-110 transition-all duration-700">
+              <span className="absolute rounded-full border border-cyan-500/50" style={{ width: '120px', height: '120px', animation: 'shortPing 3s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
+              <span className="absolute rounded-full border border-indigo-500/40" style={{ width: '140px', height: '140px', animation: 'shortPing 3s cubic-bezier(0, 0, 0.2, 1) infinite 1s' }} />
+              <span className="absolute rounded-full border border-cyan-400/30" style={{ width: '160px', height: '160px', animation: 'shortPing 3s cubic-bezier(0, 0, 0.2, 1) infinite 2s' }} />
+              <img
+                src="/Logo.png"
+                alt="The Last CEO"
+                className="relative z-10 w-32 h-32 md:w-24 md:h-24 object-contain"
+              />
             </div>
           </div>
 
