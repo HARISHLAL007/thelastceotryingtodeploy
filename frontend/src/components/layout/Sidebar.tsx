@@ -31,8 +31,8 @@ export const Sidebar = ({ onClose }: { onClose?: () => void }) => {
       <div className="relative z-10 px-5 py-5 border-b border-slate-800/60">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="p-2 bg-cyan-500/10 rounded-lg border border-cyan-400/30 shadow-[0_0_15px_rgba(34,211,238,0.25)]">
-              <img src="/Logo.png" alt="The Last CEO" className="h-5 w-5 object-contain" />
+            <div className="p-1 flex items-center justify-center bg-cyan-500/10 rounded-lg border border-cyan-400/30 shadow-[0_0_15px_rgba(34,211,238,0.25)] w-11 h-11">
+              <img src="/Logo.png" alt="The Last CEO" className="h-9 w-9 object-contain" />
             </div>
             <span className="absolute -bottom-1 -right-1 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-[#05070f] shadow-[0_0_8px_rgba(52,211,153,0.9)] animate-[blink_2s_ease-in-out_infinite]" />
           </div>

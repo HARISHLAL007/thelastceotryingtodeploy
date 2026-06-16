@@ -35,6 +35,7 @@ export interface GameState {
   isGameOver: boolean;
   gameResult: 'victory' | 'bankruptcy' | null;
   history: YearHistory[];
+  emergencyQuarters: number;
 }
 
 export interface YearHistory {
