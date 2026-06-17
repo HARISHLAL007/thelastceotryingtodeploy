@@ -69,8 +69,6 @@ const playLineBeep = () => {
   osc.stop(ctx.currentTime + 0.15);
 };
 
-
-
 const Typewriter = ({ text, delay = 0, speed = 40, className, onComplete }: any) => {
   const [displayed, setDisplayed] = useState('');
   
@@ -136,7 +134,6 @@ export const Home = () => {
   const [avatarIntroStage, setAvatarIntroStage] = useState(0);
 
   useEffect(() => {
-    // Preload voices
     if (window.speechSynthesis.getVoices().length > 0) {
       setVoicesLoaded(true);
     }
@@ -148,12 +145,10 @@ export const Home = () => {
   const currentQ = QUESTIONS[qIndex];
   const activeSpeaker = BOARD_MEMBERS.find(m => m.id === currentQ?.speakerId);
 
-  // Typewriter effect & Voice synthesis
   useEffect(() => {
     if (showIntro) return;
 
     if (!currentQ) {
-      // Boardroom meeting is over. Only advance to the report once the avatar has been designed.
       if (formData.skin && !showReport) {
         setShowReport(true);
       }
@@ -172,7 +167,6 @@ export const Home = () => {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     
-    // Dynamic Voice Profiling
     const voices = window.speechSynthesis.getVoices();
     const voiceDavid = voices.find(v => v.name.includes('David'));
     const voiceMark = voices.find(v => v.name.includes('Mark'));
@@ -184,32 +178,32 @@ export const Home = () => {
     
     switch(currentQ.speakerId) {
       case 'chairman':
-        utterance.pitch = 0.3; // Very deep, authoritative
+        utterance.pitch = 0.3;
         utterance.rate = 0.8;
         if (v1) utterance.voice = v1;
         break;
       case 'strategy':
-        utterance.pitch = 1.2; // Energetic, sharp male
+        utterance.pitch = 1.2;
         utterance.rate = 1.1;
         if (v2) utterance.voice = v2;
         break;
       case 'cfo':
-        utterance.pitch = 0.8; // Deliberate, medium-low male
+        utterance.pitch = 0.8;
         utterance.rate = 0.95;
         if (v2) utterance.voice = v2;
         break;
       case 'cto':
-        utterance.pitch = 1.4; // Fast, slightly higher pitch male
+        utterance.pitch = 1.4;
         utterance.rate = 1.2;
         if (v1) utterance.voice = v1;
         break;
       case 'chro':
-        utterance.pitch = 1.1; // Warm, professional female
+        utterance.pitch = 1.1;
         utterance.rate = 1.0;
         if (femaleVoice) utterance.voice = femaleVoice;
         break;
       case 'risk':
-        utterance.pitch = 0.8; // Serious, cautious female
+        utterance.pitch = 0.8;
         utterance.rate = 0.9;
         if (femaleVoice) utterance.voice = femaleVoice;
         break;
@@ -243,7 +237,6 @@ export const Home = () => {
     const q = QUESTIONS[qIndex];
     if (q.type === 'text') {
       const s = String(val).trim();
-      // No character limits — the only rule is that an answer was given.
       if (s === '') return "The board awaits your answer.";
     }
     return null;
@@ -263,14 +256,13 @@ export const Home = () => {
       setFormData(prev => ({ ...prev, [QUESTIONS[qIndex].field]: val }));
       setIsScanning(false);
       setQIndex(prev => prev + 1);
-    }, 1500); // Wait for scanning animation
+    }, 1500);
   };
 
   const toggleRecording = async () => {
     if (isRecording) return;
 
     try {
-      // Explicitly request microphone access to ensure the browser picks up the correct active device
       await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (err) {
       setValidationError("Microphone permission denied. Please allow microphone access in your browser.");
@@ -312,8 +304,6 @@ export const Home = () => {
 
     recognition.start();
   };
-
-
 
   const generateDocx = async () => {
     const doc = new Document({
@@ -467,7 +457,6 @@ export const Home = () => {
               speed={40}
               className="text-2xl md:text-3xl font-bold text-white tracking-widest mt-12 animate-pulse uppercase min-h-[80px]"
               onComplete={() => {
-                // Resume audio context just in case, though it usually requires user interaction
                 getAudioContext()?.resume();
                 setTimeout(() => setShowIntro(false), 2000);
               }}
@@ -478,8 +467,6 @@ export const Home = () => {
     );
   }
 
-  // Skin / Avatar selection — shown AFTER the boardroom meeting concludes.
-  // Purely cosmetic: grants no bonuses or abilities.
   if (!currentQ && !formData.skin) {
     if (showAvatarCinematic) {
       return (
@@ -487,7 +474,7 @@ export const Home = () => {
           <div className="max-w-3xl text-center space-y-8 animate-in fade-in duration-[1500ms]">
             {avatarIntroStage >= 0 && (
               <Typewriter 
-                text="EXECUTIVE PROFILE ACCEPTED." 
+                text="EXECUTIVE PROFILE ACCEPTED" 
                 speed={50}
                 className="text-xl md:text-2xl font-mono tracking-[0.2em] text-slate-500 mb-8 uppercase"
                 onComplete={() => setTimeout(() => setAvatarIntroStage(1), 1000)}
@@ -496,7 +483,7 @@ export const Home = () => {
             
             {avatarIntroStage >= 1 && (
               <Typewriter 
-                text="GO AHEAD AND FORGE YOUR AVATAR AND BEGIN YOUR JOURNEY TO 2035." 
+                text="GO AHEAD AND FORGE YOUR AVATAR AND BEGIN YOUR JOURNEY TO 2035" 
                 speed={40}
                 className="text-2xl md:text-4xl font-black tracking-[0.1em] text-cyan-400 mb-8 text-glow-cyan"
                 onComplete={() => setTimeout(() => setShowAvatarCinematic(false), 2500)}
@@ -511,30 +498,26 @@ export const Home = () => {
     const active = SKINS.find((s) => s.id === activeId) || SKINS[0];
     return (
       <div className="min-h-screen w-full bg-gradient-to-b from-[#0a0712] via-[#0d0a18] to-[#06040c] text-white font-space relative overflow-hidden flex flex-col">
-        {/* Ambient RPG glow + scanlines */}
         <div
           className="absolute inset-0 opacity-[0.08] pointer-events-none"
           style={{ backgroundImage: 'radial-gradient(circle at 28% 18%, #a855f7 0, transparent 42%), radial-gradient(circle at 82% 72%, #f59e0b 0, transparent 46%)' }}
         />
         <div className="absolute inset-0 scanlines opacity-20 pointer-events-none" />
 
-        {/* Header */}
         <div className="relative z-10 text-center pt-2 pb-1 px-6 animate-in fade-in slide-in-from-top-6 duration-700">
           <div className="inline-block px-3 py-0.5 mb-0.5 border-y-2 border-amber-500/40">
-            <span className="text-amber-400/80 tracking-[0.4em] text-[18px] uppercase">Character Select</span>
+            <span className="text-amber-400/80 tracking-[0.4em] text-[16px] uppercase">Character Select</span>
           </div>
-          <h3 className="text-lg md:text-2xl font-black tracking-widest uppercase bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 text-transparent bg-clip-text drop-shadow-[0_2px_8px_rgba(245,158,11,0.3)]">
+          <h1 className="text-lg md:text-xl font-black tracking-widest uppercase bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 text-transparent bg-clip-text drop-shadow-[0_2px_8px_rgba(245,158,11,0.3)]">
             Forge Your Avatar
-          </h3>
+          </h1>
           <p className="text-slate-400 text-[10px] mt-0.5 tracking-wide">
             Choose how your CEO looks.{' '}
-            <span className="text-amber-500/80">Appearance only - no bonuses or abilities.</span>
+            <span className="text-amber-500/80">Appearance only - no bonuses or abilities</span>
           </p>
         </div>
 
-        {/* Body */}
         <div className="relative z-10 flex-1 grid lg:grid-cols-[1fr,1.1fr] gap-3 px-4 md:px-8 pb-4 max-w-7xl mx-auto w-full items-stretch">
-          {/* Preview pedestal */}
           <div
             className="relative rounded-3xl border-2 overflow-hidden flex flex-col transition-all duration-500"
             style={{ borderColor: active.accent + '66', boxShadow: `0 0 60px ${active.accent}22, inset 0 0 80px ${active.accent}11` }}
@@ -558,7 +541,6 @@ export const Home = () => {
             </div>
           </div>
 
-          {/* Card grid + confirm */}
           <div className="flex flex-col gap-2">
             <div className="grid sm:grid-cols-2 gap-2 flex-1">
               {SKINS.map((s) => {
@@ -613,15 +595,11 @@ export const Home = () => {
     );
   }
 
-  // Meeting finished and avatar already chosen — hold briefly until the report screen takes over.
   if (!currentQ) return null;
 
-  // Camera math: To center the active speaker, we move the entire room in the OPPOSITE direction of their x,y.
-  // We also subtract a bit from Y so they sit at the TOP of the screen, making room for the question card.
   const camX = activeSpeaker ? -activeSpeaker.x : 0;
   const camY = activeSpeaker ? -activeSpeaker.y - 250 : 0; 
 
-  // Determine globe icon based on industry
   let GlobeIcon = Globe;
   let globeColor = "text-cyan-500";
   if (formData.industry === 'Healthcare') { GlobeIcon = Stethoscope; globeColor = "text-emerald-500"; }
@@ -642,13 +620,10 @@ export const Home = () => {
         style={{ backgroundImage: "url('/cyberpunk_city.png')" }} 
       />
       
-      {/* Animated Elements: Rain, Scanlines */}
       <div className="absolute inset-0 opacity-10 pointer-events-none z-0" style={{ backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0) 100%)', backgroundSize: '1px 200px', animation: 'rain 0.3s linear infinite' }}></div>
       <div className="absolute inset-0 bg-gradient-to-t from-[#040610] via-transparent to-[#040610] pointer-events-none z-0 opacity-90" />
 
-
-
-      {/* Holographic Table in Dead Center - FIXED TO VIEWPORT */}
+      {/* Holographic Table */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-0 opacity-70 pointer-events-none">
         <div className="w-[400px] h-[400px] rounded-full border border-cyan-500/10 bg-cyan-950/10 shadow-[0_0_100px_rgba(6,182,212,0.05)] flex items-center justify-center relative">
           <GlobeIcon className={cn("w-40 h-40 opacity-50 drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]", globeColor, formData.industry ? "animate-[spin_20s_linear_infinite]" : "animate-pulse")} />
@@ -660,13 +635,11 @@ export const Home = () => {
         </div>
       </div>
 
-      {/* THE 360 CIRCULAR BOARDROOM (CSS Camera System) */}
+      {/* THE 360 CIRCULAR BOARDROOM */}
       <div 
         className="absolute top-1/2 left-1/2 w-0 h-0 transition-transform duration-[2000ms] ease-in-out z-10"
         style={{ transform: `translate(${camX}px, ${camY}px)` }}
       >
-        
-        {/* Board Members positioned in absolute orbit around center */}
         {BOARD_MEMBERS.map((member) => {
           const isActive = member.id === activeSpeaker?.id;
           
@@ -688,7 +661,6 @@ export const Home = () => {
               )}>
                 {isActive && <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent h-1/2 animate-[scanline-sweep_2s_linear_infinite]" />}
                 
-                {/* Massive Portrait */}
                 <div className={cn(
                   "rounded-full border flex items-center justify-center mb-4 transition-all overflow-hidden relative bg-slate-900 shrink-0", 
                   isActive ? `w-20 h-20 md:w-24 md:h-24 ${member.border} shadow-[0_0_30px_currentColor] ${member.color.replace('text', 'shadow')} ${isSpeaking ? 'animate-[pulse_1s_ease-in-out_infinite]' : ''}` : "w-16 h-16 border-slate-700"
@@ -704,12 +676,10 @@ export const Home = () => {
                 </div>
               </div>
 
-              {/* The Holographic Question Console - Renders DIRECTLY beneath the active profile! */}
+              {/* Holographic Question Console */}
               {isActive && currentQ && (
                 <div className="absolute top-[105%] left-1/2 -translate-x-1/2 translate-y-[5px] w-[90vw] max-w-[600px] flex flex-col items-center animate-in fade-in slide-in-from-top-8 duration-700 delay-300">
-                <div className="absolute top-[105%] left-1/2 -translate-x-1/2 w-[90vw] max-w-[600px] flex flex-col items-center animate-in fade-in slide-in-from-top-8 duration-700 fill-mode-both">
                   
-                  {/* Subtle connecting line from portrait to console */}
                   <div className={cn("w-[2px] h-8 bg-gradient-to-b to-transparent mb-2", member.color.replace('text', 'from'))} />
 
                   <div className="w-full bg-slate-950/90 border border-cyan-500/30 p-5 md:p-6 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.8)] backdrop-blur-3xl relative overflow-hidden">
@@ -816,12 +786,12 @@ export const Home = () => {
                 </div>
               )}
             </div>
-          );
+          )
         })}
       </div>
       
       {/* AI Assistant Help */}
-      <div className="absolute bottom-6 left-6 text-slate-500 flex items-center gap-2 text-xs font-mono opacity-50 hover:opacity-100 transition-opacity cursor-pointer z-50">
+      <div className="absolute bottom-6 left-6 text-slate-500 flex items-center gap-2 text-xs font-mono opacity-50 hover:opacity-100 transition-opacity cursor-pointer z-50" style={{ cursor: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24'%3E%3Cpath d='M4 2v19l6-5 4 8 3-1-4-8h6z' fill='%2306b6d4' stroke='white' stroke-width='1'/%3E%3C/svg%3E\") 2 1, auto" }}>
         🤖 NeuralForge AI Active
       </div>
     </div>
