@@ -11,6 +11,13 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from datetime import datetime, timezone
 
+# Load backend/.env (e.g. GROQ_API_KEY) so the AI Advisor works without manual exports.
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+except Exception:
+    pass
+
 # Database Setup
 SQLALCHEMY_DATABASE_URL = "sqlite:///./database.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
@@ -76,13 +83,15 @@ def get_advisor_insights(req: AdvisorRequest):
     groq_api_key = os.environ.get("GROQ_API_KEY", "")
     url = "https://api.groq.com/openai/v1/chat/completions"
     data = json.dumps({
-        "model": "llama3-8b-8192",
+        "model": "llama-3.1-8b-instant",
         "messages": [{"role": "user", "content": req.prompt}]
     }).encode("utf-8")
     
     req_obj = urllib.request.Request(url, data=data, headers={
         "Authorization": f"Bearer {groq_api_key}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        # Groq sits behind Cloudflare, which 403s the default Python urllib UA (error 1010).
+        "User-Agent": "Mozilla/5.0"
     }, method="POST")
     
     try:
