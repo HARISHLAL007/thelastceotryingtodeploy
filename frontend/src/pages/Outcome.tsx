@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ShadingType, TableLayoutType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ShadingType, TableLayoutType, ImageRun } from 'docx';
 import { saveAs } from 'file-saver';
 
 interface Ending {
@@ -41,7 +41,7 @@ const ALL_ENDINGS: Ending[] = [
   {
     id: 'unicorn',
     title: 'THE UNICORN EXIT',
-    description: 'Survive to 2035 with a budget > $3M or ROI > 150%.',
+    description: 'Reach 2035 with Budget ≥ $8M and ROI ≥ 15%.',
     badge: '🦄 UNICORN EXIT',
     unlockedMsg: 'You built a legendary high-growth behemoth that dominated the global markets!',
     glowClass: 'border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.15)] bg-yellow-500/5',
@@ -53,7 +53,7 @@ const ALL_ENDINGS: Ending[] = [
   {
     id: 'ipo',
     title: 'IPO PUBLIC LISTING',
-    description: 'Survive to 2035 with >= 30 employees and >= $2M budget.',
+    description: 'Reach 2035 with ≥ 10 employees and Budget ≥ $2M.',
     badge: '🔔 IPO PUBLIC LISTING',
     unlockedMsg: 'You successfully listed your startup on the NASDAQ exchange with massive fanfare.',
     glowClass: 'border-emerald-500/50 shadow-[0_0_20px_rgba(52,211,153,0.15)] bg-emerald-500/5',
@@ -65,7 +65,7 @@ const ALL_ENDINGS: Ending[] = [
   {
     id: 'acquisition',
     title: 'MEGACORP ACQUISITION',
-    description: 'Survive to 2035 with a budget > $1.5M or ROI > 100%.',
+    description: 'Reach 2035 with Budget ≥ $5M or ROI ≥ 80%.',
     badge: '💼 ACQUIRED BY MEGACORP',
     unlockedMsg: 'A conglomerate purchased your company for a massive exit, rewarding your team.',
     glowClass: 'border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.15)] bg-purple-500/5',
@@ -77,7 +77,7 @@ const ALL_ENDINGS: Ending[] = [
   {
     id: 'bootstrap_legend',
     title: 'BOOTSTRAP LEGEND',
-    description: 'Survive to 2035 starting with Bootstrapper runway capital.',
+    description: 'Reach 2035 starting with Bootstrap capital.',
     badge: '👑 BOOTSTRAP LEGEND',
     unlockedMsg: 'No venture capital, pure grit. You built a self-sustaining empire from just $100K.',
     glowClass: 'border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.15)] bg-cyan-500/5',
@@ -89,7 +89,7 @@ const ALL_ENDINGS: Ending[] = [
   {
     id: 'lifestyle',
     title: 'SUSTAINABLE LIFESTYLE',
-    description: 'Survive to 2035 with < 15 employees and <= $1.5M budget.',
+    description: 'Reach 2035 with < 10 employees and Budget ≤ $1.5M.',
     badge: '☕ LIFESTYLE BUSINESS',
     unlockedMsg: 'You prioritized longevity and work-life harmony over hyper-scaling.',
     glowClass: 'border-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.15)] bg-amber-500/5',
@@ -101,7 +101,7 @@ const ALL_ENDINGS: Ending[] = [
   {
     id: 'rogue_ai',
     title: 'ROGUE AI SINGULARITY',
-    description: 'Survive in Technology sector with an ROI > 200%.',
+    description: 'Survive in Technology sector with an ROI ≥ 150%.',
     badge: '🤖 AI SINGULARITY',
     unlockedMsg: 'Your automation routines achieved self-awareness. Humans are now corporate relics.',
     glowClass: 'border-pink-500/50 shadow-[0_0_20px_rgba(244,63,94,0.15)] bg-pink-500/5',
@@ -113,7 +113,7 @@ const ALL_ENDINGS: Ending[] = [
   {
     id: 'talent_acquired',
     title: 'TALENT ACQUISITION',
-    description: 'Go bankrupt but maintain > 50% ROI or > 80% morale.',
+    description: 'Go bankrupt but finish with Morale ≥ 80% or ROI ≥ 50%.',
     badge: '🤝 TALENT ACQUIRED',
     unlockedMsg: 'Though capital ran dry, top-tier engineering firms bought your team for their skill.',
     glowClass: 'border-indigo-500/50 shadow-[0_0_20px_rgba(99,102,241,0.15)] bg-indigo-500/5',
@@ -125,7 +125,7 @@ const ALL_ENDINGS: Ending[] = [
   {
     id: 'crash_burn',
     title: 'CRASH & BURN',
-    description: 'Fail standard capital thresholds before Year 2035.',
+    description: 'Run out of capital before 2035.',
     badge: '💥 CRASH & BURN',
     unlockedMsg: 'Your runway collapsed. Your startup joins the historic graveyard of failed ventures.',
     glowClass: 'border-rose-500/50 shadow-[0_0_20px_rgba(244,63,94,0.15)] bg-rose-500/5',
@@ -159,28 +159,30 @@ export const Outcome = () => {
   // State for animations
   const [valTicker, setValTicker] = useState(0);
   const [typedText, setTypedText] = useState('');
+  const [showBoardroomEnding, setShowBoardroomEnding] = useState(false);
+  const [boardroomStep, setBoardroomStep] = useState(0);
 
   // Determine achieved ending
   const getAchievedEndingId = (): string => {
     if (state.gameResult === 'victory') {
-      if (company?.industry?.toLowerCase() === 'technology' && state.roi > 200) {
+      if (company?.industry?.toLowerCase() === 'technology' && state.roi >= 150) {
         return 'rogue_ai';
       }
       if (company?.startingBudget === 100000) {
         return 'bootstrap_legend';
       }
-      if (state.budget > 3000000 || state.roi > 150) {
+      if (state.budget >= 8000000 && state.roi >= 15) {
         return 'unicorn';
       }
-      if (state.employees >= 30 && state.budget >= 2000000) {
+      if (state.employees >= 10 && state.budget >= 2000000) {
         return 'ipo';
       }
-      if (state.budget > 1500000 || state.roi > 100) {
+      if (state.budget >= 5000000 || state.roi >= 80) {
         return 'acquisition';
       }
       return 'lifestyle';
     } else {
-      if (state.roi > 50 || state.morale > 80) {
+      if (state.roi >= 50 || state.morale >= 80) {
         return 'talent_acquired';
       }
       return 'crash_burn';
@@ -198,6 +200,77 @@ export const Outcome = () => {
     return 0;
   };
   const valuation = calculateValuation();
+
+  // Calculations for UI
+  const decisionsMade = state.history.length;
+  const yearsSurvived = Math.floor(decisionsMade / 4) + (decisionsMade % 4 > 0 ? 0.5 : 0);
+  const employeeTurnover = Math.floor(state.employees * 0.3); // estimated
+
+  const maxRoiQ = [...state.history].sort((a,b) => b.roi - a.roi)[0];
+  const minRoiQ = [...state.history].sort((a,b) => a.roi - b.roi)[0];
+  const maxRevenueQ = [...state.history].sort((a,b) => (b.revenue || 0) - (a.revenue || 0))[0];
+  
+  const medals = [
+    { title: "Highest Revenue", val: maxRevenueQ ? `$${((maxRevenueQ.revenue||0)/1000000).toFixed(1)}M (Q${maxRevenueQ.quarter})` : "N/A" },
+    { title: "Best Quarter", val: maxRoiQ ? `+${maxRoiQ.roi}% (Q${maxRoiQ.quarter})` : "N/A" },
+    { title: "Worst Quarter", val: minRoiQ ? `${minRoiQ.roi}% (Q${minRoiQ.quarter})` : "N/A" },
+    { title: "Most Automation", val: `${company?.automationRate || 0}%` },
+    { title: "Peak Morale", val: `${Math.max(...state.history.map(h => h.morale), state.morale)}%` },
+  ];
+
+  const getGrade = () => {
+    if (state.gameResult === 'bankruptcy') return state.roi < -20 ? "F" : "D";
+    if (achievedEndingId === 'unicorn') return "A+";
+    if (achievedEndingId === 'ipo') return "A";
+    if (achievedEndingId === 'acquisition') return "B+";
+    if (achievedEndingId === 'rogue_ai') return "S";
+    return "B";
+  };
+
+  const aiScore = Math.min(100, (company?.aiMaturityScore || 0) + 20);
+  const finScore = state.gameResult === 'bankruptcy' ? 18 : Math.max(0, Math.min(100, 50 + (state.roi / 5) + (state.budget / 1000000)));
+  const innScore = Math.min(100, (company?.automationRate || 0) + (state.gameResult === 'bankruptcy' ? 50 : 30));
+  const opScore = state.gameResult === 'bankruptcy' ? 31 : Math.min(100, 40 + (state.level * 10));
+
+  const timeline = [];
+  timeline.push("2025: Startup Founded");
+  if (state.history.length > 2) timeline.push("2025: First AI Deployment");
+  if (state.history.length > 4) timeline.push("2026: Rapid Workforce Expansion");
+  if (state.budget < 5000000 && state.history.length > 6) timeline.push(`${state.history[6]?.year}: Cash Flow Crisis`);
+  if (isVictory) {
+      timeline.push("2032: Market Dominance Established");
+      timeline.push("2035: Final Simulation Target Achieved");
+  } else {
+      timeline.push(`${state.currentYear}: Operations Ceased (Q${state.currentQuarter})`);
+  }
+
+  const getBoardDebriefs = () => {
+    const debriefs = [];
+    if (achievedEndingId === 'unicorn') {
+        debriefs.push({ role: "Chairman", text: "You built the empire we dreamed of. The legacy is secure." });
+        debriefs.push({ role: "CFO", text: "Our valuation multiplier is astronomical. Masterful capital allocation." });
+        debriefs.push({ role: "CTO", text: "We have achieved total market dominance in the AI sector." });
+    } else if (achievedEndingId === 'ipo') {
+        debriefs.push({ role: "Chairman", text: "A solid public debut. You've earned your golden parachute." });
+        debriefs.push({ role: "CFO", text: "The roadshow was a success. Institutional investors are very happy." });
+    } else if (achievedEndingId === 'acquisition') {
+        debriefs.push({ role: "Chairman", text: "We've been absorbed by the megacorp, but the buyout premium was worth it." });
+    } else if (achievedEndingId === 'lifestyle') {
+        debriefs.push({ role: "Chairman", text: "Small, profitable, and quiet. Not what we envisioned, but you survived." });
+        debriefs.push({ role: "CHRO", text: "The culture is fantastic. Remaining employees are very dedicated." });
+    } else if (state.gameResult === 'bankruptcy') {
+        debriefs.push({ role: "Chairman", text: "The market remembers winners, not excuses." });
+        debriefs.push({ role: "CFO", text: "Cash reserves evaporated due to uncontrolled expansion." });
+        debriefs.push({ role: "CTO", text: "Our AI stack succeeded technically, but business execution failed." });
+        debriefs.push({ role: "CHRO", text: "Employee morale remained resilient despite financial collapse." });
+        debriefs.push({ role: "CRO", text: "I warned against scaling without sustainable ROI." });
+        debriefs.push({ role: "Analysts", text: "Investors abandoned confidence after continuous losses." });
+    } else {
+        debriefs.push({ role: "Chairman", text: "An unprecedented trajectory. History will remember this." });
+    }
+    return debriefs;
+  };
+
 
   // 1. Count-up Valuation Ticker animation
   useEffect(() => {
@@ -275,34 +348,52 @@ export const Outcome = () => {
   };
 
   const handleDownloadReport = async () => {
-    // Palette (hex without '#', as docx expects)
-    const ACCENT = "0E7490";   // cyan-700 — headings & table headers
-    const POSITIVE = "15803D"; // green
-    const NEGATIVE = "B91C1C"; // red
-    const MUTED = "64748B";    // slate-500
-    const BORDER = "D1D5DB";   // gray-300
-    const statusColor = isVictory ? POSITIVE : NEGATIVE;
-    const statusText = isVictory ? "VICTORY" : "BANKRUPTCY";
+    const ACCENT = "06B6D4"; // Cyan-500
+    const MUTED = "64748B"; // Slate-500
+    const POSITIVE = "10B981"; // Emerald-500
+    const NEGATIVE = "F43F5E"; // Rose-500
+    const BORDER = "334155"; // Slate-700
+    const SCORE_FILLED = "█";
+    const SCORE_EMPTY = "░";
 
-    // --- Formatting helpers (bold/italics must live on TextRun, not Paragraph) ---
     const heading = (text: string) =>
       new Paragraph({
-        heading: HeadingLevel.HEADING_1,
-        spacing: { before: 280, after: 120 },
-        children: [new TextRun({ text, bold: true, color: ACCENT, size: 26 })],
+        text: text.toUpperCase(),
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 240, after: 120 },
+        border: { bottom: { color: ACCENT, space: 1, style: BorderStyle.SINGLE, size: 12 } },
       });
 
-    const kv = (label: string, value: string, valueColor?: string) =>
+    const kv = (key: string, value: string, valColor: string = "000000") =>
       new Paragraph({
         spacing: { after: 80 },
         children: [
-          new TextRun({ text: `${label}:  `, bold: true }),
-          new TextRun({ text: value, bold: true, color: valueColor }),
+          new TextRun({ text: `${key}: `, bold: true }),
+          new TextRun({ text: value, color: valColor, bold: true }),
         ],
       });
 
-    const para = (text: string) =>
-      new Paragraph({ spacing: { after: 140 }, children: [new TextRun({ text })] });
+    const para = (text: string, italics: boolean = false, bold: boolean = false, color: string = "000000", center: boolean = false) =>
+      new Paragraph({ 
+          spacing: { after: 140 }, 
+          alignment: center ? AlignmentType.CENTER : AlignmentType.LEFT,
+          children: [new TextRun({ text, italics, bold, color })] 
+      });
+
+    const bullet = (text: string) =>
+      new Paragraph({
+        text: `• ${text}`,
+        spacing: { after: 100 },
+        indent: { left: 360 }
+      });
+      
+    const monoBlock = (text: string, bold: boolean = false) => {
+      const lines = text.split('\n');
+      return new Paragraph({
+        spacing: { before: 60, after: 60 },
+        children: lines.map((line, i) => new TextRun({ text: line, break: i > 0 ? 1 : 0, font: "Courier New", size: 18, bold }))
+      });
+    };
 
     const divider = () =>
       new Paragraph({
@@ -319,17 +410,16 @@ export const Outcome = () => {
         children: [new Paragraph({ children: [new TextRun({ text, bold: true, color: "FFFFFF" })] })],
       });
 
-    const cell = (text: string, width: number, opts: { bold?: boolean; color?: string } = {}) =>
+    const cell = (text: string, width: number, opts: { bold?: boolean; color?: string; fill?: string } = {}) =>
       new TableCell({
         width: { size: width, type: WidthType.DXA },
+        shading: opts.fill ? { type: ShadingType.CLEAR, color: "auto", fill: opts.fill } : undefined,
         margins: { top: 60, bottom: 60, left: 120, right: 120 },
         children: [new Paragraph({ children: [new TextRun({ text, bold: opts.bold, color: opts.color })] })],
       });
 
-    // Explicit column widths (twips). Without these + FIXED layout, Word/Pages
-    // collapse the columns to one character wide.
-    const METRIC_COLS = [3120, 6240];                          // 2 cols, ~9360 total
-    const HISTORY_COLS = [1000, 1100, 2280, 2280, 1350, 1350]; // 6 cols, ~9360 total
+    const METRIC_COLS = [3120, 6240];
+    const HISTORY_COLS = [1000, 1100, 2000, 2000, 1350, 1350, 1800];
 
     const tableBorders = {
       top: { style: BorderStyle.SINGLE, size: 4, color: BORDER },
@@ -341,20 +431,203 @@ export const Outcome = () => {
     };
 
     const metrics: [string, string][] = [
-      ["Final Budget", `$${state.budget.toLocaleString()}`],
+      ["Final Budget", `$${(state.budget / 1000000).toFixed(2)}M`],
       ["Final ROI", `${state.roi}%`],
       ["Employees", `${state.employees}`],
-      ["Employee Morale", `${state.morale}%`],
+      ["Morale", `${state.morale}%`],
       ["Company Level", `${state.level}`],
-      ["Final Quarter", `${state.currentYear} - Q${state.currentQuarter}`],
+      ["Final Date", `${state.currentYear} Q${state.currentQuarter}`],
     ];
+
+    const getInsights = () => {
+       const insights = [];
+       if (state.roi > 50) insights.push("AI investment accelerated revenue growth and generated high ROI.");
+       else if (state.roi < 0) insights.push("ROI remained negative during the final years, indicating inefficient capital utilization.");
+       else insights.push("ROI remained stable but lacked explosive growth.");
+
+       if (state.budget < 5000000) insights.push("Excessive spending reduced long-term budget reserves.");
+       else insights.push("Strong financial discipline preserved capital reserves.");
+
+       if (state.morale < 50) insights.push("Employee morale fluctuated significantly and remained critically low during restructuring.");
+       else insights.push("Workforce satisfaction remained high despite transitions.");
+
+       if (isVictory) insights.push("Company survival was achieved through strategic adaptation and maintaining core operations.");
+       else insights.push("Failure to pivot and control burn rate ultimately caused insolvency.");
+       
+       return insights;
+    };
+
+    const isBankrupt = state.gameResult === 'bankruptcy';
+
+    const getGrade = () => {
+      if (isBankrupt) return state.roi < -20 ? "F" : "D";
+      if (achievedEndingId === 'unicorn') return "A+";
+      if (achievedEndingId === 'ipo') return "A";
+      if (achievedEndingId === 'acquisition') return "B+";
+      if (achievedEndingId === 'rogue_ai') return "S";
+      return "B";
+    };
+
+    const getBoardDebriefs = () => {
+      const debriefs = [];
+      if (achievedEndingId === 'unicorn') {
+         debriefs.push(kv("Chairman", "You created a company history will remember."));
+         debriefs.push(kv("CFO", "Our valuation multiplier is astronomical. Masterful capital allocation."));
+         debriefs.push(kv("CTO", "We have achieved total market dominance in the AI sector."));
+         debriefs.push(kv("Trading Floor", "The market has crowned a new king. We are issuing strong buy ratings across the board."));
+      } else if (achievedEndingId === 'ipo') {
+         debriefs.push(kv("Chairman", "The public markets have validated your vision."));
+         debriefs.push(kv("CFO", "The roadshow was a success. Institutional investors are very happy."));
+         debriefs.push(kv("Trading Floor", "We are seeing a 40% pop on opening day. Exceptional."));
+      } else if (achievedEndingId === 'acquisition') {
+         debriefs.push(kv("Chairman", "We've been absorbed by the megacorp, but the buyout premium was worth it."));
+         debriefs.push(kv("Trading Floor", "M&A rumors confirmed. The acquisition premium is driving immense shareholder value."));
+      } else if (achievedEndingId === 'lifestyle') {
+         debriefs.push(kv("Chairman", "Small, profitable, and quiet. Not what we envisioned, but you survived."));
+         debriefs.push(kv("CHRO", "The culture is fantastic. Remaining employees are very dedicated."));
+         debriefs.push(kv("CFO", "Cash flow is stable. We aren't making headlines, but we aren't bankrupt either."));
+      } else if (isBankrupt) {
+         debriefs.push(kv("Chairman", "Your ambition exceeded your execution."));
+         debriefs.push(kv("CFO", "Cash flow is oxygen. Excessive burn rate destroyed shareholder value."));
+         debriefs.push(kv("CTO", "Our AI infrastructure achieved remarkable capabilities. However, technological excellence alone cannot compensate for poor financial management."));
+         debriefs.push(kv("CHRO", "Automation accelerated productivity but employee morale steadily deteriorated."));
+         debriefs.push(kv("CRO", "Multiple high-risk decisions compounded losses. Better risk diversification could have prevented collapse."));
+         debriefs.push(kv("Trading Floor", "Investor confidence evaporated as losses mounted. The company's valuation collapsed alongside its cash reserves."));
+      } else {
+         debriefs.push(kv("Chairman", "An unprecedented trajectory. History will remember this."));
+      }
+      return debriefs;
+    };
+
+    let aiScore = Math.min(100, (company?.aiMaturityScore || 0) + 20);
+    if (isBankrupt) aiScore = Math.min(aiScore, 78);
+    
+    const finScore = isBankrupt ? 18 : Math.max(0, Math.min(100, 50 + (state.roi / 5) + (state.budget / 1000000)));
+    const innScore = Math.min(100, (company?.automationRate || 0) + (isBankrupt ? 50 : 30));
+    const empScore = state.morale;
+    const opScore = isBankrupt ? 31 : Math.min(100, 40 + (state.level * 10));
+    
+    // Create Timeline
+    const timelineEvents = [];
+    timelineEvents.push(`2024: Startup Founded - Seed Capital $${(company?.startingBudget||1000000)/1000000}M`);
+    if (company?.aiInvestment && company.aiInvestment > 0) timelineEvents.push(`${state.history.length > 0 ? state.history[0].year : 2024}: Initial AI Investment Strategies Deployed`);
+    if (state.history.length > 1) timelineEvents.push(`${state.history[1].year}: Initial Workforce Scaled`);
+    if ((company?.automationRate||0) > 20) timelineEvents.push(`${state.history.length > 2 ? state.history[2].year : 2025}: Advanced Workflow Automation Achieved`);
+    if (state.history.length > 4) timelineEvents.push(`${state.history[4].year}: Aggressive Operations Expansion Phase`);
+    if (state.budget < 5000000 && state.history.length > 6) timelineEvents.push(`${state.history[6].year}: Critical Cash Flow Shortages Reported`);
+    
+    if (isVictory) {
+       timelineEvents.push("2032: Market Dominance and Stabilization");
+       timelineEvents.push("2035: Executive Objectives Completed");
+    } else {
+       timelineEvents.push(`${state.currentYear}: Chapter 11 Bankruptcy (Q${state.currentQuarter})`);
+    }
+
+    const strengths = [];
+    const weaknesses = [];
+    
+    if (state.morale >= 60) strengths.push("Maintained strong employee morale during early growth.");
+    else weaknesses.push("Low employee morale impacted productivity and retention.");
+
+    if (state.budget > 5000000) strengths.push("Robust financial reserves and exceptional cash flow management.");
+    else if (!isBankrupt) strengths.push("Controlled initial investment strategy reduced early risk.");
+    else weaknesses.push("Uncontrollable burn rate and total budget depletion.");
+
+    if (company?.aiInvestment && company.aiInvestment > 500000) strengths.push("Demonstrated strong willingness to adopt and scale AI technologies.");
+    else weaknesses.push("Hesitant AI adoption led to competitive disadvantages.");
+    
+    if (isVictory) strengths.push("Resilient risk management through market fluctuations.");
+
+    const renderBar = (percent: number) => {
+        const p = Math.round(percent / 10);
+        return SCORE_FILLED.repeat(p) + SCORE_EMPTY.repeat(10 - p) + ` ${Math.round(percent)}`;
+    };
+
+    const generateChart = async (config: any) => {
+      try {
+        const response = await fetch("https://quickchart.io/chart", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chart: config, width: 500, height: 300, format: "png", backgroundColor: "white" })
+        });
+        if (!response.ok) throw new Error(`QuickChart error: ${response.status}`);
+        return await response.arrayBuffer();
+      } catch (e) {
+        console.error("Failed to generate chart", e);
+        return null;
+      }
+    };
+
+    const labels = state.history.map(h => `${h.year} Q${h.quarter || 1}`);
+    const revenueData = state.history.map(h => h.revenue / 1000000);
+    const budgetData = state.history.map(h => h.budget / 1000000);
+    const roiData = state.history.map(h => h.roi);
+    const moraleData = state.history.map(h => h.morale);
+    const employeesData = state.history.map(h => h.employees || 0);
+
+    const [finChartBuf, roiMoraleChartBuf, empChartBuf] = await Promise.all([
+      generateChart({
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Revenue ($M)', data: revenueData, borderColor: '#06B6D4', fill: false },
+            { label: 'Budget ($M)', data: budgetData, borderColor: '#EAB308', fill: false }
+          ]
+        },
+        options: { title: { display: true, text: 'Financial Performance' } }
+      }),
+      generateChart({
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'ROI (%)', data: roiData, borderColor: '#10B981', fill: false },
+            { label: 'Morale (%)', data: moraleData, borderColor: '#F43F5E', fill: false }
+          ]
+        },
+        options: { title: { display: true, text: 'Health Metrics' } }
+      }),
+      generateChart({
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Employees', data: employeesData, borderColor: '#A855F7', fill: true, backgroundColor: 'rgba(168,85,247,0.2)' }
+          ]
+        },
+        options: { title: { display: true, text: 'Workforce Capacity' } }
+      })
+    ]);
+
+    const chartParagraphs = [];
+    if (finChartBuf) {
+      chartParagraphs.push(new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 200 },
+        children: [new ImageRun({ data: finChartBuf, transformation: { width: 500, height: 300 } })]
+      }));
+    }
+    if (roiMoraleChartBuf) {
+      chartParagraphs.push(new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 200 },
+        children: [new ImageRun({ data: roiMoraleChartBuf, transformation: { width: 500, height: 300 } })]
+      }));
+    }
+    if (empChartBuf) {
+      chartParagraphs.push(new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 200 },
+        children: [new ImageRun({ data: empChartBuf, transformation: { width: 500, height: 300 } })]
+      }));
+    }
 
     const doc = new Document({
       styles: { default: { document: { run: { font: "Calibri", size: 22 } } } },
       sections: [{
         properties: {},
         children: [
-          // Title block
           new Paragraph({
             alignment: AlignmentType.CENTER, spacing: { after: 40 },
             children: [new TextRun({ text: "THE LAST CEO", bold: true, size: 44, color: ACCENT })],
@@ -365,37 +638,61 @@ export const Outcome = () => {
           }),
           new Paragraph({
             alignment: AlignmentType.CENTER, spacing: { after: 80 },
-            children: [new TextRun({ text: statusText, bold: true, size: 32, color: statusColor })],
+            children: [new TextRun({ text: isVictory ? "✅ SIMULATION COMPLETE — VICTORY" : "❌ SIMULATION TERMINATED — BANKRUPTCY", bold: true, size: 32, color: isVictory ? POSITIVE : NEGATIVE })],
           }),
           divider(),
 
-          heading("Company Profile"),
-          kv("Company Name", company?.name || "Company"),
-          kv("Sector", company?.industry || "—"),
-          kv("Simulation Status", statusText, statusColor),
-          kv("Simulation Duration", `2025 → ${state.currentYear} (Q${state.currentQuarter})`),
+          heading("Executive Summary"),
+          para(`Throughout the simulation, the company ${(company?.aiMaturityScore || 0) > 50 ? 'aggressively' : 'cautiously'} invested in AI transformation and operational expansion. While several growth phases produced revenue gains, ${state.roi < 0 ? 'inconsistent ROI' : 'steady ROI'} and ${state.morale < 50 ? 'declining' : 'stable'} employee morale affected long-term financial stability. Despite these challenges, the company ${isVictory ? 'survived until 2035 and achieved the Victory condition by maintaining operations and adapting to changing business conditions.' : 'was unable to sustain its burn rate and ultimately declared bankruptcy.'}`),
           divider(),
 
-          heading("Final Performance Metrics"),
+          heading("KPI Dashboard"),
           new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
             columnWidths: METRIC_COLS,
             layout: TableLayoutType.FIXED,
             borders: tableBorders,
-            rows: [
-              new TableRow({ tableHeader: true, children: [headerCell("Metric", METRIC_COLS[0]), headerCell("Final Value", METRIC_COLS[1])] }),
-              ...metrics.map(([k, v]) => new TableRow({ children: [cell(k, METRIC_COLS[0]), cell(v, METRIC_COLS[1], { bold: true })] })),
-            ],
+            rows: metrics.map(([k, v]) => new TableRow({ children: [cell(k, METRIC_COLS[0]), cell(v, METRIC_COLS[1], { bold: true })] })),
           }),
           divider(),
 
-          heading("Executive Summary"),
-          para(isVictory
-            ? "Over the course of the simulation, the company successfully expanded its operations through strategic AI investments and operational decisions. The organization achieved significant capital growth while maintaining strong employee morale and progressing to the highest possible levels."
-            : "The simulation concluded in corporate failure. Operations ceased due to critical insolvency, failing to maintain the necessary capital reserves or operational ROI to sustain market presence."),
-          para(isVictory
-            ? "The Board recognizes this simulation as a Victory, demonstrating strong long-term business sustainability and successful AI-driven transformation."
-            : "The Board recognizes this simulation as a Bankruptcy, highlighting critical failures in resource management and strategic adaptation."),
+          heading("Executive Statistics"),
+          monoBlock(`Total Decisions        ${state.history.length}
+AI Investments         ${Math.floor((company?.aiInvestment || 0) / 100000)}
+Deployments            ${company?.deploymentCount || 0}
+Employees Hired        ${Math.max(0, state.employees - (company?.employees || 10))}
+Employees Lost         ${Math.max(0, (company?.employees || 10) - state.employees + Math.floor(Math.random() * 5))}
+Automation             ${company?.automationRate || 0}%
+Training Hours         ${company?.trainingHours || 0}
+Highest Revenue        $${(Math.max(0, ...revenueData)).toFixed(1)}M
+Highest Budget         $${(Math.max(0, ...budgetData)).toFixed(1)}M
+Best ROI               ${Math.max(0, ...roiData)}%
+Worst ROI              ${Math.min(0, ...roiData)}%`, true),
+          divider(),
+
+          heading("Performance Graphs"),
+          ...(chartParagraphs.length > 0 ? chartParagraphs : [para("Chart generation failed.", true, false, NEGATIVE)]),
+          divider(),
+
+          heading("AI Strategy Timeline"),
+          ...timelineEvents.map(event => bullet(event)),
+          divider(),
+
+          heading("Board Member Debrief"),
+          ...getBoardDebriefs(),
+          divider(),
+
+          heading("Business Insights"),
+          ...getInsights().map(insight => bullet(insight)),
+          divider(),
+
+          heading("Player Strategy Selection"),
+          monoBlock(`Initial Strategy Configuration:
+AI Investment : ${(company?.aiMaturityScore || 0) > 70 ? "Aggressive" : (company?.aiMaturityScore || 0) > 40 ? "Moderate" : "Low"}
+Hiring        : ${state.employees > 20 ? "Aggressive" : "Controlled"}
+Automation    : ${(company?.automationRate || 0) > 60 ? "Aggressive" : "Moderate"}
+Training      : ${(company?.trainingHours || 0) > 500 ? "High" : "Medium"}
+Risk Appetite : ${state.roi < 0 || state.budget < 2000000 ? "High" : "Moderate"}`),
           divider(),
 
           heading("Company History Log"),
@@ -408,53 +705,107 @@ export const Outcome = () => {
               new TableRow({
                 tableHeader: true,
                 children: [
-                  headerCell("Year", HISTORY_COLS[0]), headerCell("Quarter", HISTORY_COLS[1]), headerCell("Revenue", HISTORY_COLS[2]),
+                  headerCell("Year", HISTORY_COLS[0]), headerCell("Qtr", HISTORY_COLS[1]), headerCell("Revenue", HISTORY_COLS[2]),
                   headerCell("Budget", HISTORY_COLS[3]), headerCell("ROI", HISTORY_COLS[4]), headerCell("Morale", HISTORY_COLS[5]),
+                  headerCell("Decision", HISTORY_COLS[6]),
                 ],
               }),
-              ...state.history.map((h) =>
+              ...state.history.map((h, i) =>
                 new TableRow({
                   children: [
-                    cell(`${h.year}`, HISTORY_COLS[0]),
-                    cell(`Q${h.quarter || 1}`, HISTORY_COLS[1]),
-                    cell(`$${(h.revenue || 0).toLocaleString()}`, HISTORY_COLS[2]),
-                    cell(`$${h.budget.toLocaleString()}`, HISTORY_COLS[3]),
-                    cell(`${h.roi}%`, HISTORY_COLS[4]),
-                    cell(`${h.morale}%`, HISTORY_COLS[5]),
+                    cell(`${h.year}`, HISTORY_COLS[0], { fill: i % 2 === 0 ? "F8FAFC" : "FFFFFF" }),
+                    cell(`Q${h.quarter || 1}`, HISTORY_COLS[1], { fill: i % 2 === 0 ? "F8FAFC" : "FFFFFF" }),
+                    cell(`$${((h.revenue || 0) / 1000000).toFixed(1)}M`, HISTORY_COLS[2], { color: "10B981", fill: i % 2 === 0 ? "F8FAFC" : "FFFFFF" }),
+                    cell(`$${(h.budget / 1000000).toFixed(1)}M`, HISTORY_COLS[3], { color: h.budget < 0 ? "F43F5E" : "000000", fill: i % 2 === 0 ? "F8FAFC" : "FFFFFF" }),
+                    cell(`${h.roi > 0 ? '+' : ''}${h.roi}%`, HISTORY_COLS[4], { color: h.roi > 0 ? POSITIVE : NEGATIVE, fill: i % 2 === 0 ? "F8FAFC" : "FFFFFF", bold: true }),
+                    cell(`${h.morale}%`, HISTORY_COLS[5], { color: "06B6D4", fill: i % 2 === 0 ? "F8FAFC" : "FFFFFF" }),
+                    cell(`${h.decision || "—"}`, HISTORY_COLS[6], { fill: i % 2 === 0 ? "F8FAFC" : "FFFFFF" }),
                   ],
                 })
               ),
             ],
           }),
           divider(),
-
-          heading("Board Verdict"),
-          kv("Simulation Result", statusText, statusColor),
-          para(isVictory
-            ? "Your leadership successfully transformed a startup into a thriving AI-driven enterprise through strategic investments, workforce development, and operational expansion."
-            : "Your leadership failed to maintain the required capital thresholds and market competitiveness, leading to corporate dissolution."),
-          new Paragraph({
-            spacing: { before: 80, after: 140 },
-            children: [new TextRun({
-              text: isVictory
-                ? "“The Board of Directors congratulates you on building a resilient AI enterprise capable of competing in the future economy.”"
-                : "“The Board of Directors terminates your position effective immediately. Please clear your desk.”",
-              italics: true, bold: true, color: MUTED,
-            })],
-          }),
+          
+          heading("Strengths & Weaknesses"),
+          para("Strengths:", false, true),
+          ...strengths.map(s => bullet(s)),
+          new Paragraph({ spacing: { before: 100 }, children: [] }),
+          para("Weaknesses:", false, true),
+          ...weaknesses.map(w => bullet(w)),
           divider(),
-          new Paragraph({
-            alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text: "Generated by The Last CEO • AI Strategy Simulator", italics: true, color: MUTED, size: 18 })],
-          }),
+
+          heading("Achievement Medals"),
+          monoBlock(medals.map(m => `🏅 ${m.title} — ${m.val}`).join('\n')),
+          divider(),
+
+          heading("CEO Legacy Score"),
+          monoBlock(`Innovation        ${renderBar(innScore)}
+Leadership        ${renderBar(isBankrupt ? 22 : 88)}
+Financial Skill   ${renderBar(finScore)}
+People Management ${renderBar(empScore)}
+Risk Control      ${renderBar(opScore)}
+
+Overall Grade:    ${getGrade()}
+Title:            ${getGrade() === 'A+' ? 'Legendary Visionary' : getGrade() === 'A' ? 'Corporate Titan' : getGrade() === 'B+' ? 'Strategic Leader' : getGrade() === 'B' ? 'Ambitious Innovator' : 'Failed Visionary'}`),
+          divider(),
+
+          heading("Executive Letter"),
+          para("FROM:", false, true),
+          para("The Board of Directors"),
+          para("Dear CEO,"),
+          para(isVictory
+             ? "History celebrates those who dare to lead through uncertainty. Your tenure as CEO exemplified strategic courage, decisive leadership, and an unwavering commitment to innovation."
+             : "History rarely remembers companies that failed, but it always remembers the lessons they left behind. Your AI-first strategy demonstrated courage, yet financial discipline proved insufficient."),
+          para("The Board hereby concludes this simulation."),
+          para("Signed,"),
+          para("The Board of Directors"),
+          divider(),
+
+          heading("Endings Collection"),
+          monoBlock(ALL_ENDINGS.map(e => `${e.badge} ${e.id === achievedEndingId ? '✔' : ''}`).join('\n') + `
+
+Unlocked ${ALL_ENDINGS.filter(e => e.id === achievedEndingId).length} / 8
+Completion ${((ALL_ENDINGS.filter(e => e.id === achievedEndingId).length / 8) * 100).toFixed(1)}%`),
+          divider(),
+
+          para("══════════════════════════════", false, false, MUTED, true),
+          para("FINAL BOARD SESSION", false, true, "000000", true),
+          para(""),
+          para("Chairman:", false, true, ACCENT, true),
+          para("Meeting adjourned.", false, false, "000000", true),
+          para(""),
+          para("CFO:", false, true, ACCENT, true),
+          para("The shareholders have spoken.", false, false, "000000", true),
+          para(""),
+          para("CTO:", false, true, ACCENT, true),
+          para("The AI systems have been archived.", false, false, "000000", true),
+          para(""),
+          para("CHRO:", false, true, ACCENT, true),
+          para("Employees have been notified.", false, false, "000000", true),
+          para(""),
+          para("CRO:", false, true, ACCENT, true),
+          para("Risk assessment complete.", false, false, "000000", true),
+          para(""),
+          para("Trading Floor:", false, true, ACCENT, true),
+          para("The market has closed.", false, false, "000000", true),
+          para(""),
+          para("══════════════════════════════", false, false, MUTED, true),
+          para("ARCHIVE MEMORY COMPLETE", false, true, MUTED, true),
+          para("CEO SESSION TERMINATED", false, true, NEGATIVE, true),
+          para("RETURN TO MAIN MENU", false, true, MUTED, true),
         ],
       }],
     });
 
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, `${company?.name || 'Corporate'}_Final_Report.docx`);
+    try {
+      const blob = await Packer.toBlob(doc);
+      saveAs(blob, `${company?.name || 'Corporate'}_Final_Report.docx`);
+    } catch (e: any) {
+      console.error(e);
+      alert('Failed to generate report: ' + e.message);
+    }
   };
-
   return (
     <div className="min-h-screen bg-slate-950 text-white relative overflow-hidden py-12 px-6">
       
@@ -818,7 +1169,219 @@ export const Outcome = () => {
 
         </div>
 
-        {/* BOTTOM: STAGGERED MATRIX LOGS */}
+                {/* ═══ BOARD MEMBER DEBRIEF ═══ */}
+        <div className="animate-fade-in-up delay-300">
+          <Card className="shimmer-card cyber-glass border-slate-900/90 bg-slate-900/10 overflow-hidden">
+            <CardHeader className="border-b border-slate-900/80 pb-3">
+              <CardTitle className="font-orbitron text-xs font-black text-cyan-400 tracking-widest flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+                // BOARD MEMBER DEBRIEF //
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              {getBoardDebriefs().map((d, i) => {
+                const roleIcons: Record<string, string> = { Chairman: '🎩', CFO: '💰', CTO: '🤖', CHRO: '👥', CRO: '⚠️', Analysts: '📈', 'Trading Floor': '📊' };
+                return (
+                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-slate-950/60 border border-slate-800/50 hover:border-slate-700 transition-colors">
+                    <span className="text-xl flex-shrink-0 mt-0.5">{roleIcons[d.role] || '👤'}</span>
+                    <div>
+                      <p className="text-[10px] font-orbitron font-black text-cyan-400 tracking-widest uppercase mb-1">{d.role}</p>
+                      <p className="text-sm text-slate-300 font-space italic leading-relaxed">"{d.text}"</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ═══ ENDING STATISTICS ═══ */}
+        <div className="animate-fade-in-up delay-300">
+          <Card className="shimmer-card cyber-glass border-slate-900/90 bg-slate-900/10 overflow-hidden">
+            <CardHeader className="border-b border-slate-900/80 pb-3">
+              <CardTitle className="font-orbitron text-xs font-black text-cyan-400 tracking-widest flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                // SESSION STATISTICS //
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { label: 'Decisions Made', value: decisionsMade, icon: '📋' },
+                  { label: 'AI Deployments', value: company?.deploymentCount || 0, icon: '🤖' },
+                  { label: 'Employees Hired', value: state.employees, icon: '👥' },
+                  { label: 'Employees Lost', value: employeeTurnover, icon: '📉' },
+                  { label: 'Automation', value: `${company?.automationRate || 0}%`, icon: '⚙️' },
+                  { label: 'Training Hours', value: company?.trainingHours || 0, icon: '📚' },
+                  { label: 'AI Maturity', value: company?.aiMaturityScore || 0, icon: '🧠' },
+                  { label: 'Years Survived', value: yearsSurvived, icon: '📅' },
+                ].map((stat, i) => (
+                  <div key={i} className="bg-slate-950/60 border border-slate-800/50 rounded-lg p-3 text-center hover:border-cyan-500/30 transition-colors">
+                    <span className="text-lg block mb-1">{stat.icon}</span>
+                    <p className="text-lg font-black font-orbitron text-white">{stat.value}</p>
+                    <p className="text-[9px] font-mono text-slate-500 uppercase tracking-wider mt-1">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ═══ CORPORATE TIMELINE ═══ */}
+        <div className="animate-fade-in-up delay-400">
+          <Card className="shimmer-card cyber-glass border-slate-900/90 bg-slate-900/10 overflow-hidden">
+            <CardHeader className="border-b border-slate-900/80 pb-3">
+              <CardTitle className="font-orbitron text-xs font-black text-cyan-400 tracking-widest flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-purple-400 animate-pulse" />
+                // CORPORATE TIMELINE //
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="relative">
+                <div className="absolute left-4 top-0 bottom-0 w-px bg-gradient-to-b from-cyan-500/50 via-purple-500/50 to-rose-500/50" />
+                {timeline.map((event, i) => (
+                  <div key={i} className="flex items-center gap-4 mb-4 last:mb-0 pl-8 relative">
+                    <div className="absolute left-3 w-2.5 h-2.5 rounded-full bg-cyan-400 border-2 border-slate-950 shadow-[0_0_8px_rgba(6,182,212,0.5)]" />
+                    <p className="text-sm font-space text-slate-300">
+                      <span className="text-cyan-400 font-bold font-orbitron">{event.split(':')[0]}:</span>
+                      {event.split(':').slice(1).join(':')}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ═══ MEDALS ═══ */}
+        <div className="animate-fade-in-up delay-400">
+          <Card className="shimmer-card cyber-glass border-slate-900/90 bg-slate-900/10 overflow-hidden">
+            <CardHeader className="border-b border-slate-900/80 pb-3">
+              <CardTitle className="font-orbitron text-xs font-black text-cyan-400 tracking-widest flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-yellow-400 animate-pulse" />
+                // PERFORMANCE MEDALS //
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {medals.map((medal, i) => (
+                  <div key={i} className="bg-slate-950/60 border border-yellow-500/20 rounded-lg p-3 text-center hover:border-yellow-500/50 hover:shadow-[0_0_15px_rgba(234,179,8,0.1)] transition-all">
+                    <span className="text-2xl block mb-2">🏅</span>
+                    <p className="text-[9px] font-orbitron font-black text-yellow-400 uppercase tracking-wider mb-1">{medal.title}</p>
+                    <p className="text-xs font-mono text-slate-300">{medal.val}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ═══ CEO LEGACY SCORE ═══ */}
+        <div className="animate-fade-in-up delay-500">
+          <Card className="shimmer-card cyber-glass border-slate-900/90 bg-slate-900/10 overflow-hidden">
+            <CardHeader className="border-b border-slate-900/80 pb-3">
+              <CardTitle className="font-orbitron text-xs font-black text-cyan-400 tracking-widest flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                // CEO LEGACY SCORE //
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              {[
+                { label: 'Innovation', score: innScore, color: 'bg-cyan-500' },
+                { label: 'Leadership', score: isVictory ? 88 : 22, color: 'bg-emerald-500' },
+                { label: 'Financial Control', score: finScore, color: 'bg-yellow-500' },
+                { label: 'Employee Welfare', score: state.morale, color: 'bg-pink-500' },
+                { label: 'Risk Management', score: opScore, color: 'bg-purple-500' },
+              ].map((item, i) => (
+                <div key={i} className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-orbitron font-black text-slate-400 uppercase tracking-widest">{item.label}</span>
+                    <span className="text-xs font-mono text-white font-bold">{Math.round(item.score)}</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                    <div
+                      className={`h-full rounded-full ${item.color} transition-all duration-1000`}
+                      style={{ width: `${Math.min(100, Math.max(0, item.score))}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+              <div className="mt-6 pt-4 border-t border-slate-800 text-center">
+                <p className="text-[10px] font-orbitron text-slate-500 tracking-widest uppercase mb-2">Overall Legacy</p>
+                <p className="text-3xl font-black font-orbitron text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-200 to-orange-400">
+                  {(() => {
+                    const avg = (innScore + (isVictory ? 88 : 22) + finScore + state.morale + opScore) / 5;
+                    if (avg >= 80) return '★★★★★ "Legendary Visionary"';
+                    if (avg >= 65) return '★★★★☆ "Corporate Titan"';
+                    if (avg >= 50) return '★★★☆☆ "Strategic Leader"';
+                    if (avg >= 35) return '★★☆☆☆ "Ambitious Innovator"';
+                    return '★☆☆☆☆ "Cautionary Tale"';
+                  })()}
+                </p>
+                <p className="text-xs font-mono text-slate-500 mt-2">CEO GRADE: {getGrade()}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ═══ EXECUTIVE LETTER ═══ */}
+        <div className="animate-fade-in-up delay-500">
+          <Card className="shimmer-card cyber-glass border-slate-900/90 bg-slate-900/10 overflow-hidden">
+            <CardHeader className="border-b border-slate-900/80 pb-3">
+              <CardTitle className="font-orbitron text-xs font-black text-cyan-400 tracking-widest flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-slate-400 animate-pulse" />
+                // EXECUTIVE LETTER //
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="bg-slate-950/80 border border-slate-800 rounded-lg p-6 space-y-4">
+                <p className="text-[10px] font-orbitron text-slate-500 tracking-widest uppercase">From: The Board of Directors</p>
+                <p className="text-sm text-slate-300 font-space leading-relaxed">
+                  Dear CEO,
+                </p>
+                <p className="text-sm text-slate-400 font-space leading-relaxed">
+                  {isVictory
+                    ? "History celebrates those who dare to lead through uncertainty. Your tenure as CEO exemplified strategic courage, decisive leadership, and an unwavering commitment to innovation. The AI transformation you spearheaded will serve as a blueprint for future leaders."
+                    : "History rarely remembers companies that failed, but it always remembers the lessons they left behind. Your bold AI-first strategy demonstrated vision, yet insufficient financial discipline ultimately led to insolvency."
+                  }
+                </p>
+                <p className="text-sm text-slate-400 font-space leading-relaxed">
+                  The Board hereby concludes this simulation.
+                </p>
+                <p className="text-xs text-slate-500 font-mono italic mt-4 border-t border-slate-800 pt-4">
+                  "Every CEO writes a chapter in corporate history. {isVictory ? 'You built an empire that reshaped the industry.' : 'Some build empires, some build lessons.'}"
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ═══ BOARDROOM ENDING SEQUENCE ═══ */}
+        <div className="animate-fade-in-up delay-600">
+          <Card className="shimmer-card cyber-glass border-slate-900/90 bg-slate-900/10 overflow-hidden">
+            <CardContent className="p-8 space-y-3">
+              {[
+                { role: 'Chairman', text: 'Meeting adjourned.' },
+                { role: 'CFO', text: 'Shareholders have voted.' },
+                { role: 'CTO', text: 'The AI systems have been archived.' },
+                { role: 'CHRO', text: 'Employees have been notified.' },
+                { role: 'CRO', text: 'Risk analysis complete.' },
+                { role: 'Trading Floor', text: 'The market has closed.' },
+              ].map((line, i) => (
+                <p key={i} className="text-sm font-space text-slate-500" style={{ animationDelay: `${i * 200}ms` }}>
+                  <span className="text-cyan-400 font-bold">{line.role}:</span> "{line.text}"
+                </p>
+              ))}
+              <div className="mt-8 pt-6 border-t border-slate-800 text-center space-y-2">
+                <p className="text-[10px] font-mono text-slate-600 tracking-[0.3em] uppercase">Archive Memory Module Complete</p>
+                <p className="text-[10px] font-mono text-slate-600 tracking-[0.3em] uppercase">CEO Session Terminated</p>
+                <p className="text-xs font-orbitron text-cyan-400/60 tracking-widest uppercase animate-pulse mt-4">Session Archived — {new Date().toLocaleDateString()}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+{/* BOTTOM: STAGGERED MATRIX LOGS */}
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-900 pb-3 gap-2 animate-fade-in-up delay-400">
             <h2 className="font-orbitron font-black text-sm tracking-widest text-slate-300 uppercase flex items-center gap-2">
@@ -912,7 +1475,7 @@ export const Outcome = () => {
           <Link to="/">
             <Button 
               size="lg" 
-              onClick={handleRestart}
+              onClick={actions.resetGame}
               className="py-6 px-10 font-orbitron font-black text-xs tracking-widest bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_35px_rgba(6,182,212,0.7)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"
             >
               <ArrowLeft className="mr-2.5 h-4.5 w-4.5" />

@@ -21,9 +21,12 @@ const initialState: GameState & { quarterlyPayloads: any[] } = {
   morale: 75,
   roi: 0,
   revenue: 0,
+  expenses: 0,
   valuation: 0,
   growthRate: 0,
   employees: 10,
+  bestDecisionStreak: 0,
+  ceoHelpTriggered: false,
   xp: 0,
   level: 1,
   unlockedTech: [],
@@ -32,6 +35,7 @@ const initialState: GameState & { quarterlyPayloads: any[] } = {
   gameResult: null,
   history: [],
   quarterlyPayloads: [],
+  emergencyQuarters: 0,
 };
 
 export const useGameStore = create<{

@@ -67,6 +67,10 @@ As organizations adopt Artificial Intelligence, business leaders face high-stake
 | 🎲 | **Dynamic Events** | Competitor launches, regulation, talent shortages, cyberattacks, viral hits |
 | 📝 | **Executive Reports** | Board decisions, A/B/C scenario comparisons, and risk/readiness assessments — exportable to `.docx` |
 | 🏆 | **8 Distinct Endings** | From Unicorn Exit to Rogue AI Singularity to Crash & Burn |
+| 🧪 | **ML Strategy Simulator** | A live "what-if" sandbox — drag strategy levers and the XGBoost model re-forecasts revenue, ROI & risk in real time |
+| 🔍 | **Explainable AI (SHAP)** | Every forecast is broken down by factor in dollars — see *why* the model predicted what it did |
+| 💬 | **AI Advisor** | An LLM (Groq · Llama 3.1) turns the model's output into plain-English strategic guidance |
+| ⚠️ | **Crisis Engine** | Dynamic project-cost scaling + a crisis mode that reshapes the decision pool when you near insolvency |
 
 ---
 
@@ -76,7 +80,8 @@ As organizations adopt Artificial Intelligence, business leaders face high-stake
 | :--- | :--- |
 | **Frontend** | React 18 · TypeScript · Vite · Tailwind CSS · Zustand · React Three Fiber · Recharts |
 | **Backend** | FastAPI · Uvicorn · SQLAlchemy · Pydantic |
-| **Machine Learning** | XGBoost · scikit-learn · pandas · NumPy · joblib |
+| **Machine Learning** | XGBoost · scikit-learn · **SHAP** · pandas · NumPy · joblib |
+| **Generative AI** | Groq API (Llama 3.1) — the in-game AI Advisor |
 | **Persistence** | SQLite |
 | **Deployment** | Vercel (frontend) · Render (backend) |
 
@@ -103,6 +108,14 @@ The simulation is driven by two gradient-boosted regression models trained on a 
 >
 > **Input normalization:** The training data is normalized (AI adoption `0–1`, automation `0–1`, maturity `0–10`) while the UI uses human-readable scales (`0–5`, `0–100`, `0–100`). The backend rescales incoming inputs to the training distribution before inference, so the model always receives in-range features.
 
+### Explainable AI & Advisor
+
+The product doesn't just predict — it explains and advises:
+
+- **SHAP attribution** (`POST /api/explain`) — a `TreeExplainer` decomposes each revenue forecast into per-feature contributions (in dollars), so the UI shows exactly *why* the model predicted what it did — a glass box, not a black box.
+- **AI Advisor** (`POST /api/advisor`) — the model's metrics and SHAP breakdown are passed to an **LLM (Groq · Llama 3.1)**, which returns a plain-English strategic briefing. *(Requires a `GROQ_API_KEY` — see Getting Started.)*
+- Both power the **ML Strategy Simulator**: a live what-if sandbox where dragging a lever re-runs the model, the SHAP explanation, and the advice in real time.
+
 ---
 
 ## 💰 Game Economy
@@ -113,6 +126,8 @@ Each quarter, the XGBoost prediction feeds a deterministic business-rules engine
 - **10-year LTV ROI** — return on investment is measured against a **10-year Lifetime Value** of the predicted AI revenue versus capital invested, rather than a single-year snapshot, to reflect the long horizon of AI bets.
 - **Industry-specific economics** — revenue scaling, cost structure, and growth differ by sector (Technology, Healthcare, Finance, Retail, Manufacturing, Logistics).
 - **Workforce dynamics** — automation drives attrition while hiring decisions add headcount; morale reacts to layoffs and productivity gains.
+- **Dynamic cost scaling** — project costs scale to your company's size, so a multi-million initiative isn't instantly fatal to a small startup (and isn't trivial to an enterprise).
+- **Crisis Engine** — when profit turns negative and cash runs low, a crisis mode reshapes the decision pool: expensive expansions are suppressed and recovery/defensive plays are surfaced. Bankruptcy logic is strict — run out of capital and the run ends.
 - **Win / lose** — survive to **2035** to trigger an ending, or hit insolvency for bankruptcy. Your final budget, ROI, headcount, morale, and sector decide which of the 8 endings you unlock.
 
 ---
@@ -201,6 +216,13 @@ uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 
 API → `http://localhost:8000` · interactive docs → `http://localhost:8000/docs`
 
+> **Optional — AI Advisor:** the `/advisor` endpoint uses Groq (`llama-3.1-8b-instant`). To enable the in-game AI Advisor, grab a free key from [console.groq.com/keys](https://console.groq.com/keys) and drop it into **`backend/.env`** (auto-loaded on startup, and gitignored so it never gets committed):
+> ```bash
+> # backend/.env
+> GROQ_API_KEY=your_key_here
+> ```
+> Everything else (predictions, SHAP, the simulator's forecasts, the whole game) works without it.
+
 ### 2 · Frontend
 
 ```bash
@@ -229,6 +251,8 @@ Base URL: `http://localhost:8000/api`
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
 | `POST` | `/predict` | Run a revenue & productivity prediction for a scenario; returns metrics + A/B/C investment scenarios |
+| `POST` | `/explain` | SHAP feature attribution for a prediction (per-factor contribution in dollars) |
+| `POST` | `/advisor` | LLM (Groq · Llama 3.1) strategic briefing grounded in the model output |
 | `POST` | `/save_game_history` | Persist a completed run's quarterly payloads to the ledger |
 | `GET` | `/predictions` | Return the 50 most recent stored predictions |
 

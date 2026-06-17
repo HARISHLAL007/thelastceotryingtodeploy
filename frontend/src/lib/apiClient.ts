@@ -36,6 +36,10 @@ export const api = {
     return apiClient.post('/predict', payload);
   },
 
+  async explainPrediction(payload: any) {
+    return apiClient.post('/explain', payload);
+  },
+
   async getPredictions() {
     return apiClient.get('/predictions');
   },
@@ -56,6 +60,10 @@ export const api = {
   async getDecisions() {
     return apiClient.get('/decisions');
   },
+
+  async getAdvisorInsights(prompt: string) {
+    return apiClient.post('/advisor', { prompt });
+  }
 };
 
 export default apiClient;

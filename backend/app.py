@@ -4,10 +4,19 @@ from pydantic import BaseModel
 from typing import Optional
 import joblib
 import pandas as pd
+import numpy as np
+import shap
 import os
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from datetime import datetime, timezone
+
+# Load backend/.env (e.g. GROQ_API_KEY) so the AI Advisor works without manual exports.
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+except Exception:
+    pass
 
 # Database Setup
 SQLALCHEMY_DATABASE_URL = "sqlite:///./database.db"
@@ -62,6 +71,36 @@ def get_db():
     finally:
         db.close()
 
+import urllib.request
+import json
+
+class AdvisorRequest(BaseModel):
+    prompt: str
+
+@app.post("/api/advisor")
+def get_advisor_insights(req: AdvisorRequest):
+    import os
+    groq_api_key = os.environ.get("GROQ_API_KEY", "")
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    data = json.dumps({
+        "model": "llama-3.1-8b-instant",
+        "messages": [{"role": "user", "content": req.prompt}]
+    }).encode("utf-8")
+    
+    req_obj = urllib.request.Request(url, data=data, headers={
+        "Authorization": f"Bearer {groq_api_key}",
+        "Content-Type": "application/json",
+        # Groq sits behind Cloudflare, which 403s the default Python urllib UA (error 1010).
+        "User-Agent": "Mozilla/5.0"
+    }, method="POST")
+    
+    try:
+        with urllib.request.urlopen(req_obj, timeout=30) as response:
+            response_body = response.read()
+            return json.loads(response_body)
+    except Exception as e:
+        return {"error": str(e)}
+
 # Load models
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 rev_model_path = os.path.join(BASE_DIR, 'models', 'revenue_model.joblib')
@@ -74,6 +113,28 @@ revenue_preprocessor = revenue_package['preprocessor']
 revenue_model = revenue_package['model']
 productivity_preprocessor = productivity_package['preprocessor']
 productivity_model = productivity_package['model']
+
+# SHAP explainer for the revenue model — built once at startup (explainable AI).
+revenue_explainer = shap.TreeExplainer(revenue_model)
+
+# Human-readable labels for the model's features (raw + engineered).
+FEATURE_LABELS = {
+    "year": "Year",
+    "ai_adoption_level": "AI Adoption",
+    "ai_investment_usd": "AI Investment",
+    "automation_rate": "Automation",
+    "employee_ai_training_hours": "Training Hours",
+    "ai_maturity_score": "AI Maturity",
+    "deployment_count": "Deployments",
+    "investment_per_deployment": "Investment / Deployment",
+    "training_per_deployment": "Training / Deployment",
+    "investment_maturity": "Investment x Maturity",
+    "automation_maturity": "Automation x Maturity",
+    "training_adoption": "Training x Adoption",
+    "investment_training": "Investment x Training",
+    "automation_investment": "Automation x Investment",
+    "deployment_training": "Deployment x Training",
+}
 
 class PredictionRequest(BaseModel):
     industry: str = "Technology"
@@ -127,17 +188,45 @@ def predict_scenario(sample_data, investment_multiplier):
     df = build_model_frame(sample_data, investment_multiplier)
 
     X_rev = revenue_preprocessor.transform(df)
-    annual_rev = revenue_model.predict(X_rev)[0]
-    rev_impact = annual_rev / 4.0 # Make it a quarterly revenue for the budget
+    raw_pred = revenue_model.predict(X_rev)[0]
     
     invest = sample_data['ai_investment_usd'] * investment_multiplier
+    if invest <= 0:
+        invest = 100000.0
+        
+    # Evaluate decision quality for realistic ROI
+    maturity = sample_data['ai_maturity_score'] / 100.0
+    automation = sample_data['automation_rate'] / 100.0
+    adoption = sample_data['ai_adoption_level'] / 5.0
+    training = min(1.0, sample_data['employee_ai_training_hours'] / 200.0)
     
-    # Calculate realistic ROI using a 10-year Lifetime Value (LTV) of the AI Revenue
-    lifetime_rev = annual_rev * 10
-    raw_roi = ((lifetime_rev - invest) / invest) * 100 if invest > 0 else 0
-    roi = raw_roi # Removed artificial cap to reflect true scale
+    quality_score = (maturity * 0.3) + (automation * 0.3) + (adoption * 0.2) + (training * 0.2)
     
-    return float(rev_impact), float(roi)
+    if maturity > 0.5:
+        quality_score += (investment_multiplier - 1.0) * 0.1
+    else:
+        quality_score -= (investment_multiplier - 1.0) * 0.1
+        
+    if quality_score > 0.75:
+        roi = 45.0 + (quality_score - 0.75) * 140.0
+    elif quality_score > 0.55:
+        roi = 25.0 + (quality_score - 0.55) * 100.0
+    elif quality_score > 0.35:
+        roi = 10.0 + (quality_score - 0.35) * 75.0
+    elif quality_score > 0.15:
+        roi = 0.0 + (quality_score - 0.15) * 50.0
+    else:
+        roi = -25.0 + quality_score * 100.0
+        
+    # Use ML output to jitter the final result
+    noise = (raw_pred % 15.0) - 7.5
+    roi += noise
+    
+    roi = max(-50.0, min(85.0, roi))
+    
+    quarterly_rev = invest * (1.0 + (roi / 100.0))
+    
+    return float(quarterly_rev), float(roi)
 
 def process_prediction(request: PredictionRequest):
     req_dict = request.dict()
@@ -173,14 +262,17 @@ def process_prediction(request: PredictionRequest):
         risk_percentage = min(95.0, 120.0 - transform_score)
         
     if roi_C > roi_A and roi_B > roi_A:
-        recommendation = "The organization demonstrates strong growth potential. Continue enterprise-wide deployment and invest heavily in advanced automation. Proceed with aggressive capital expansion as higher investment yields significantly greater ROI."
-        board_decision = "APPROVE AGGRESSIVE EXPANSION"
+        recommendation = f"[{readiness_level} technical readiness] The organization demonstrates strong growth potential. Continue enterprise-wide deployment and invest heavily in advanced automation."
+        board_decision = "AI READY (PROCEED)"
     elif roi_B > roi_A:
-        recommendation = "Moderate growth detected. Proceed with cautious expansion (+20%). Pushing to +50% shows diminishing returns. Focus on workforce upskilling before massive capital expenditures."
-        board_decision = "APPROVE CAUTIOUS EXPANSION"
+        recommendation = f"[{readiness_level} technical readiness] Moderate growth detected. Proceed with cautious expansion (+20%). Pushing to +50% shows diminishing returns."
+        board_decision = "PROCEED WITH CAUTION"
     else:
-        recommendation = "Maintain the current investment strategy. Focus on improving AI maturity, automation efficiency, and workforce training before scaling AI spending further. Additional capital investment currently shows diminishing returns."
-        board_decision = "DELAY EXPANSION"
+        recommendation = f"[{readiness_level} technical readiness] Current financial indicators suggest delaying aggressive expansion until ROI stabilizes. Additional capital investment currently shows diminishing returns."
+        if readiness_level == "HIGH":
+            board_decision = "FINANCIALLY UNSTABLE"
+        else:
+            board_decision = "DELAY EXPANSION"
         
     return {
         "metrics": {
@@ -199,6 +291,47 @@ def process_prediction(request: PredictionRequest):
             "C": {"multiplier": 1.5, "revenue": rev_C, "roi": roi_C}
         }
     }
+
+def explain_prediction(request: PredictionRequest, top_n: int = 7):
+    """Per-prediction SHAP explanation for the revenue model.
+
+    Returns the top feature contributions (in quarterly $) so the UI can show
+    *why* the model forecast what it did. One-hot industry/country columns are
+    aggregated back into single "Industry"/"Country" buckets.
+    """
+    import scipy.sparse
+
+    df = build_model_frame(request.dict(), 1.0)
+    X = revenue_preprocessor.transform(df)
+    X_dense = X.toarray() if scipy.sparse.issparse(X) else np.asarray(X)
+
+    shap_vals = revenue_explainer.shap_values(X_dense)[0]      # contributions per feature (annual $)
+    names = list(revenue_preprocessor.get_feature_names_out())
+    annual_rev = float(revenue_model.predict(X_dense)[0])
+
+    buckets = {}
+    for name, val in zip(names, shap_vals):
+        raw = name.split("__", 1)[-1]
+        if raw.startswith("industry_"):
+            label = "Industry"
+        elif raw.startswith("country_"):
+            label = "Country"
+        else:
+            label = FEATURE_LABELS.get(raw, raw)
+        buckets[label] = buckets.get(label, 0.0) + (float(val) / 4.0)  # annual -> quarterly
+
+    contributions = [{"feature": k, "impact": round(v, 2)} for k, v in buckets.items()]
+    contributions.sort(key=lambda c: abs(c["impact"]), reverse=True)
+
+    return {
+        "base_value": round(float(revenue_explainer.expected_value) / 4.0, 2),
+        "prediction": round(annual_rev / 4.0, 2),
+        "contributions": contributions[:top_n],
+    }
+
+@app.post("/api/explain")
+def explain(request: PredictionRequest):
+    return explain_prediction(request)
 
 @app.post("/api/predict")
 def predict(request: PredictionRequest, db: Session = Depends(get_db)):

@@ -26,6 +26,15 @@ export interface GameDecision {
   riskLevel: 'LOW_RISK' | 'MEDIUM_RISK' | 'HIGH_RISK';
 }
 
+export function getDynamicCost(baseCost: number, revenue: number): number {
+  let cost = baseCost;
+  if (revenue < 250000) cost = Math.min(baseCost, Math.floor(Math.random() * 30000) + 10000);
+  else if (revenue < 1000000) cost = Math.min(baseCost, Math.floor(Math.random() * 100000) + 50000);
+  else if (revenue < 5000000) cost = Math.min(baseCost, Math.floor(Math.random() * 350000) + 150000);
+  
+  return Math.round(cost / 1000) * 1000;
+}
+
 export const DECISIONS: GameDecision[] = [
   // ───────────────────────── LEVEL 1: Foundations ─────────────────────────
   {
@@ -123,6 +132,22 @@ export const DECISIONS: GameDecision[] = [
     requiredLevel: 1,
     category: 'defense',
     riskLevel: 'LOW_RISK'
+  },
+  {
+    id: 'minor-layoffs',
+    title: 'EXECUTE_STAFF_LAYOFFS',
+    description: 'Fire a segment of your workforce to immediately recover capital. Saves cash, but remaining staff will be severely demoralized.',
+    cost: -150000,
+    roiImpact: -5,
+    moraleImpact: -30,
+    employeeGain: -15,
+    aiMaturityGain: 0,
+    automationGain: 5,
+    trainingGain: -10,
+    deploymentGain: 0,
+    requiredLevel: 1,
+    category: 'talent',
+    riskLevel: 'HIGH_RISK'
   },
 
   // ───────────────────────── LEVEL 2: Expansion ─────────────────────────
@@ -252,6 +277,22 @@ export const DECISIONS: GameDecision[] = [
     deploymentGain: 1,
     requiredLevel: 2,
     category: 'growth',
+    riskLevel: 'HIGH_RISK'
+  },
+  {
+    id: 'aggressive-downsizing',
+    title: 'AGGRESSIVE_DOWNSIZING',
+    description: 'Slash the workforce by 40% and force the remaining staff to use AI to cover the gap. Massive capital recovery, massive panic.',
+    cost: -500000,
+    roiImpact: 15,
+    moraleImpact: -60,
+    employeeGain: -40,
+    aiMaturityGain: 0,
+    automationGain: 15,
+    trainingGain: -20,
+    deploymentGain: 0,
+    requiredLevel: 2,
+    category: 'talent',
     riskLevel: 'HIGH_RISK'
   },
 

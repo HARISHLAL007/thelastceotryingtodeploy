@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useGameLoop } from '@/hooks/useGameLoop';
 import { useGameStore } from '@/store/gameStore';
-import { DECISIONS } from '@/data/decisions';
+import { DECISIONS, getDynamicCost } from '@/data/decisions';
 import CEOModel from '@/components/CEOModel';
 import { Joystick } from './Joystick';
 import {
@@ -19,7 +20,9 @@ import {
   Maximize2,
   Minimize2,
   Volume2,
-  VolumeX
+  VolumeX,
+  Info,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -47,25 +50,88 @@ const DIRECTIVE_PROMPTS = [
   'Power is leverage applied at the right moment. Pick yours.',
 ];
 
+// Typewriter effect component for the CEO popup
+const TypewriterText = ({ text, delay = 0, speed = 20 }: { text: string, delay?: number, speed?: number }) => {
+  const [displayedText, setDisplayedText] = useState("");
+  
+  useEffect(() => {
+    setDisplayedText("");
+    let isMounted = true;
+    let timer: NodeJS.Timeout;
+
+    const startTyping = async () => {
+      let currentText = "";
+      for (let i = 0; i < text.length; i++) {
+        if (!isMounted) break;
+        currentText += text.charAt(i);
+        setDisplayedText(currentText);
+        await new Promise(r => { timer = setTimeout(r, speed); });
+      }
+    };
+
+    const delayTimer = setTimeout(() => {
+      startTyping();
+    }, delay);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(delayTimer);
+      clearTimeout(timer);
+    };
+  }, [text, delay, speed]);
+
+  return <span>{displayedText}</span>;
+};
+
 export const QuarterlyDecision = () => {
   const state = useGameStore((s) => s.state);
   const company = useGameStore((s) => s.company);
   const currentEvent = useGameStore((s) => s.currentEvent);
+  const [showDossier, setShowDossier] = useState(false);
   const { isLoading, makeQuarterDecision, error } = useGameLoop();
   const [selectedDecision, setSelectedDecision] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showBoundaryMessage, setShowBoundaryMessage] = useState(false);
   const [isMusicOn, setIsMusicOn] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [showCeoHelp, setShowCeoHelp] = useState(false);
+  const [ceoHelpData, setCeoHelpData] = useState<{name: string, description: string, hintOption: string} | null>(null);
 
   useEffect(() => {
-    if (audioRef.current) {
+    if (state.ceoHelpTriggered && state.currentDecisions.length > 0) {
+      const ceos = [
+        { name: "Satya Nadella (Microsoft)", description: "Praised for his transformative leadership, pivoted Microsoft heavily into cloud computing (Azure) and artificial intelligence, steering the company to a valuation well over $3 trillion." },
+        { name: "Jensen Huang (NVIDIA)", description: "A visionary leader who turned NVIDIA into the global powerhouse of AI hardware, accelerated computing, and data center technologies." },
+        { name: "Tim Cook (Apple)", description: "Recognized for supreme supply chain management and expanding Apple’s services ecosystem, while returning hundreds of billions to shareholders." },
+        { name: "Mark Zuckerberg (Meta Platforms)", description: "Leading Meta’s massive investment in AI integration, virtual reality, and heavily refined ad-targeting to sustain long-term growth." },
+        { name: "Andy Jassy (Amazon)", description: "Known for driving customer obsession and scaling Amazon Web Services (AWS) into the premier global cloud platform." }
+      ];
+      const randomCeo = ceos[Math.floor(Math.random() * ceos.length)];
+      
+      const unlockedDecisions = DECISIONS.filter(d => state.currentDecisions.includes(d.id));
+      const best = [...unlockedDecisions].sort((a, b) => b.roiImpact - a.roiImpact)[0];
+      
+      setCeoHelpData({ ...randomCeo, hintOption: best?.title.replace(/_/g, ' ') || 'an option' });
+      setShowCeoHelp(true);
+      
+      useGameStore.getState().actions.updateGameState({ ceoHelpTriggered: false });
+    }
+  }, [state.ceoHelpTriggered, state.currentDecisions]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
       if (isMusicOn) {
-        audioRef.current.play().catch(err => console.error("Audio playback failed", err));
+        audio.play().catch(err => console.error("Audio playback failed", err));
       } else {
-        audioRef.current.pause();
+        audio.pause();
       }
     }
+    return () => {
+      if (audio) {
+        audio.pause();
+      }
+    };
   }, [isMusicOn]);
 
   useEffect(() => {
@@ -75,6 +141,39 @@ export const QuarterlyDecision = () => {
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
+
+  useEffect(() => {
+    if (showCeoHelp) {
+      try {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        const ctx = new AudioContext();
+        const playRing = (startTime: number) => {
+           const osc1 = ctx.createOscillator();
+           const osc2 = ctx.createOscillator();
+           const gain = ctx.createGain();
+           osc1.type = 'sine';
+           osc1.frequency.value = 440;
+           osc2.type = 'sine';
+           osc2.frequency.value = 480;
+           osc1.connect(gain);
+           osc2.connect(gain);
+           gain.connect(ctx.destination);
+           gain.gain.setValueAtTime(0, startTime);
+           gain.gain.linearRampToValueAtTime(0.15, startTime + 0.1);
+           gain.gain.setValueAtTime(0.15, startTime + 1.0);
+           gain.gain.linearRampToValueAtTime(0, startTime + 1.1);
+           osc1.start(startTime);
+           osc2.start(startTime);
+           osc1.stop(startTime + 1.1);
+           osc2.stop(startTime + 1.1);
+        };
+        playRing(ctx.currentTime);
+        playRing(ctx.currentTime + 2.0);
+      } catch (e) {
+        console.error('AudioContext not supported', e);
+      }
+    }
+  }, [showCeoHelp]);
 
   const toggleFullscreen = () => {
     const el = document.getElementById('game-container');
@@ -86,7 +185,10 @@ export const QuarterlyDecision = () => {
   };
 
   // Filter decisions based on current decisions hand
-  const unlockedDecisions = DECISIONS.filter(d => state.currentDecisions.includes(d.id));
+  const unlockedDecisions = DECISIONS.filter(d => state.currentDecisions.includes(d.id)).map(d => ({
+    ...d,
+    cost: getDynamicCost(d.cost, state.revenue)
+  }));
 
   // Monotonic quarter counter drives an escalating story so each turn reads fresh.
   const turn = state.currentYear * 4 + state.currentQuarter;
@@ -114,12 +216,100 @@ export const QuarterlyDecision = () => {
           <span className="font-space text-sm font-black tracking-widest text-cyan-400 text-glow-cyan">
             // BOARD MEETING // STRATEGY DIRECTIVE
           </span>
-          <span className="text-xs font-space font-semibold bg-slate-950 px-2.5 py-1 rounded border border-slate-800 text-purple-400">
-            QUARTER: Q{state.currentQuarter} <span className="text-slate-600">//</span> YEAR: {state.currentYear}
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowDossier(true)}
+              title="View your company dossier (board-meeting choices)"
+              className="flex items-center justify-center w-7 h-7 rounded border border-slate-800 bg-slate-950 text-cyan-400 hover:border-cyan-500/60 hover:text-cyan-300 transition-colors"
+            >
+              <Info className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-space font-semibold bg-slate-950 px-2.5 py-1 rounded border border-slate-800 text-purple-400">
+              QUARTER: Q{state.currentQuarter} <span className="text-slate-600">//</span> YEAR: {state.currentYear}
+            </span>
+          </div>
         </CardTitle>
       </CardHeader>
-      
+
+      {/* CEO Help Modal via Portal */}
+      {showCeoHelp && ceoHelpData && createPortal(
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300"
+          onClick={() => setShowCeoHelp(false)}
+        >
+          <div
+            className="relative w-full max-w-lg cyber-glass border border-emerald-500/50 rounded-2xl p-8 text-center animate-in zoom-in-95 duration-500 shadow-[0_0_50px_-12px_rgba(16,185,129,0.3)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent rounded-2xl pointer-events-none" />
+            <div className="mx-auto w-16 h-16 rounded-full bg-slate-950 border-2 border-emerald-500 mb-6 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.5)] animate-pulse">
+               <span className="text-2xl">👑</span>
+            </div>
+            <h2 className="text-2xl font-space font-black tracking-widest text-emerald-400 uppercase mb-2 min-h-[2rem]">
+              <TypewriterText text={`Incoming Call: ${ceoHelpData.name}`} speed={40} />
+            </h2>
+            <p className="text-xs font-mono text-emerald-500/80 mb-6 uppercase tracking-widest min-h-[3rem]">
+              <TypewriterText text={ceoHelpData.description} delay={1000} speed={20} />
+            </p>
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-6 min-h-[3rem]">
+              <p className="text-sm text-emerald-300 font-space italic">
+                <TypewriterText text={`"Based on my experience, I'd recommend '${ceoHelpData.hintOption}' — it might be the way to go right now."`} delay={4000} speed={30} />
+              </p>
+            </div>
+            <Button
+              onClick={() => setShowCeoHelp(false)}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-space uppercase tracking-widest shadow-[0_0_15px_rgba(16,185,129,0.2)] hover:shadow-[0_0_25px_rgba(16,185,129,0.4)] transition-all duration-300"
+            >
+              Acknowledge
+            </Button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Company Dossier — recap of board-meeting choices */}
+      {showDossier && company && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          onClick={() => setShowDossier(false)}
+        >
+          <div
+            className="relative w-full max-w-md cyber-glass cyber-border-cyan rounded-2xl p-6 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowDossier(false)}
+              className="absolute top-3 right-3 text-slate-500 hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <h3 className="text-sm font-space font-black tracking-widest text-cyan-400 text-glow-cyan uppercase mb-1">
+              Company Dossier
+            </h3>
+            <p className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.25em] mb-5">
+              Your board-meeting mandate
+            </p>
+            <div className="space-y-2.5">
+              {([
+                ['Founder', company.founderName || '—'],
+                ['Company', company.name || '—'],
+                ['Industry', company.industry || '—'],
+                ['Headquarters', company.country || '—'],
+                ['Starting Budget', `$${(company.startingBudget || 0).toLocaleString()}`],
+                ['AI Investment', `$${(company.aiInvestment || 0).toLocaleString()}`],
+                ['Initial Workforce', `${company.employees ?? '—'} employees`],
+                ['Founded', `${company.foundedYear ?? '—'}`],
+              ] as [string, string][]).map(([label, value]) => (
+                <div key={label} className="flex items-center justify-between gap-4 border-b border-slate-800/70 pb-2">
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500 shrink-0">{label}</span>
+                  <span className="text-sm font-space font-semibold text-slate-200 text-right truncate">{value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <CardContent className="pt-6 relative z-10">
         {/* Story briefing — rotates and escalates each quarter */}
         <div className="mb-6 relative overflow-hidden rounded-xl border border-cyan-500/20 bg-gradient-to-r from-slate-950/90 via-slate-900/50 to-slate-950/90 p-4 animate-in fade-in slide-in-from-top-2 duration-500">
@@ -275,6 +465,7 @@ export const QuarterlyDecision = () => {
                 <CEOModel
                   playable={true}
                   archetype={company?.skin || 'researcher'}
+                  quarter={state.currentQuarter}
                   selectedStation={selectedDecision ? 
                     (selectedDecision === unlockedDecisions[0]?.id ? 'hr' : 
                      selectedDecision === unlockedDecisions[1]?.id ? 'boardroom' : 
