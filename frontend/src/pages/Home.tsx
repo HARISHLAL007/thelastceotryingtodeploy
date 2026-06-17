@@ -126,13 +126,11 @@ export const Home = () => {
   const [validationError, setValidationError] = useState('');
   const [showIntro, setShowIntro] = useState(true);
   const [introStage, setIntroStage] = useState(-2);
-  const [showReport, setShowReport] = useState(false);
   const [pendingSkin, setPendingSkin] = useState<string>(SKINS[0].id);
   const [hoveredSkin, setHoveredSkin] = useState<string | null>(null);
   const [voicesLoaded, setVoicesLoaded] = useState(false);
   const [showAvatarCinematic, setShowAvatarCinematic] = useState(true);
   const [avatarIntroStage, setAvatarIntroStage] = useState(0);
-  const lastSpokenQRef = React.useRef<string | null>(null);
 
   useEffect(() => {
     if (window.speechSynthesis.getVoices().length > 0) {
@@ -150,15 +148,8 @@ export const Home = () => {
     if (showIntro) return;
 
     if (!currentQ) {
-      if (formData.skin && !showReport) {
-        setShowReport(true);
-      }
       return;
     }
-
-    // Prevent double execution in React StrictMode
-    if (lastSpokenQRef.current === currentQ.id) return;
-    lastSpokenQRef.current = currentQ.id;
 
     setDisplayedBotText('');
     setIsTyping(true);
@@ -235,9 +226,9 @@ export const Home = () => {
     return () => {
       clearInterval(timer);
       window.speechSynthesis.cancel();
-      // We do NOT reset lastSpokenQRef here, so StrictMode double-mount won't re-trigger it.
     };
-  }, [qIndex, showIntro, formData.skin, voicesLoaded]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qIndex, showIntro]);
 
   const validateInput = (val: string | number) => {
     const q = QUESTIONS[qIndex];
@@ -337,7 +328,7 @@ export const Home = () => {
     saveAs(blob, "Executive_Setup_Report.docx");
   };
 
-  if (showReport) {
+  if (!currentQ && formData.skin) {
     const entries = Object.entries(formData).filter(([key]) => key !== 'skin');
     return (
       <div className="min-h-screen w-full bg-black text-white font-space flex flex-col items-center justify-center p-8 scanlines overflow-y-auto">
@@ -684,7 +675,7 @@ export const Home = () => {
 
               {/* Holographic Question Console */}
               {isActive && currentQ && (
-                <div className="absolute top-[105%] left-1/2 -translate-x-1/2 translate-y-[5px] w-[90vw] max-w-[600px] flex flex-col items-center animate-in fade-in slide-in-from-top-8 duration-700 delay-300">
+                <div className="absolute top-[105%] left-1/2 -translate-x-1/2 translate-y-[5px] w-[90vw] max-w-[600px] flex flex-col items-center animate-in fade-in slide-in-from-top-8 duration-700">
                   
                   <div className={cn("w-[2px] h-8 bg-gradient-to-b to-transparent mb-2", member.color.replace('text', 'from'))} />
 
