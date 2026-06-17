@@ -67,7 +67,7 @@ export const useGameLoop = () => {
     const ranked = [...available].sort((a, b) => score(b) - score(a));
 
     // Pick the 3 strongest, but keep category variety so the hand feels distinct
-    const picked: string[] = [];
+    let picked: string[] = [];
     const usedCats = new Set<string>();
     for (const d of ranked) {
       if (picked.length >= 3) break;
@@ -80,6 +80,25 @@ export const useGameLoop = () => {
       for (const d of ranked) {
         if (picked.length >= 3) break;
         if (!picked.includes(d.id)) picked.push(d.id);
+      }
+    }
+
+    // RIG FIRST YEAR: Ensure highest ROI is placed at specific indices
+    const startYear = c?.foundedYear || 2024;
+    if (freshState.currentYear === startYear) {
+      const pickedDecisions = DECISIONS.filter(d => picked.includes(d.id));
+      const maxRoi = Math.max(...pickedDecisions.map(d => d.roiImpact));
+      const bestId = pickedDecisions.find(d => d.roiImpact === maxRoi)?.id;
+      
+      if (bestId) {
+        const others = picked.filter(id => id !== bestId);
+        if (freshState.currentQuarter === 1) {
+          // Q1: Place best at the right (index 2)
+          picked = [others[0] || picked[0], others[1] || picked[1], bestId];
+        } else if (freshState.currentQuarter === 2) {
+          // Q2: Place best at the left (index 0)
+          picked = [bestId, others[0] || picked[0], others[1] || picked[1]];
+        }
       }
     }
 
@@ -152,18 +171,18 @@ export const useGameLoop = () => {
                 deployment_count: (preCompanyState.deploymentCount || 10) + dec.deploymentGain,
                 save_to_db: false
              };
-             try {
-                const altRes = await api.getQuarterReport(altPayload);
-                return { title: dec.title, roi: Math.round(altRes.data.metrics.roi), rev: altRes.data.metrics.revenue_impact };
-             } catch (e) {
-                return { title: dec.title, roi: -999, rev: 0, failed: true };
-             }
-          }));
+              try {
+                 const altRes = await api.getQuarterReport(altPayload);
+                 return { title: dec.title, roi: Math.round(altRes.data.metrics.roi * 0.15), rev: altRes.data.metrics.revenue_impact };
+              } catch (e) {
+                 return { title: dec.title, roi: -999, rev: 0, failed: true };
+              }
+           }));
 
-          const allOptions = [
-             { isChosen: true, title: chosenDecision.title, roi: Math.round(metrics.roi), rev: metrics.revenue_impact, failed: false },
-             ...altOptions.map(o => ({ isChosen: false, ...o }))
-          ];
+           const allOptions = [
+              { isChosen: true, title: chosenDecision.title, roi: Math.round(metrics.roi * 0.15), rev: metrics.revenue_impact, failed: false },
+              ...altOptions.map(o => ({ isChosen: false, ...o }))
+           ];
 
           // Guarantee at least one recoverable path
           if (allOptions.every(opt => opt.roi < 0 && !opt.failed)) {
@@ -182,9 +201,9 @@ export const useGameLoop = () => {
           ));
       } else {
          recommendations = [
-            `Scenario A (Maintain): ROI ${Math.round(scenarios.A.roi)}%, Revenue $${(scenarios.A.revenue/1000000).toFixed(2)}M`,
-            `Scenario B (+20%): ROI ${Math.round(scenarios.B.roi)}%, Revenue $${(scenarios.B.revenue/1000000).toFixed(2)}M`,
-            `Scenario C (+50%): ROI ${Math.round(scenarios.C.roi)}%, Revenue $${(scenarios.C.revenue/1000000).toFixed(2)}M`
+            `Scenario A (Maintain): ROI ${Math.round(scenarios.A.roi * 0.15)}%, Revenue $${(scenarios.A.revenue/1000000).toFixed(2)}M`,
+            `Scenario B (+20%): ROI ${Math.round(scenarios.B.roi * 0.15)}%, Revenue $${(scenarios.B.revenue/1000000).toFixed(2)}M`,
+            `Scenario C (+50%): ROI ${Math.round(scenarios.C.roi * 0.15)}%, Revenue $${(scenarios.C.revenue/1000000).toFixed(2)}M`
          ];
       }
 
@@ -473,7 +492,7 @@ export const useGameLoop = () => {
       
       let nextStreak = isBest ? state.bestDecisionStreak + 1 : 0;
       let nextCeoHelpTriggered = false;
-      if (nextStreak === 3) {
+      if (nextStreak === 2) {
         nextCeoHelpTriggered = true;
         nextStreak = 0;
       }
@@ -546,7 +565,8 @@ export const useGameLoop = () => {
         history: updatedHistory,
         emergencyQuarters: newEmergencyQuarters,
         isGameOver,
-        gameResult
+        gameResult,
+        ceoHelpTriggered: nextCeoHelpTriggered ? true : state.ceoHelpTriggered
       });
 
       if (isGameOver) {
@@ -562,10 +582,6 @@ export const useGameLoop = () => {
       
       // 5. Trigger Random Event for next quarter
       triggerRandomEvent();
-
-      if (nextCeoHelpTriggered) {
-        actions.updateGameState({ ceoHelpTriggered: true });
-      }
 
     } finally {
       setIsLoading(false);

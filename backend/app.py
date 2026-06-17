@@ -179,19 +179,45 @@ def predict_scenario(sample_data, investment_multiplier):
     df = build_model_frame(sample_data, investment_multiplier)
 
     X_rev = revenue_preprocessor.transform(df)
-    annual_rev = revenue_model.predict(X_rev)[0]
-    rev_impact = annual_rev / 4.0 # Make it a quarterly revenue for the budget
+    raw_pred = revenue_model.predict(X_rev)[0]
     
     invest = sample_data['ai_investment_usd'] * investment_multiplier
+    if invest <= 0:
+        invest = 100000.0
+        
+    # Evaluate decision quality for realistic ROI
+    maturity = sample_data['ai_maturity_score'] / 100.0
+    automation = sample_data['automation_rate'] / 100.0
+    adoption = sample_data['ai_adoption_level'] / 5.0
+    training = min(1.0, sample_data['employee_ai_training_hours'] / 200.0)
     
-    # Calculate Quarterly ROI for the management game
-    # Amortize the capital AI investment over 5 years (20 quarters)
-    quarterly_rev = annual_rev / 4.0
-    quarterly_invest = invest / 20.0
-    raw_roi = ((quarterly_rev - quarterly_invest) / quarterly_invest) * 100 if quarterly_invest > 0 else 0
-    roi = raw_roi
+    quality_score = (maturity * 0.3) + (automation * 0.3) + (adoption * 0.2) + (training * 0.2)
     
-    return float(rev_impact), float(roi)
+    if maturity > 0.5:
+        quality_score += (investment_multiplier - 1.0) * 0.1
+    else:
+        quality_score -= (investment_multiplier - 1.0) * 0.1
+        
+    if quality_score > 0.75:
+        roi = 45.0 + (quality_score - 0.75) * 140.0
+    elif quality_score > 0.55:
+        roi = 25.0 + (quality_score - 0.55) * 100.0
+    elif quality_score > 0.35:
+        roi = 10.0 + (quality_score - 0.35) * 75.0
+    elif quality_score > 0.15:
+        roi = 0.0 + (quality_score - 0.15) * 50.0
+    else:
+        roi = -25.0 + quality_score * 100.0
+        
+    # Use ML output to jitter the final result
+    noise = (raw_pred % 15.0) - 7.5
+    roi += noise
+    
+    roi = max(-50.0, min(85.0, roi))
+    
+    quarterly_rev = invest * (1.0 + (roi / 100.0))
+    
+    return float(quarterly_rev), float(roi)
 
 def process_prediction(request: PredictionRequest):
     req_dict = request.dict()
@@ -227,14 +253,17 @@ def process_prediction(request: PredictionRequest):
         risk_percentage = min(95.0, 120.0 - transform_score)
         
     if roi_C > roi_A and roi_B > roi_A:
-        recommendation = "The organization demonstrates strong growth potential. Continue enterprise-wide deployment and invest heavily in advanced automation. Proceed with aggressive capital expansion as higher investment yields significantly greater ROI."
-        board_decision = "APPROVE AGGRESSIVE EXPANSION"
+        recommendation = f"[{readiness_level} technical readiness] The organization demonstrates strong growth potential. Continue enterprise-wide deployment and invest heavily in advanced automation."
+        board_decision = "AI READY (PROCEED)"
     elif roi_B > roi_A:
-        recommendation = "Moderate growth detected. Proceed with cautious expansion (+20%). Pushing to +50% shows diminishing returns. Focus on workforce upskilling before massive capital expenditures."
-        board_decision = "APPROVE CAUTIOUS EXPANSION"
+        recommendation = f"[{readiness_level} technical readiness] Moderate growth detected. Proceed with cautious expansion (+20%). Pushing to +50% shows diminishing returns."
+        board_decision = "PROCEED WITH CAUTION"
     else:
-        recommendation = "Maintain the current investment strategy. Focus on improving AI maturity, automation efficiency, and workforce training before scaling AI spending further. Additional capital investment currently shows diminishing returns."
-        board_decision = "DELAY EXPANSION"
+        recommendation = f"[{readiness_level} technical readiness] Current financial indicators suggest delaying aggressive expansion until ROI stabilizes. Additional capital investment currently shows diminishing returns."
+        if readiness_level == "HIGH":
+            board_decision = "FINANCIALLY UNSTABLE"
+        else:
+            board_decision = "DELAY EXPANSION"
         
     return {
         "metrics": {

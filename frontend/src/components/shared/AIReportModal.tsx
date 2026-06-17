@@ -47,8 +47,8 @@ const TypewriterText = ({ text, delay = 0, speed = 20 }: { text: string, delay?:
     const startTyping = () => {
       timer = setInterval(() => {
         if (i < text.length) {
-          setDisplayedText((prev) => prev + text.charAt(i));
           i++;
+          setDisplayedText(text.substring(0, i));
         } else {
           clearInterval(timer);
         }
@@ -344,7 +344,7 @@ export const AIReportModal = () => {
           >
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
             <Play className="w-4 h-4 mr-2 group-hover:text-cyan-300" />
-            {state.currentQuarter >= 4 ? "AUTHORIZE NEXT YEAR" : `CONTINUE TO QUARTER ${state.currentQuarter + 1}`}
+            {state.currentQuarter === 1 ? "AUTHORIZE NEXT YEAR" : `CONTINUE TO QUARTER ${state.currentQuarter}`}
           </Button>
         </div>
 

@@ -27,10 +27,12 @@ export interface GameDecision {
 }
 
 export function getDynamicCost(baseCost: number, revenue: number): number {
-  if (revenue < 250000) return Math.min(baseCost, Math.floor(Math.random() * 30000) + 10000);
-  if (revenue < 1000000) return Math.min(baseCost, Math.floor(Math.random() * 100000) + 50000);
-  if (revenue < 5000000) return Math.min(baseCost, Math.floor(Math.random() * 350000) + 150000);
-  return baseCost;
+  let cost = baseCost;
+  if (revenue < 250000) cost = Math.min(baseCost, Math.floor(Math.random() * 30000) + 10000);
+  else if (revenue < 1000000) cost = Math.min(baseCost, Math.floor(Math.random() * 100000) + 50000);
+  else if (revenue < 5000000) cost = Math.min(baseCost, Math.floor(Math.random() * 350000) + 150000);
+  
+  return Math.round(cost / 1000) * 1000;
 }
 
 export const DECISIONS: GameDecision[] = [

@@ -21,6 +21,7 @@ const initialState: GameState & { quarterlyPayloads: any[] } = {
   morale: 75,
   roi: 0,
   revenue: 0,
+  expenses: 0,
   valuation: 0,
   growthRate: 0,
   employees: 10,

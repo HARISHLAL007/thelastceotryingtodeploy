@@ -440,7 +440,9 @@ const CEOCharacter = ({
       if (!hasMoved.current && playable) {
         bodyGroupRef.current.rotation.y += (chairSpinTarget.current - bodyGroupRef.current.rotation.y) * 5 * delta;
       } else {
-        bodyGroupRef.current.rotation.y += (0 - bodyGroupRef.current.rotation.y) * 10 * delta;
+        const diff = 0 - bodyGroupRef.current.rotation.y;
+        const normalizedDiff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        bodyGroupRef.current.rotation.y += normalizedDiff * 10 * delta;
       }
     }
 

@@ -25,9 +25,12 @@ export interface GameState {
   morale: number;
   roi: number;
   revenue: number;
+  expenses: number;
   valuation: number;
   growthRate: number;
   employees: number;
+  bestDecisionStreak: number;
+  ceoHelpTriggered: boolean;
   xp: number;
   level: number;
   unlockedTech: string[];
@@ -46,6 +49,7 @@ export interface YearHistory {
   roi: number;
   morale: number;
   employees?: number;
+  decision?: string;
 }
 
 // LLM Report structure

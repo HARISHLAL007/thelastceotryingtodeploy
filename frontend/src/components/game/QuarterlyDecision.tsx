@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useGameLoop } from '@/hooks/useGameLoop';
@@ -52,26 +53,33 @@ const DIRECTIVE_PROMPTS = [
 // Typewriter effect component for the CEO popup
 const TypewriterText = ({ text, delay = 0, speed = 20 }: { text: string, delay?: number, speed?: number }) => {
   const [displayedText, setDisplayedText] = useState("");
+  
   useEffect(() => {
     setDisplayedText("");
-    let i = 0;
+    let isMounted = true;
     let timer: NodeJS.Timeout;
-    const startTyping = () => {
-      timer = setInterval(() => {
-        if (i < text.length) {
-          setDisplayedText((prev) => prev + text.charAt(i));
-          i++;
-        } else {
-          clearInterval(timer);
-        }
-      }, speed);
+
+    const startTyping = async () => {
+      let currentText = "";
+      for (let i = 0; i < text.length; i++) {
+        if (!isMounted) break;
+        currentText += text.charAt(i);
+        setDisplayedText(currentText);
+        await new Promise(r => { timer = setTimeout(r, speed); });
+      }
     };
-    const delayTimer = setTimeout(startTyping, delay);
+
+    const delayTimer = setTimeout(() => {
+      startTyping();
+    }, delay);
+
     return () => {
+      isMounted = false;
       clearTimeout(delayTimer);
-      clearInterval(timer);
+      clearTimeout(timer);
     };
   }, [text, delay, speed]);
+
   return <span>{displayedText}</span>;
 };
 
@@ -223,10 +231,10 @@ export const QuarterlyDecision = () => {
         </CardTitle>
       </CardHeader>
 
-      {/* CEO Help Modal */}
-      {showCeoHelp && ceoHelpData && (
+      {/* CEO Help Modal via Portal */}
+      {showCeoHelp && ceoHelpData && createPortal(
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-300"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300"
           onClick={() => setShowCeoHelp(false)}
         >
           <div
@@ -243,15 +251,10 @@ export const QuarterlyDecision = () => {
             <p className="text-xs font-mono text-emerald-500/80 mb-6 uppercase tracking-widest min-h-[3rem]">
               <TypewriterText text={ceoHelpData.description} delay={1000} speed={20} />
             </p>
-            <div className="bg-slate-950/70 border border-emerald-500/30 rounded-xl p-6 mb-6 relative overflow-hidden">
-               <div className="absolute inset-0 cyber-sweep-overlay opacity-20 pointer-events-none" />
-               <p className="text-slate-300 font-space text-sm leading-relaxed italic relative z-10 min-h-[5rem]">
-                 <TypewriterText text={`"Good luck for doing perfect for one whole year! This is my help from my side: Based on my experience, I think focusing on `} delay={3500} speed={30} />
-                 <span className="text-emerald-400 font-bold drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]">
-                   <TypewriterText text={ceoHelpData.hintOption} delay={8000} speed={40} />
-                 </span>
-                 <TypewriterText text={` might be the way to go right now."`} delay={9000} speed={30} />
-               </p>
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-6 min-h-[3rem]">
+              <p className="text-sm text-emerald-300 font-space italic">
+                <TypewriterText text={`"Based on my experience, I'd recommend '${ceoHelpData.hintOption}' — it might be the way to go right now."`} delay={4000} speed={30} />
+              </p>
             </div>
             <Button
               onClick={() => setShowCeoHelp(false)}
@@ -260,7 +263,8 @@ export const QuarterlyDecision = () => {
               Acknowledge
             </Button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Company Dossier — recap of board-meeting choices */}
