@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '@/store/gameStore';
-import { Mic, Send, MicOff, Globe, Stethoscope, Landmark, ShoppingCart, Factory, Truck, CheckCircle2, ChevronRight, Download } from 'lucide-react';
+import { Mic, Send, MicOff, Globe, Stethoscope, Landmark, ShoppingCart, Factory, Truck, ChevronRight, Download } from 'lucide-react';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 import { saveAs } from 'file-saver';
 import { cn } from '@/lib/utils';
@@ -355,7 +355,7 @@ export const Home = () => {
                     key={key} 
                     className="flex flex-col border-b border-slate-800 pb-2"
                   >
-                    <span className="text-slate-500 capitalize tracking-wider text-[10px] uppercase mb-1">
+                    <span className="text-slate-500 tracking-wider text-[10px] uppercase mb-1">
                       {key.replace(/([A-Z])/g, ' $1').trim()}
                     </span>
                     <Typewriter 
@@ -461,7 +461,7 @@ export const Home = () => {
 
           {introStage >= 2 && (
             <Typewriter 
-              text={"You have been appointed as\nChief Executive Officer."}
+              text={"You have been appointed as the\nChief Executive Officer"}
               speed={40}
               className="text-2xl md:text-3xl font-bold text-white tracking-widest mt-12 animate-pulse uppercase min-h-[80px]"
               onComplete={() => {
@@ -491,48 +491,48 @@ export const Home = () => {
         <div className="absolute inset-0 scanlines opacity-20 pointer-events-none" />
 
         {/* Header */}
-        <div className="relative z-10 text-center pt-10 pb-4 px-6 animate-in fade-in slide-in-from-top-6 duration-700">
-          <div className="inline-block px-6 py-1 mb-3 border-y-2 border-amber-500/40">
-            <span className="text-amber-400/80 tracking-[0.4em] text-[11px] uppercase">Character Select</span>
+        <div className="relative z-10 text-center pt-2 pb-1 px-6 animate-in fade-in slide-in-from-top-6 duration-700">
+          <div className="inline-block px-3 py-0.5 mb-0.5 border-y-2 border-amber-500/40">
+            <span className="text-amber-400/80 tracking-[0.4em] text-[18px] uppercase">Character Select</span>
           </div>
-          <h1 className="text-4xl md:text-6xl font-black tracking-widest uppercase bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 text-transparent bg-clip-text drop-shadow-[0_2px_8px_rgba(245,158,11,0.3)]">
+          <h3 className="text-lg md:text-2xl font-black tracking-widest uppercase bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 text-transparent bg-clip-text drop-shadow-[0_2px_8px_rgba(245,158,11,0.3)]">
             Forge Your Avatar
-          </h1>
-          <p className="text-slate-400 text-sm mt-2 tracking-wide">
+          </h3>
+          <p className="text-slate-400 text-[10px] mt-0.5 tracking-wide">
             Choose how your CEO looks.{' '}
-            <span className="text-amber-500/80">Appearance only — no bonuses or abilities.</span>
+            <span className="text-amber-500/80">Appearance only - no bonuses or abilities.</span>
           </p>
         </div>
 
         {/* Body */}
-        <div className="relative z-10 flex-1 grid lg:grid-cols-[1fr,1.1fr] gap-6 px-6 md:px-12 pb-8 max-w-7xl mx-auto w-full items-stretch">
+        <div className="relative z-10 flex-1 grid lg:grid-cols-[1fr,1.1fr] gap-3 px-4 md:px-8 pb-4 max-w-7xl mx-auto w-full items-stretch">
           {/* Preview pedestal */}
           <div
             className="relative rounded-3xl border-2 overflow-hidden flex flex-col transition-all duration-500"
             style={{ borderColor: active.accent + '66', boxShadow: `0 0 60px ${active.accent}22, inset 0 0 80px ${active.accent}11` }}
           >
             <div className="absolute inset-0 bg-gradient-to-b from-slate-950/30 to-black/80 pointer-events-none" />
-            <div className="relative flex-1 min-h-[340px]">
+            <div className="relative flex-1 min-h-[220px]">
               <CEOModel archetype={activeId} />
             </div>
-            <div className="relative z-10 text-center pb-8 px-6">
-              <div className="h-px w-2/3 mx-auto mb-4" style={{ background: `linear-gradient(90deg, transparent, ${active.accent}, transparent)` }} />
-              <h2 className="text-2xl md:text-3xl font-black tracking-widest uppercase" style={{ color: active.accent }}>
+            <div className="relative z-10 text-center pb-4 px-4">
+              <div className="h-px w-2/3 mx-auto mb-2" style={{ background: `linear-gradient(90deg, transparent, ${active.accent}, transparent)` }} />
+              <h2 className="text-lg md:text-xl font-black tracking-widest uppercase" style={{ color: active.accent }}>
                 {active.name}
               </h2>
               <div
-                className="inline-block mt-2 px-3 py-0.5 rounded-full border text-[10px] tracking-[0.25em] uppercase text-slate-300"
+                className="inline-block mt-1 px-2 py-0.5 rounded-full border text-[9px] tracking-[0.25em] uppercase text-slate-300"
                 style={{ borderColor: active.accent + '55' }}
               >
                 {active.theme}
               </div>
-              <p className="text-slate-400 text-sm mt-3 max-w-sm mx-auto">{active.blurb}</p>
+              <p className="text-slate-400 text-xs mt-2 max-w-sm mx-auto">{active.blurb}</p>
             </div>
           </div>
 
           {/* Card grid + confirm */}
-          <div className="flex flex-col gap-4">
-            <div className="grid sm:grid-cols-2 gap-3 flex-1">
+          <div className="flex flex-col gap-2">
+            <div className="grid sm:grid-cols-2 gap-2 flex-1">
               {SKINS.map((s) => {
                 const selected = pendingSkin === s.id;
                 return (
@@ -542,26 +542,26 @@ export const Home = () => {
                     onMouseLeave={() => setHoveredSkin(null)}
                     onClick={() => setPendingSkin(s.id)}
                     className={cn(
-                      'group relative text-left rounded-2xl border-2 p-4 transition-all duration-300 overflow-hidden bg-slate-950/60 backdrop-blur-sm',
-                      selected ? 'scale-[1.02]' : 'border-slate-800/80 hover:border-slate-600 hover:-translate-y-0.5'
+                      'group relative text-left rounded-xl border-2 p-2 transition-all duration-300 overflow-hidden bg-slate-950/60 backdrop-blur-sm',
+                      selected ? 'scale-[1.01]' : 'border-slate-800/80 hover:border-slate-600 hover:-translate-y-0.5'
                     )}
                     style={selected ? { borderColor: s.accent, boxShadow: `0 0 25px ${s.accent}44` } : {}}
                   >
                     <div
-                      className="absolute -right-6 -top-6 w-20 h-20 rounded-full blur-2xl opacity-30 group-hover:opacity-60 transition-opacity"
+                      className="absolute -right-6 -top-6 w-16 h-16 rounded-full blur-2xl opacity-30 group-hover:opacity-60 transition-opacity"
                       style={{ background: s.accent }}
                     />
-                    <div className="flex items-center gap-2 mb-1 relative z-10">
+                    <div className="flex items-center gap-1.5 mb-1 relative z-10">
                       <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.accent, boxShadow: `0 0 8px ${s.accent}` }} />
                       <span className="font-black tracking-wide uppercase text-sm" style={{ color: selected ? s.accent : '#e2e8f0' }}>
                         {s.name}
                       </span>
                     </div>
-                    <div className="text-[10px] tracking-[0.2em] uppercase text-slate-500 mb-2 relative z-10">{s.theme}</div>
+                    <div className="text-[10px] tracking-[0.2em] uppercase text-slate-500 mb-1.5 relative z-10">{s.theme}</div>
                     <p className="text-xs text-slate-400 leading-relaxed relative z-10">{s.blurb}</p>
                     {selected && (
                       <div
-                        className="absolute top-3 right-3 text-[9px] font-bold tracking-widest uppercase px-2 py-0.5 rounded z-10"
+                        className="absolute top-3 right-3 text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded z-10"
                         style={{ background: s.accent, color: '#0a0a0a' }}
                       >
                         Selected
@@ -574,7 +574,7 @@ export const Home = () => {
 
             <button
               onClick={() => { getAudioContext()?.resume(); setFormData((prev) => ({ ...prev, skin: pendingSkin })); }}
-              className="w-full py-4 rounded-2xl font-black tracking-[0.3em] uppercase text-sm transition-all duration-300 border-2 hover:scale-[1.01] bg-slate-950/40"
+              className="w-full py-2 rounded-xl font-black tracking-[0.3em] uppercase text-sm transition-all duration-300 border-2 hover:scale-[1.01] bg-slate-950/40"
               style={{ borderColor: active.accent, color: active.accent, boxShadow: `0 0 30px ${active.accent}33` }}
             >
               ▸ Confirm Appearance
@@ -653,7 +653,7 @@ export const Home = () => {
             >
               {/* Profile Card */}
               <div className={cn(
-                "p-4 rounded-xl border backdrop-blur-2xl flex flex-col items-center justify-center transition-all duration-700 relative overflow-hidden w-48 md:w-56",
+                "p-4 rounded-xl border backdrop-blur-2xl flex flex-col items-center justify-center transition-all duration-700 relative overflow-hidden w-48 md:w-56 translate-y-[25px]",
                 isActive 
                   ? `${member.border} bg-slate-950/95 ${member.glow}` 
                   : "border-slate-800/50 bg-slate-950/80"
@@ -678,7 +678,7 @@ export const Home = () => {
 
               {/* The Holographic Question Console - Renders DIRECTLY beneath the active profile! */}
               {isActive && currentQ && (
-                <div className="absolute top-[105%] left-1/2 -translate-x-1/2 w-[90vw] max-w-[600px] flex flex-col items-center animate-in fade-in slide-in-from-top-8 duration-700 delay-300">
+                <div className="absolute top-[105%] left-1/2 -translate-x-1/2 translate-y-[5px] w-[90vw] max-w-[600px] flex flex-col items-center animate-in fade-in slide-in-from-top-8 duration-700 delay-300">
                   
                   {/* Subtle connecting line from portrait to console */}
                   <div className={cn("w-[2px] h-8 bg-gradient-to-b to-transparent mb-2", member.color.replace('text', 'from'))} />
