@@ -31,6 +31,7 @@ An AI-powered business strategy simulator where you lead a company through the A
 - [Project Structure](#-project-structure)
 - [Getting Started](#-getting-started)
 - [API Reference](#-api-reference)
+- [Deployment](#-deployment)
 - [The Endings Matrix](#-the-endings-matrix)
 - [Contributors](#-contributors)
 
@@ -275,6 +276,29 @@ Base URL: `http://localhost:8000/api`
 
 Returns `metrics` (revenue impact, productivity gain, ROI, transformation score, risk, readiness, board decision) and `scenarios` (A: maintain, B: +20%, C: +50%).
 </details>
+
+---
+
+## 🚀 Deployment
+
+The app is deploy-ready — the backend binds to the platform's **`$PORT`** and uses an absolute SQLite path, so it runs unchanged on managed hosts.
+
+### Backend — Render (Web Service)
+| Setting | Value |
+| :--- | :--- |
+| **Root Directory** | *(blank — deploy the whole repo; the models live at repo root)* |
+| **Build Command** | `pip install -r backend/requirements.txt` |
+| **Start Command** | `cd backend && uvicorn app:app --host 0.0.0.0 --port $PORT` |
+| **Env var** | `GROQ_API_KEY` → your `gsk_...` key (enables the AI Advisor; the `.env` file is gitignored and not deployed) |
+
+### Frontend — Vercel
+| Setting | Value |
+| :--- | :--- |
+| **Root Directory** | `frontend` |
+| **Framework** | Vite |
+| **Env var** | `VITE_API_URL` → `https://<your-render-url>/api` *(note the `/api` suffix)* |
+
+> **Notes:** SQLite is **ephemeral** on Render's free tier (prediction history resets on restart), and the free instance **sleeps** after ~15 min idle — open the backend URL once before a live demo to wake it. CORS is open (`*`), so the Vercel frontend can call the Render backend out of the box.
 
 ---
 
