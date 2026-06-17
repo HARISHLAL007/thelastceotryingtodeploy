@@ -69,7 +69,7 @@ As organizations adopt Artificial Intelligence, business leaders face high-stake
 | 🏆 | **8 Distinct Endings** | From Unicorn Exit to Rogue AI Singularity to Crash & Burn |
 | 🧪 | **ML Strategy Simulator** | A live "what-if" sandbox — drag strategy levers and the XGBoost model re-forecasts revenue, ROI & risk in real time |
 | 🔍 | **Explainable AI (SHAP)** | Every forecast is broken down by factor in dollars — see *why* the model predicted what it did |
-| 💬 | **AI Advisor** | An LLM (Groq · Llama 3) turns the model's output into plain-English strategic guidance |
+| 💬 | **AI Advisor** | An LLM (Groq · Llama 3.1) turns the model's output into plain-English strategic guidance |
 | ⚠️ | **Crisis Engine** | Dynamic project-cost scaling + a crisis mode that reshapes the decision pool when you near insolvency |
 
 ---
@@ -81,7 +81,7 @@ As organizations adopt Artificial Intelligence, business leaders face high-stake
 | **Frontend** | React 18 · TypeScript · Vite · Tailwind CSS · Zustand · React Three Fiber · Recharts |
 | **Backend** | FastAPI · Uvicorn · SQLAlchemy · Pydantic |
 | **Machine Learning** | XGBoost · scikit-learn · **SHAP** · pandas · NumPy · joblib |
-| **Generative AI** | Groq API (Llama 3) — the in-game AI Advisor |
+| **Generative AI** | Groq API (Llama 3.1) — the in-game AI Advisor |
 | **Persistence** | SQLite |
 | **Deployment** | Vercel (frontend) · Render (backend) |
 
@@ -113,7 +113,7 @@ The simulation is driven by two gradient-boosted regression models trained on a 
 The product doesn't just predict — it explains and advises:
 
 - **SHAP attribution** (`POST /api/explain`) — a `TreeExplainer` decomposes each revenue forecast into per-feature contributions (in dollars), so the UI shows exactly *why* the model predicted what it did — a glass box, not a black box.
-- **AI Advisor** (`POST /api/advisor`) — the model's metrics and SHAP breakdown are passed to an **LLM (Groq · Llama 3)**, which returns a plain-English strategic briefing. *(Requires a `GROQ_API_KEY` — see Getting Started.)*
+- **AI Advisor** (`POST /api/advisor`) — the model's metrics and SHAP breakdown are passed to an **LLM (Groq · Llama 3.1)**, which returns a plain-English strategic briefing. *(Requires a `GROQ_API_KEY` — see Getting Started.)*
 - Both power the **ML Strategy Simulator**: a live what-if sandbox where dragging a lever re-runs the model, the SHAP explanation, and the advice in real time.
 
 ---
@@ -216,11 +216,12 @@ uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 
 API → `http://localhost:8000` · interactive docs → `http://localhost:8000/docs`
 
-> **Optional — AI Advisor:** the `/advisor` endpoint uses Groq. To enable the in-game AI Advisor, grab a free key from [console.groq.com/keys](https://console.groq.com/keys) and set it before running:
+> **Optional — AI Advisor:** the `/advisor` endpoint uses Groq (`llama-3.1-8b-instant`). To enable the in-game AI Advisor, grab a free key from [console.groq.com/keys](https://console.groq.com/keys) and drop it into **`backend/.env`** (auto-loaded on startup, and gitignored so it never gets committed):
 > ```bash
-> export GROQ_API_KEY=your_key_here     # or put it in backend/.env
+> # backend/.env
+> GROQ_API_KEY=your_key_here
 > ```
-> Everything else (predictions, SHAP, the simulator's forecasts) works without it.
+> Everything else (predictions, SHAP, the simulator's forecasts, the whole game) works without it.
 
 ### 2 · Frontend
 
@@ -251,7 +252,7 @@ Base URL: `http://localhost:8000/api`
 | :--- | :--- | :--- |
 | `POST` | `/predict` | Run a revenue & productivity prediction for a scenario; returns metrics + A/B/C investment scenarios |
 | `POST` | `/explain` | SHAP feature attribution for a prediction (per-factor contribution in dollars) |
-| `POST` | `/advisor` | LLM (Groq · Llama 3) strategic briefing grounded in the model output |
+| `POST` | `/advisor` | LLM (Groq · Llama 3.1) strategic briefing grounded in the model output |
 | `POST` | `/save_game_history` | Persist a completed run's quarterly payloads to the ledger |
 | `GET` | `/predictions` | Return the 50 most recent stored predictions |
 
