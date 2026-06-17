@@ -132,6 +132,7 @@ export const Home = () => {
   const [voicesLoaded, setVoicesLoaded] = useState(false);
   const [showAvatarCinematic, setShowAvatarCinematic] = useState(true);
   const [avatarIntroStage, setAvatarIntroStage] = useState(0);
+  const lastSpokenQRef = React.useRef<string | null>(null);
 
   useEffect(() => {
     if (window.speechSynthesis.getVoices().length > 0) {
@@ -154,6 +155,10 @@ export const Home = () => {
       }
       return;
     }
+
+    // Prevent double execution in React StrictMode
+    if (lastSpokenQRef.current === currentQ.id) return;
+    lastSpokenQRef.current = currentQ.id;
 
     setDisplayedBotText('');
     setIsTyping(true);
@@ -230,6 +235,7 @@ export const Home = () => {
     return () => {
       clearInterval(timer);
       window.speechSynthesis.cancel();
+      // We do NOT reset lastSpokenQRef here, so StrictMode double-mount won't re-trigger it.
     };
   }, [qIndex, showIntro, formData.skin, voicesLoaded]);
 
