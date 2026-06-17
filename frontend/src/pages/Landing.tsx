@@ -278,7 +278,7 @@ const Reveal = ({ children, className = '', delay = 0, threshold = 0.1 }: { chil
   return (
     <div
       ref={ref}
-      className={`transition-all duration-[1500ms] ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'} ${className}`}
+      className={`transition-all duration-1500 ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'} ${className}`}
       style={{ transitionDelay: `${delay}ms` }}
     >
       {children}

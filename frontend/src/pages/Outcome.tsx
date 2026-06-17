@@ -791,9 +791,6 @@ Completion ${((ALL_ENDINGS.filter(e => e.id === achievedEndingId).length / 8) * 
           para("The market has closed.", false, false, "000000", true),
           para(""),
           para("══════════════════════════════", false, false, MUTED, true),
-          para("ARCHIVE MEMORY COMPLETE", false, true, MUTED, true),
-          para("CEO SESSION TERMINATED", false, true, NEGATIVE, true),
-          para("RETURN TO MAIN MENU", false, true, MUTED, true),
         ],
       }],
     });

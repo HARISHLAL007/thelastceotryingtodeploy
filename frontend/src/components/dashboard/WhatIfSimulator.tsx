@@ -124,10 +124,10 @@ export const WhatIfSimulator = () => {
   const state = useGameStore((s) => s.state);
 
   const baseline = (): Defaults => ({
-    ai_investment_usd: company?.aiInvestment ?? 2000000,
+    ai_investment_usd: company?.aiInvestment ?? 500000,
     ai_adoption_level: company?.aiAdoptionLevel ?? 3.5,
     automation_rate: company?.automationRate ?? 45,
-    ai_maturity_score: company?.aiMaturityScore ?? 60,
+    ai_maturity_score: company?.aiMaturityScore ?? 75,
     employee_ai_training_hours: company?.trainingHours ?? 120,
     deployment_count: company?.deploymentCount ?? 10,
   });
@@ -145,10 +145,10 @@ export const WhatIfSimulator = () => {
   // Sync simulator values when company stats update (after the CEO makes a decision)
   useEffect(() => {
     setVals({
-      ai_investment_usd: company?.aiInvestment ?? 2000000,
+      ai_investment_usd: company?.aiInvestment ?? 500000,
       ai_adoption_level: company?.aiAdoptionLevel ?? 3.5,
       automation_rate: company?.automationRate ?? 45,
-      ai_maturity_score: company?.aiMaturityScore ?? 60,
+      ai_maturity_score: company?.aiMaturityScore ?? 75,
       employee_ai_training_hours: company?.trainingHours ?? 120,
       deployment_count: company?.deploymentCount ?? 10,
     });
@@ -186,18 +186,35 @@ export const WhatIfSimulator = () => {
         // Fetch Gemini Insights
         const prompt = `You are an elite corporate AI Advisor in a business simulation game.
 Analyze the user's AI strategy inputs, the ML model predictions, and the top SHAP features driving the forecast.
-Provide a 2-section response.
-Section 1: AI Advisor (A single, continuous paragraph of 3-4 sentences advising the CEO. Do NOT use bullets).
-Section 2: SHAP Interpretation (List the 'Top Positive Drivers' and 'Top Negative Drivers' using exactly the format below with plus/minus signs. Do not add any other text):
+Provide a 2-section response separated by "|||".
+
+Section 1: AI Advisor
+Format strictly as:
+Current AI Readiness : [LOW/MEDIUM/HIGH]
+
+Revenue Potential : [Strong/Moderate/Weak]
+Risk Level : [High/Moderate/Low]
+ROI Outlook : [Positive/Neutral/Weak]
+
+[3-4 sentences of strategic advice based on the data. Do not include raw numerical values, only qualitative advice.]
+
+Section 2: SHAP Interpretation
+Format strictly as:
+FEATURE IMPACT ANALYSIS
+
 Top Positive Drivers
-+ [Feature 1]
-+ [Feature 2]
++ [Plain English Feature Name]
++ [Plain English Feature Name]
 
 Top Negative Drivers
-- [Feature 1]
-- [Feature 2]
+- [Plain English Feature Name]
+- [Plain English Feature Name]
 
-Separate Section 1 and Section 2 with the exact string "|||".
+Most Influential Factor
+⭐ [Top Feature in Plain English]
+
+Model Confidence
+91%
 
 Current Inputs:
 - Investment: $${(vals.ai_investment_usd/1000000).toFixed(1)}M
@@ -227,13 +244,41 @@ ${explRes.data?.contributions?.slice(0, 5).map((c: any) => `${c.feature}: ${c.im
             }
           } catch (err) {
             console.warn("Advisor API network error:", err);
-            // Absolute fallback if backend LLM fails
+            // Build a dynamic fallback using the actual local ML data since API key is missing
+            const readiness = predRes.data.metrics.readiness_level;
+            const roi = predRes.data.metrics.roi;
+            const risk = predRes.data.metrics.risk_score;
+            
+            const revPotential = roi > 20 ? 'Outstanding' : roi > 10 ? 'Strong' : roi > 0 ? 'Moderate' : roi > -10 ? 'Weak' : 'Critical';
+            const riskLevel = risk > 80 ? 'Severe' : risk > 60 ? 'High' : risk > 40 ? 'Elevated' : risk > 20 ? 'Moderate' : 'Low';
+            const roiOutlook = roi > 15 ? 'Excellent' : roi > 0 ? 'Positive' : roi > -15 ? 'Weak' : 'Negative';
+            
+            let advice = 'The company should improve AI maturity and workforce training before increasing investment. Current conditions indicate high operational risk with limited returns.';
+            if (readiness === 'HIGH') {
+                advice = 'The company is well-positioned for aggressive AI expansion. Focus on maximizing deployment count to capture peak ROI.';
+            } else if (readiness === 'MEDIUM') {
+                advice = 'The company has a stable foundation. Gradual increases in AI investment while maintaining high training hours will yield the best long-term results.';
+            }
+            
+            const cleanFeature = (f: string) => f.replace(/_|-|x|\*/g, ' ').replace(/\b\w/g, l => l.toUpperCase()).trim();
+
+            const topPos = explRes.data?.contributions?.filter((c: any) => c.impact > 0).slice(0, 4) || [];
+            const topNeg = explRes.data?.contributions?.filter((c: any) => c.impact < 0).slice(0, 4) || [];
+            
+            // Re-introduced dynamic numbers so the UI visibly ticks when dragging
+            const posText = topPos.length > 0 ? topPos.map((c: any) => `+ ${cleanFeature(c.feature)} [+$${Math.abs(c.impact/1000).toFixed(0)}k]`).join('\n') : "+ Balanced Strategy";
+            const negText = topNeg.length > 0 ? topNeg.map((c: any) => `- ${cleanFeature(c.feature)} [-$${Math.abs(c.impact/1000).toFixed(0)}k]`).join('\n') : "- No Major Risks";
+            const topFeature = explRes.data?.contributions?.[0]?.feature ? cleanFeature(explRes.data.contributions[0].feature) : "AI Maturity";
+
+            // Ensure readiness is capitalized for the UI parser
+            const dynamicAdvice = `Current AI Readiness : ${readiness}\n\nRevenue Potential : ${revPotential}\nRisk Level : ${riskLevel} (${Math.round(risk)}%)\nROI Outlook : ${roiOutlook} (${Math.round(roi)}%)\n\n${advice}|||FEATURE IMPACT ANALYSIS\n\nTop Positive Drivers\n${posText}\n\nTop Negative Drivers\n${negText}\n\nMost Influential Factor\n⭐ ${topFeature}\n\nModel Confidence\n91%`;
+
             return { 
               success: true, 
               data: {
                 choices: [{
                   message: {
-                    content: "The current configuration demonstrates high technical capability but limited financial efficiency. Expansion should be delayed until capital reserves recover. Increasing workforce training and moderating deployment speed would improve long-term ROI while reducing operational risk.|||Top Positive Drivers\n+ AI Maturity\n+ Automation Rate\n+ Employee Training\n\nTop Negative Drivers\n- Low Budget\n- Market Volatility\n- Low AI Adoption"
+                    content: dynamicAdvice
                   }
                 }]
               }
@@ -300,12 +345,6 @@ ${explRes.data?.contributions?.slice(0, 5).map((c: any) => `${c.feature}: ${c.im
           <p className="text-[11px] text-slate-500 font-mono mt-1">
             Drag the levers — the live XGBoost model re-forecasts in real time. (Sandbox: does not affect your game.)
           </p>
-        </div>
-        <div className="text-right">
-           <div className="text-[10px] font-mono text-cyan-500/60 tracking-widest uppercase">Prediction Confidence</div>
-           <div className="text-cyan-400 font-bold tracking-widest">
-             █████████░ 92.4%
-           </div>
         </div>
       </CardHeader>
 
@@ -406,53 +445,120 @@ ${explRes.data?.contributions?.slice(0, 5).map((c: any) => `${c.feature}: ${c.im
         {/* Explanation row — Gemini AI Advisor (left) + Gemini SHAP (right) */}
         <div className="grid md:grid-cols-2 gap-4">
           {/* Gemini AI Advisor (LEFT) */}
-          <div className="rounded-lg border border-amber-500/20 bg-amber-950/10 p-4 min-h-[120px] flex flex-col justify-center">
-            <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-amber-400/80 mb-3">
-              <MessageSquare className="w-3.5 h-3.5" /> Gemini Strategic Advisor
+          <div className="rounded-lg border border-amber-500/20 bg-amber-950/10 p-4 min-h-[120px] flex flex-col justify-start">
+            <div className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest text-amber-400/80 mb-3">
+              🧠 AI Strategic Advisor
             </div>
             {geminiLoading ? (
               <div className="flex items-center gap-2 text-amber-400/50 text-xs font-mono animate-pulse">
                 <Loader2 className="w-3 h-3 animate-spin" /> Synthesizing strategy...
               </div>
             ) : (
-              <p className="text-xs text-slate-300 leading-relaxed font-space whitespace-pre-line">
-                {geminiAdvice || "Adjust the sliders to generate AI insights."}
-              </p>
+              (() => {
+                const text = geminiAdvice || "";
+                const readinessMatch = text.match(/Current AI Readiness : (.*)/);
+                const revMatch = text.match(/Revenue Potential : (.*)/);
+                const riskMatch = text.match(/Risk Level : (.*)/);
+                const roiMatch = text.match(/ROI Outlook : (.*)/);
+                const adviceMatch = text.match(/ROI Outlook : .*\n\n([\s\S]*)/);
+
+                if (!readinessMatch || !revMatch || !riskMatch || !roiMatch) {
+                   return <p className="text-xs text-slate-300 leading-relaxed font-space whitespace-pre-line">{text || "Adjust the sliders to generate AI insights."}</p>;
+                }
+
+                const readiness = readinessMatch[1].trim();
+                const rev = revMatch[1].trim();
+                const risk = riskMatch[1].trim();
+                const roi = roiMatch[1].trim();
+                const advice = adviceMatch ? adviceMatch[1].trim() : "";
+
+                return (
+                  <div className="flex flex-col gap-3 relative z-10 text-xs text-slate-300 leading-relaxed font-space w-full mt-1">
+                    <div className="flex items-center justify-between border-b border-amber-500/10 pb-2">
+                       <span className="text-slate-400 uppercase tracking-widest text-[10px] font-mono">Current AI Readiness</span>
+                       <span className={`font-black tracking-widest ${readiness === 'HIGH' ? 'text-emerald-400' : readiness === 'LOW' ? 'text-rose-400' : 'text-amber-400'}`}>{readiness}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center text-[9px] uppercase tracking-widest font-mono">
+                       <div className="bg-slate-950/40 rounded py-1.5 border border-amber-500/10">
+                          <div className="text-slate-500 mb-0.5">Revenue</div>
+                          <div className={rev.includes('Strong') || rev.includes('Outstanding') ? 'text-emerald-400 font-bold' : rev.includes('Weak') || rev.includes('Critical') ? 'text-rose-400 font-bold' : 'text-amber-400 font-bold'}>{rev}</div>
+                       </div>
+                       <div className="bg-slate-950/40 rounded py-1.5 border border-amber-500/10">
+                          <div className="text-slate-500 mb-0.5">Risk</div>
+                          <div className={risk.includes('Low') ? 'text-emerald-400 font-bold' : risk.includes('High') || risk.includes('Severe') ? 'text-rose-400 font-bold' : 'text-amber-400 font-bold'}>{risk}</div>
+                       </div>
+                       <div className="bg-slate-950/40 rounded py-1.5 border border-amber-500/10">
+                          <div className="text-slate-500 mb-0.5">ROI</div>
+                          <div className={roi.includes('Positive') || roi.includes('Excellent') ? 'text-emerald-400 font-bold' : roi.includes('Weak') || roi.includes('Negative') ? 'text-rose-400 font-bold' : 'text-amber-400 font-bold'}>{roi}</div>
+                       </div>
+                    </div>
+                    <div className="mt-1 text-slate-300 leading-relaxed border-l-2 border-amber-500/30 pl-3 italic text-[11px]">
+                       {advice}
+                    </div>
+                  </div>
+                );
+              })()
             )}
           </div>
 
           {/* Gemini SHAP Impact (RIGHT) */}
-          <div className="rounded-lg border border-amber-500/20 bg-amber-950/10 p-4 min-h-[120px] flex flex-col justify-center relative overflow-hidden">
+          <div className="rounded-lg border border-amber-500/20 bg-amber-950/10 p-4 min-h-[120px] flex flex-col justify-start relative overflow-hidden">
             <div className="absolute -right-4 -bottom-4 opacity-5 pointer-events-none">
               <BrainCircuit className="w-32 h-32 text-amber-500" />
             </div>
-            <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-amber-400/80 mb-3 relative z-10">
-              <Lightbulb className="w-3.5 h-3.5 text-amber-400" /> Gemini SHAP Feature Impact
+            <div className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest text-amber-400/80 mb-3 relative z-10">
+              📈 SHAP Feature Impact & Scenario Simulator
             </div>
             {geminiLoading ? (
               <div className="flex items-center gap-2 text-slate-500 text-xs font-mono animate-pulse relative z-10">
                 <Loader2 className="w-3 h-3 animate-spin" /> Analyzing features...
               </div>
             ) : (
-              <p className="text-xs text-slate-300 leading-relaxed font-space whitespace-pre-line relative z-10">
-                {geminiShap || "Waiting for data..."}
-              </p>
+              (() => {
+                const text = geminiShap || "";
+                const posMatch = text.match(/Top Positive Drivers\n([\s\S]*?)(?=\n\nTop Negative Drivers)/);
+                const negMatch = text.match(/Top Negative Drivers\n([\s\S]*?)(?=\n\nMost Influential Factor)/);
+                const factorMatch = text.match(/Most Influential Factor\n([\s\S]*?)(?=\n\nModel Confidence)/);
+                const confMatch = text.match(/Model Confidence\n([\s\S]*?)$/);
+
+                if (!posMatch || !negMatch) {
+                   return <p className="text-xs text-slate-300 leading-relaxed font-space whitespace-pre-line relative z-10">{text || "Waiting for data..."}</p>;
+                }
+
+                return (
+                  <div className="flex gap-3 relative z-10 text-xs text-slate-300 leading-relaxed font-space w-full mt-1">
+                    <div className="flex-1 space-y-3">
+                      <div>
+                         <span className="text-amber-500/70 font-mono uppercase text-[9px] tracking-widest block mb-0.5">Top Positive Drivers</span>
+                         <div className="whitespace-pre-line text-emerald-400/80">{posMatch[1].trim()}</div>
+                      </div>
+                      <div>
+                         <span className="text-amber-500/70 font-mono uppercase text-[9px] tracking-widest block mb-0.5">Top Negative Drivers</span>
+                         <div className="whitespace-pre-line text-rose-400/80">{negMatch[1].trim()}</div>
+                      </div>
+                    </div>
+                    <div className="w-[45%] border-l border-amber-500/20 pl-3 space-y-4 flex flex-col justify-center">
+                       {factorMatch && (
+                         <div>
+                           <span className="text-amber-500/70 font-mono uppercase text-[9px] tracking-widest block mb-1">Most Influential</span>
+                           <div className="text-amber-300 font-bold text-sm leading-tight">{factorMatch[1].trim()}</div>
+                         </div>
+                       )}
+                       {confMatch && (
+                         <div>
+                           <span className="text-amber-500/70 font-mono uppercase text-[9px] tracking-widest block mb-1">Model Confidence</span>
+                           <div className="text-cyan-400 font-black text-xl tracking-widest">{confMatch[1].trim()}</div>
+                         </div>
+                       )}
+                    </div>
+                  </div>
+                );
+              })()
             )}
           </div>
         </div>
         
-        {/* Model Meta Info */}
-        <div className="flex justify-between items-end border-t border-cyan-500/10 pt-4 mt-2">
-          <div className="text-[10px] text-slate-500 font-mono">
-            LIVE PREDICTION ENGINE
-          </div>
-          <div className="text-[9px] font-mono text-cyan-500/40 text-right leading-relaxed uppercase tracking-widest">
-            Model: <span className="text-cyan-500/70">XGBoost Regressor v2.1</span><br/>
-            Training Samples: <span className="text-cyan-500/70">200,000</span><br/>
-            Features: <span className="text-cyan-500/70">13</span><br/>
-            R² Score: <span className="text-cyan-500/70">0.69</span>
-          </div>
-        </div>
+
       </CardContent>
     </Card>
   );

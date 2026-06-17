@@ -412,7 +412,7 @@ export const Home = () => {
   if (showIntro) {
     return (
       <div className="h-screen w-full bg-black text-white font-space flex items-center justify-center p-8 scanlines cursor-pointer" onClick={() => { getAudioContext()?.resume(); setShowIntro(false); }}>
-        <div className="max-w-3xl text-center space-y-8 animate-in fade-in zoom-in-95 duration-[3000ms]">
+        <div className="max-w-3xl text-center space-y-8 animate-in fade-in zoom-in-95 duration-3000">
           
           {introStage === -2 && (
             <Typewriter 
@@ -471,7 +471,7 @@ export const Home = () => {
     if (showAvatarCinematic) {
       return (
         <div className="h-screen w-full bg-black text-white font-space flex items-center justify-center p-8 scanlines cursor-pointer" onClick={() => setShowAvatarCinematic(false)}>
-          <div className="max-w-3xl text-center space-y-8 animate-in fade-in duration-[1500ms]">
+          <div className="max-w-3xl text-center space-y-8 animate-in fade-in duration-1500">
             {avatarIntroStage >= 0 && (
               <Typewriter 
                 text="EXECUTIVE PROFILE ACCEPTED" 
@@ -508,7 +508,7 @@ export const Home = () => {
           <div className="inline-block px-3 py-0.5 mb-0.5 border-y-2 border-amber-500/40">
             <span className="text-amber-400/80 tracking-[0.4em] text-[16px] uppercase">Character Select</span>
           </div>
-          <h1 className="text-lg md:text-xl font-black tracking-widest uppercase bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 text-transparent bg-clip-text drop-shadow-[0_2px_8px_rgba(245,158,11,0.3)]">
+          <h1 className="text-5xl md:text-6xl font-black tracking-widest uppercase bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 text-transparent bg-clip-text drop-shadow-[0_2px_8px_rgba(245,158,11,0.3)]">
             Forge Your Avatar
           </h1>
           <p className="text-slate-400 text-[10px] mt-0.5 tracking-wide">
@@ -541,8 +541,8 @@ export const Home = () => {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <div className="grid sm:grid-cols-2 gap-2 flex-1">
+          <div className="flex flex-col gap-1.5">
+            <div className="grid sm:grid-cols-2 gap-1.5 flex-1">
               {SKINS.map((s) => {
                 const selected = pendingSkin === s.id;
                 return (
@@ -552,7 +552,7 @@ export const Home = () => {
                     onMouseLeave={() => setHoveredSkin(null)}
                     onClick={() => setPendingSkin(s.id)}
                     className={cn(
-                      'group relative text-left rounded-xl border-2 p-2 transition-all duration-300 overflow-hidden bg-slate-950/60 backdrop-blur-sm',
+                      'group relative text-left rounded-xl border-2 p-3 flex flex-col justify-center transition-all duration-300 overflow-hidden bg-slate-950/60 backdrop-blur-sm',
                       selected ? 'scale-[1.01]' : 'border-slate-800/80 hover:border-slate-600 hover:-translate-y-0.5'
                     )}
                     style={selected ? { borderColor: s.accent, boxShadow: `0 0 25px ${s.accent}44` } : {}}
@@ -563,15 +563,15 @@ export const Home = () => {
                     />
                     <div className="flex items-center gap-1.5 mb-1 relative z-10">
                       <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.accent, boxShadow: `0 0 8px ${s.accent}` }} />
-                      <span className="font-black tracking-wide uppercase text-sm" style={{ color: selected ? s.accent : '#e2e8f0' }}>
+                      <span className="font-black tracking-wide uppercase text-[15px]" style={{ color: selected ? s.accent : '#e2e8f0' }}>
                         {s.name}
                       </span>
                     </div>
-                    <div className="text-[10px] tracking-[0.2em] uppercase text-slate-500 mb-1.5 relative z-10">{s.theme}</div>
-                    <p className="text-xs text-slate-400 leading-relaxed relative z-10">{s.blurb}</p>
+                    <div className="text-[11px] tracking-[0.2em] uppercase text-slate-500 mb-1 relative z-10">{s.theme}</div>
+                    <p className="text-[13px] text-slate-400 leading-tight relative z-10">{s.blurb}</p>
                     {selected && (
                       <div
-                        className="absolute top-3 right-3 text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded z-10"
+                        className="absolute top-2 right-2 text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded z-10"
                         style={{ background: s.accent, color: '#0a0a0a' }}
                       >
                         Selected
@@ -584,7 +584,7 @@ export const Home = () => {
 
             <button
               onClick={() => { getAudioContext()?.resume(); setFormData((prev) => ({ ...prev, skin: pendingSkin })); }}
-              className="w-full py-2 rounded-xl font-black tracking-[0.3em] uppercase text-sm transition-all duration-300 border-2 hover:scale-[1.01] bg-slate-950/40"
+              className="w-full py-2.5 mt-1 rounded-xl font-black tracking-[0.3em] uppercase text-sm transition-all duration-300 border-2 hover:scale-[1.01] bg-slate-950/40"
               style={{ borderColor: active.accent, color: active.accent, boxShadow: `0 0 30px ${active.accent}33` }}
             >
               ▸ Confirm Appearance
@@ -612,7 +612,7 @@ export const Home = () => {
     <div className="min-h-screen w-full bg-black text-white font-space relative overflow-x-hidden overflow-y-auto scanlines">
       {/* Dynamic Background */}
       <div 
-        className={cn("absolute inset-0 bg-cover bg-center transition-all duration-[2000ms] ease-in-out opacity-30 z-0", 
+        className={cn("absolute inset-0 bg-cover bg-center transition-all duration-2000 ease-in-out opacity-30 z-0", 
           activeSpeaker?.id === 'cfo' ? "brightness-110 hue-rotate-90" : 
           activeSpeaker?.id === 'cto' ? "brightness-110 hue-rotate-180" : 
           activeSpeaker?.id === 'risk' ? "brightness-75 hue-rotate-[-30deg]" : ""
@@ -637,7 +637,7 @@ export const Home = () => {
 
       {/* THE 360 CIRCULAR BOARDROOM */}
       <div 
-        className="absolute top-1/2 left-1/2 w-0 h-0 transition-transform duration-[2000ms] ease-in-out z-10"
+        className="absolute top-1/2 left-1/2 w-0 h-0 transition-transform duration-2000 ease-in-out z-10"
         style={{ transform: `translate(${camX}px, ${camY}px)` }}
       >
         {BOARD_MEMBERS.map((member) => {
@@ -647,7 +647,7 @@ export const Home = () => {
             <div 
               key={member.id} 
               className={cn(
-                "absolute flex flex-col items-center transition-all duration-[2000ms] ease-in-out",
+                "absolute flex flex-col items-center transition-all duration-2000 ease-in-out",
                 isActive ? "z-50 scale-110 -translate-y-8" : "z-20 scale-90 opacity-40 blur-[1px]"
               )}
               style={{ top: `${member.y}px`, left: `${member.x}px`, transform: `translate(-50%, -50%)` }}

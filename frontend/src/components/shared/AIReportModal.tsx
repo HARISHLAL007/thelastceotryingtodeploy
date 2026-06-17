@@ -128,7 +128,7 @@ export const AIReportModal = () => {
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 overflow-hidden">
       {/* Holographic background */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none animate-pulse duration-[3000ms]" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none animate-pulse duration-3000" />
       
       <Card className="max-w-4xl w-full text-cyan-500 font-mono relative animate-in zoom-in-95 duration-500 cyber-glass border-slate-800/80 shadow-[0_0_50px_rgba(6,182,212,0.15)] overflow-hidden flex flex-col max-h-[95vh]">
         {/* Neon top border glow */}
@@ -286,7 +286,7 @@ export const AIReportModal = () => {
                     </div>
                   </div>
 
-                  <div className="pt-2 animate-in fade-in duration-1000 delay-[2000ms] fill-mode-both">
+                  <div className="pt-2 animate-in fade-in duration-1000 delay-2000 fill-mode-both">
                     <div className="text-cyan-700 text-[9px] tracking-widest mb-2">THE BOARD RECOMMENDS:</div>
                     <ul className="space-y-1 text-[11px] text-cyan-300 tracking-wide">
                       {boardRecs.map((rec, idx) => (
@@ -311,7 +311,7 @@ export const AIReportModal = () => {
                 <div className="h-2.5 bg-slate-950 border border-slate-800 relative overflow-hidden mb-2 rounded-full">
                   <div 
                     className={cn(
-                      "absolute top-0 left-0 bottom-0 transition-all duration-[2000ms] ease-out rounded-full",
+                      "absolute top-0 left-0 bottom-0 transition-all duration-2000 ease-out rounded-full",
                       riskScore > 75 ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]" : riskScore > 40 ? "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" : "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
                     )}
                     style={{ width: `${riskScore}%` }}

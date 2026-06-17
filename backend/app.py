@@ -248,7 +248,7 @@ def process_prediction(request: PredictionRequest):
     scaled_deployment = min(100.0, request.deployment_count * 2.0)
     scaled_training = min(100.0, request.employee_ai_training_hours / 2.0)
     
-    transform_score = (0.30 * request.ai_maturity_score) + (0.25 * request.automation_rate) + (0.20 * scaled_adoption) + (0.15 * scaled_training) + (0.10 * request.deployment_count)
+    transform_score = (0.30 * request.ai_maturity_score) + (0.25 * request.automation_rate) + (0.20 * scaled_adoption) + (0.15 * scaled_training) + (0.10 * scaled_deployment)
     transform_score = min(100.0, max(0.0, transform_score))
     
     if transform_score >= 71:
