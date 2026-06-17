@@ -225,12 +225,12 @@ uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 
 API → `http://localhost:8000` · interactive docs → `http://localhost:8000/docs`
 
-> **Optional — AI Advisor:** the `/advisor` endpoint uses Groq (`llama-3.1-8b-instant`). To enable the in-game AI Advisor, grab a free key from [console.groq.com/keys](https://console.groq.com/keys) and drop it into **`backend/.env`** (auto-loaded on startup, and gitignored so it never gets committed):
+> **AI Advisor (optional):** the `/advisor` endpoint uses Groq (`llama-3.1-8b-instant`). Provide a key from [console.groq.com/keys](https://console.groq.com/keys) in `backend/.env`, which is loaded on startup:
 > ```bash
 > # backend/.env
 > GROQ_API_KEY=your_key_here
 > ```
-> Everything else (predictions, SHAP, the simulator's forecasts, the whole game) works without it.
+> All other features — predictions, SHAP attribution, and the strategy simulator — operate without it.
 
 ### 2 · Frontend
 
@@ -289,26 +289,27 @@ Returns `metrics` (revenue impact, productivity gain, ROI, transformation score,
 
 ## 🚀 Deployment
 
-**Live now:** frontend on **Vercel** → [the-last-ceo-eight.vercel.app](https://the-last-ceo-eight.vercel.app) · backend on **Render** → [the-last-ceo.onrender.com](https://the-last-ceo.onrender.com/docs)
+| Service | Platform | URL |
+| :--- | :--- | :--- |
+| Frontend | Vercel | [the-last-ceo-eight.vercel.app](https://the-last-ceo-eight.vercel.app) |
+| Backend API | Render | [the-last-ceo.onrender.com](https://the-last-ceo.onrender.com/docs) |
 
-The app is deploy-ready — the backend binds to the platform's **`$PORT`** and uses an absolute SQLite path, so it runs unchanged on managed hosts.
+The backend binds to the platform-provided `$PORT` and resolves its database to an absolute path, enabling zero-configuration deployment to managed hosts. CORS is enabled for cross-origin requests from the frontend.
 
 ### Backend — Render (Web Service)
 | Setting | Value |
 | :--- | :--- |
-| **Root Directory** | *(blank — deploy the whole repo; the models live at repo root)* |
-| **Build Command** | `pip install -r backend/requirements.txt` |
-| **Start Command** | `cd backend && uvicorn app:app --host 0.0.0.0 --port $PORT` |
-| **Env var** | `GROQ_API_KEY` → your `gsk_...` key (enables the AI Advisor; the `.env` file is gitignored and not deployed) |
+| Root Directory | Repository root |
+| Build Command | `pip install -r backend/requirements.txt` |
+| Start Command | `cd backend && uvicorn app:app --host 0.0.0.0 --port $PORT` |
+| Environment | `GROQ_API_KEY` — authenticates the AI Advisor (Groq) |
 
 ### Frontend — Vercel
 | Setting | Value |
 | :--- | :--- |
-| **Root Directory** | `frontend` |
-| **Framework** | Vite |
-| **Env var** | `VITE_API_URL` → `https://<your-render-url>/api` *(note the `/api` suffix)* |
-
-> **Notes:** SQLite is **ephemeral** on Render's free tier (prediction history resets on restart), and the free instance **sleeps** after ~15 min idle — open the backend URL once before a live demo to wake it. CORS is open (`*`), so the Vercel frontend can call the Render backend out of the box.
+| Root Directory | `frontend` |
+| Framework | Vite |
+| Environment | `VITE_API_URL` = `https://the-last-ceo.onrender.com/api` |
 
 ---
 
