@@ -15,6 +15,14 @@ An AI-powered business strategy simulator where you lead a company through the A
   <img src="https://img.shields.io/badge/Python-3.13-3670A0?logo=python&logoColor=white" alt="Python" />
 </p>
 
+<p>
+  <a href="https://the-last-ceo-eight.vercel.app">
+    <img src="https://img.shields.io/badge/%E2%96%B6%20Live%20Demo-Play%20Now-22D3EE?style=for-the-badge" alt="Live Demo" />
+  </a>
+</p>
+
+🔗 **Live app:** [the-last-ceo-eight.vercel.app](https://the-last-ceo-eight.vercel.app) &nbsp;·&nbsp; **API docs:** [the-last-ceo.onrender.com/docs](https://the-last-ceo.onrender.com/docs)
+
 </div>
 
 ---
@@ -280,6 +288,8 @@ Returns `metrics` (revenue impact, productivity gain, ROI, transformation score,
 ---
 
 ## 🚀 Deployment
+
+**Live now:** frontend on **Vercel** → [the-last-ceo-eight.vercel.app](https://the-last-ceo-eight.vercel.app) · backend on **Render** → [the-last-ceo.onrender.com](https://the-last-ceo.onrender.com/docs)
 
 The app is deploy-ready — the backend binds to the platform's **`$PORT`** and uses an absolute SQLite path, so it runs unchanged on managed hosts.
 
