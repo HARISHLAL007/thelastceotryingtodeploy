@@ -14,9 +14,9 @@ const QUESTIONS = [
   { id: 'q2', speakerId: 'chairman', text: "What should we call your company?", type: 'text', field: 'name', stage: 'IDENTITY' },
   { id: 'q3', speakerId: 'strategy', text: "Which industry will your company operate in?", type: 'cards', field: 'industry', options: ['Technology', 'Healthcare', 'Finance', 'Retail', 'Manufacturing', 'Logistics'], stage: 'STRATEGY' },
   { id: 'q4', speakerId: 'strategy', text: "Which country will serve as headquarters?", type: 'cards', field: 'country', options: ['United States', 'China', 'Germany', 'Japan', 'United Kingdom', 'India'], stage: 'STRATEGY' },
-  { id: 'q5', speakerId: 'cfo', text: "How much starting capital should the Board allocate?", type: 'slider', field: 'startingBudget', min: 500000, max: 50000000, step: 500000, prefix: '$', stage: 'FINANCE' },
-  { id: 'q6', speakerId: 'cfo', text: "How much should we invest in Artificial Intelligence?", type: 'slider', field: 'aiInvestment', min: 100000, max: 10000000, step: 100000, prefix: '$', stage: 'FINANCE' },
-  { id: 'q7', speakerId: 'chro', text: "How many employees do you need in the beginning?", type: 'slider', field: 'employees', min: 1, max: 50, step: 1, stage: 'WORKFORCE' }
+  { id: 'q5', speakerId: 'cfo', text: "How much starting capital should the Board allocate?", type: 'slider', field: 'startingBudget', min: 500000, max: 50000000, step: 500000, prefix: '$', suffix: '', stage: 'FINANCE' },
+  { id: 'q6', speakerId: 'cfo', text: "How much should we invest in Artificial Intelligence?", type: 'slider', field: 'aiInvestment', min: 100000, max: 10000000, step: 100000, prefix: '$', suffix: '', stage: 'FINANCE' },
+  { id: 'q7', speakerId: 'chro', text: "How many employees do you need in the beginning?", type: 'slider', field: 'employees', min: 1, max: 50, step: 1, suffix: '', stage: 'WORKFORCE' }
 ];
 
 const BOARD_MEMBERS = [
