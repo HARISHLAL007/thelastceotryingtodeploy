@@ -290,9 +290,42 @@ ${explRes.data?.contributions?.slice(0, 5).map((c: any) => `${c.feature}: ${c.im
           .then(result => {
             if (result.success) {
               const text = result.data.choices[0].message.content as string;
-              const parts = text.split("|||");
-              setGeminiAdvice(parts[0]?.trim().replace(/\*/g, '') || "No advice available.");
-              setGeminiShap(parts[1]?.trim().replace(/\*/g, '') || "No SHAP insights available.");
+
+              // The small LLM doesn't reliably place the "|||" delimiter (it sometimes
+              // leads with it or omits it), so route the two sections by CONTENT.
+              const SHAP_MARK = /FEATURE IMPACT ANALYSIS|Top Positive Drivers|Section\s*2/i;
+              const stripLabels = (s: string) =>
+                s.replace(/\*/g, '')
+                 .replace(/^[\s|]+/, '')
+                 .replace(/^Section\s*\d+\s*:?\s*(AI Advisor|SHAP Interpretation)?/i, '')
+                 .trim();
+
+              let advice = "";
+              let shap = "";
+              for (const seg of text.split("|||").map(s => s.trim()).filter(Boolean)) {
+                if (SHAP_MARK.test(seg)) shap += (shap ? "\n\n" : "") + seg;
+                else advice += (advice ? "\n\n" : "") + seg;
+              }
+              // A single blob may hold both sections — split it on the SHAP marker.
+              if (advice && !shap) {
+                const i = advice.search(SHAP_MARK);
+                if (i > 0) { shap = advice.slice(i); advice = advice.slice(0, i); }
+              }
+              if (!advice && shap) {
+                const i = shap.search(SHAP_MARK);
+                if (i > 0) { advice = shap.slice(0, i); shap = shap.slice(i); }
+              }
+
+              // Always give the SHAP panel real data, even if the LLM skipped that section.
+              if (!stripLabels(shap)) {
+                const c: any[] = explRes.data?.contributions || [];
+                const pos = c.filter(x => x.impact >= 0).slice(0, 3).map(x => `+ ${x.feature}`).join('\n');
+                const neg = c.filter(x => x.impact < 0).slice(0, 3).map(x => `- ${x.feature}`).join('\n');
+                shap = `FEATURE IMPACT ANALYSIS\n\nTop Positive Drivers\n${pos || '—'}\n\nTop Negative Drivers\n${neg || '—'}`;
+              }
+
+              setGeminiAdvice(stripLabels(advice) || "No advice available.");
+              setGeminiShap(stripLabels(shap) || "No SHAP insights available.");
             } else {
               setGeminiAdvice("System Error: Unable to reach AI Advisor.");
               setGeminiShap("System Error: Unable to generate SHAP insights.");
