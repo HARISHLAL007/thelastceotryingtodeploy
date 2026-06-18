@@ -4,6 +4,7 @@ import { PanelLeftOpen } from 'lucide-react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Landing } from '@/pages/Landing';
 import { Home } from '@/pages/Home';
+import { Auth } from '@/pages/Auth';
 import { Engine } from '@/pages/Engine';
 import { Outcome } from '@/pages/Outcome';
 import { Database } from '@/pages/Database';
@@ -12,7 +13,7 @@ const Layout = () => {
   const location = useLocation();
   const path = location.pathname;
   // Sidebar belongs to the dashboard phase only — hidden on the landing page and the corporate game flow.
-  const sidebarAvailable = path !== '/' && path !== '/enter';
+  const sidebarAvailable = path !== '/' && path !== '/enter' && path !== '/auth';
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
@@ -30,6 +31,7 @@ const Layout = () => {
       <main className="flex-1 overflow-y-auto h-screen">
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/auth" element={<Auth />} />
           <Route path="/enter" element={<Home />} />
           <Route path="/engine" element={<Engine />} />
           <Route path="/outcome" element={<Outcome />} />

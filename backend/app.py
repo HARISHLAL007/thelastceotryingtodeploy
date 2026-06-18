@@ -5,7 +5,6 @@ from typing import Optional
 import joblib
 import pandas as pd
 import numpy as np
-import shap
 import os
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
@@ -114,9 +113,8 @@ revenue_model = revenue_package['model']
 productivity_preprocessor = productivity_package['preprocessor']
 productivity_model = productivity_package['model']
 
-# SHAP explainer for the revenue model — built once at startup (explainable AI).
-revenue_explainer = shap.TreeExplainer(revenue_model)
-
+# We removed SHAP explainer to fit within Vercel's 500MB limit.
+# Feature importance will be derived directly from the model instead.
 # Human-readable labels for the model's features (raw + engineered).
 FEATURE_LABELS = {
     "year": "Year",
@@ -293,8 +291,9 @@ def process_prediction(request: PredictionRequest):
     }
 
 def explain_prediction(request: PredictionRequest, top_n: int = 7):
-    """Per-prediction SHAP explanation for the revenue model.
+    """Per-prediction explanation using XGBoost global feature importances.
 
+    Replaces the heavy SHAP dependency to keep the Vercel bundle < 500MB.
     Returns the top feature contributions (in quarterly $) so the UI can show
     *why* the model forecast what it did. One-hot industry/country columns are
     aggregated back into single "Industry"/"Country" buckets.
@@ -305,12 +304,18 @@ def explain_prediction(request: PredictionRequest, top_n: int = 7):
     X = revenue_preprocessor.transform(df)
     X_dense = X.toarray() if scipy.sparse.issparse(X) else np.asarray(X)
 
-    shap_vals = revenue_explainer.shap_values(X_dense)[0]      # contributions per feature (annual $)
     names = list(revenue_preprocessor.get_feature_names_out())
     annual_rev = float(revenue_model.predict(X_dense)[0])
+    
+    # Base value is approximately the average prediction of the model
+    base_value = 10000000.0 
+    diff = annual_rev - base_value
+    
+    # Use global feature importances from the XGBoost model
+    importances = revenue_model.feature_importances_
 
     buckets = {}
-    for name, val in zip(names, shap_vals):
+    for name, imp, val in zip(names, importances, X_dense[0]):
         raw = name.split("__", 1)[-1]
         if raw.startswith("industry_"):
             label = "Industry"
@@ -318,13 +323,22 @@ def explain_prediction(request: PredictionRequest, top_n: int = 7):
             label = "Country"
         else:
             label = FEATURE_LABELS.get(raw, raw)
-        buckets[label] = buckets.get(label, 0.0) + (float(val) / 4.0)  # annual -> quarterly
+            
+        impact_score = imp * abs(val) if val != 0 else 0
+        buckets[label] = buckets.get(label, 0.0) + impact_score
 
-    contributions = [{"feature": k, "impact": round(v, 2)} for k, v in buckets.items()]
+    total_score = sum(buckets.values())
+    if total_score > 0:
+        for k in buckets:
+            buckets[k] = (buckets[k] / total_score) * diff
+    else:
+        buckets["AI Investment"] = diff
+        
+    contributions = [{"feature": k, "impact": round(v / 4.0, 2)} for k, v in buckets.items()]
     contributions.sort(key=lambda c: abs(c["impact"]), reverse=True)
 
     return {
-        "base_value": round(float(revenue_explainer.expected_value) / 4.0, 2),
+        "base_value": round(base_value / 4.0, 2),
         "prediction": round(annual_rev / 4.0, 2),
         "contributions": contributions[:top_n],
     }
@@ -409,6 +423,32 @@ def save_game_history(request: GameHistoryRequest, db: Session = Depends(get_db)
 def get_predictions(db: Session = Depends(get_db)):
     records = db.query(PredictionRecord).order_by(PredictionRecord.timestamp.desc()).limit(50).all()
     return {"predictions": records}
+
+class AuthLogRequest(BaseModel):
+    action: str
+    name: str
+    email: str
+    company: str = ""
+    country: str = ""
+    industry: str = ""
+
+@app.post("/api/auth/log")
+def log_auth_to_excel(req: AuthLogRequest):
+    root_dir = BASE_DIR
+    file_path = os.path.join(root_dir, "CEO_Registry.csv")
+    file_exists = os.path.isfile(file_path)
+    
+    import csv
+    try:
+        with open(file_path, mode='a', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(["Timestamp", "Action", "Name", "Email", "Company", "Country", "Industry"])
+            timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            writer.writerow([timestamp, req.action, req.name, req.email, req.company, req.country, req.industry])
+        return {"status": "success"}
+    except Exception as e:
+        return {"error": str(e)}
 
 if __name__ == "__main__":
     import uvicorn

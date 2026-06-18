@@ -865,7 +865,7 @@ export const Landing = () => {
 
           <Reveal delay={200}>
             <button
-              onClick={() => navigate('/enter')}
+              onClick={() => navigate('/auth')}
               className="group relative px-14 py-3 font-orbitron font-black text-sm tracking-[0.3em] text-slate-950 bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400 rounded-2xl shadow-[0_0_40px_rgba(6,182,212,0.5),0_0_80px_rgba(6,182,212,0.2)] hover:shadow-[0_0_60px_rgba(6,182,212,0.8),0_0_120px_rgba(6,182,212,0.3)] hover:scale-105 transition-all duration-300 flex items-center gap-3 mx-auto overflow-hidden"
             >
               {/* Shimmer effect */}

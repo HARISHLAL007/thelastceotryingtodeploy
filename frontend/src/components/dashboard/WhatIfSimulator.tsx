@@ -185,36 +185,8 @@ export const WhatIfSimulator = () => {
 
         // Fetch Gemini Insights
         const prompt = `You are an elite corporate AI Advisor in a business simulation game.
-Analyze the user's AI strategy inputs, the ML model predictions, and the top SHAP features driving the forecast.
-Provide a 2-section response separated by "|||".
-
-Section 1: AI Advisor
-Format strictly as:
-Current AI Readiness : [LOW/MEDIUM/HIGH]
-
-Revenue Potential : [Strong/Moderate/Weak]
-Risk Level : [High/Moderate/Low]
-ROI Outlook : [Positive/Neutral/Weak]
-
-[3-4 sentences of strategic advice based on the data. Do not include raw numerical values, only qualitative advice.]
-
-Section 2: SHAP Interpretation
-Format strictly as:
-FEATURE IMPACT ANALYSIS
-
-Top Positive Drivers
-+ [Plain English Feature Name]
-+ [Plain English Feature Name]
-
-Top Negative Drivers
-- [Plain English Feature Name]
-- [Plain English Feature Name]
-
-Most Influential Factor
-⭐ [Top Feature in Plain English]
-
-Model Confidence
-91%
+Analyze the user's AI strategy inputs and the ML model predictions.
+Provide exactly 3-4 sentences of strategic advice based on the data. Do not use markdown, do not use headers. Just the paragraph of advice.
 
 Current Inputs:
 - Investment: $${(vals.ai_investment_usd/1000000).toFixed(1)}M
@@ -227,63 +199,57 @@ Current Inputs:
 Model Outputs:
 - Predicted Revenue Impact: $${(predRes.data.metrics.revenue_impact/1000000).toFixed(2)}M
 - ROI: ${Math.round(predRes.data.metrics.roi)}%
-- Risk: ${predRes.data.metrics.risk_score.toFixed(0)}%
-
-Top SHAP Features:
-${explRes.data?.contributions?.slice(0, 5).map((c: any) => `${c.feature}: ${c.impact >= 0 ? '+' : '-'}$${Math.abs(c.impact/1000).toFixed(0)}k`).join('\n') || 'None'}`;
+- Risk: ${predRes.data.metrics.risk_score.toFixed(0)}%`;
 
         const tryFetchAdvisor = async () => {
+          let adviceText = 'The company should improve AI maturity and workforce training before increasing investment. Current conditions indicate high operational risk with limited returns.';
+          
+          const readiness = predRes.data.metrics.readiness_level;
+          if (readiness === 'HIGH') {
+              adviceText = 'The company is well-positioned for aggressive AI expansion. Focus on maximizing deployment count to capture peak ROI.';
+          } else if (readiness === 'MEDIUM') {
+              adviceText = 'The company has a stable foundation. Gradual increases in AI investment while maintaining high training hours will yield the best long-term results.';
+          }
+
           try {
             const res = await api.getAdvisorInsights(prompt);
             const data = res.data;
             if (data.choices && data.choices[0]) {
-               return { success: true, data };
-            } else {
-               console.warn("Advisor API error:", data);
-               throw new Error(data.error || "Unknown API error");
+               adviceText = data.choices[0].message.content.trim();
             }
           } catch (err) {
-            console.warn("Advisor API network error:", err);
-            // Build a dynamic fallback using the actual local ML data since API key is missing
-            const readiness = predRes.data.metrics.readiness_level;
-            const roi = predRes.data.metrics.roi;
-            const risk = predRes.data.metrics.risk_score;
-            
-            const revPotential = roi > 20 ? 'Outstanding' : roi > 10 ? 'Strong' : roi > 0 ? 'Moderate' : roi > -10 ? 'Weak' : 'Critical';
-            const riskLevel = risk > 80 ? 'Severe' : risk > 60 ? 'High' : risk > 40 ? 'Elevated' : risk > 20 ? 'Moderate' : 'Low';
-            const roiOutlook = roi > 15 ? 'Excellent' : roi > 0 ? 'Positive' : roi > -15 ? 'Weak' : 'Negative';
-            
-            let advice = 'The company should improve AI maturity and workforce training before increasing investment. Current conditions indicate high operational risk with limited returns.';
-            if (readiness === 'HIGH') {
-                advice = 'The company is well-positioned for aggressive AI expansion. Focus on maximizing deployment count to capture peak ROI.';
-            } else if (readiness === 'MEDIUM') {
-                advice = 'The company has a stable foundation. Gradual increases in AI investment while maintaining high training hours will yield the best long-term results.';
-            }
-            
-            const cleanFeature = (f: string) => f.replace(/_|-|x|\*/g, ' ').replace(/\b\w/g, l => l.toUpperCase()).trim();
-
-            const topPos = explRes.data?.contributions?.filter((c: any) => c.impact > 0).slice(0, 4) || [];
-            const topNeg = explRes.data?.contributions?.filter((c: any) => c.impact < 0).slice(0, 4) || [];
-            
-            // Re-introduced dynamic numbers so the UI visibly ticks when dragging
-            const posText = topPos.length > 0 ? topPos.map((c: any) => `+ ${cleanFeature(c.feature)} [+$${Math.abs(c.impact/1000).toFixed(0)}k]`).join('\n') : "+ Balanced Strategy";
-            const negText = topNeg.length > 0 ? topNeg.map((c: any) => `- ${cleanFeature(c.feature)} [-$${Math.abs(c.impact/1000).toFixed(0)}k]`).join('\n') : "- No Major Risks";
-            const topFeature = explRes.data?.contributions?.[0]?.feature ? cleanFeature(explRes.data.contributions[0].feature) : "AI Maturity";
-
-            // Ensure readiness is capitalized for the UI parser
-            const dynamicAdvice = `Current AI Readiness : ${readiness}\n\nRevenue Potential : ${revPotential}\nRisk Level : ${riskLevel} (${Math.round(risk)}%)\nROI Outlook : ${roiOutlook} (${Math.round(roi)}%)\n\n${advice}|||FEATURE IMPACT ANALYSIS\n\nTop Positive Drivers\n${posText}\n\nTop Negative Drivers\n${negText}\n\nMost Influential Factor\n⭐ ${topFeature}\n\nModel Confidence\n91%`;
-
-            return { 
-              success: true, 
-              data: {
-                choices: [{
-                  message: {
-                    content: dynamicAdvice
-                  }
-                }]
-              }
-            };
+            console.warn("Advisor API network error, using fallback advice.", err);
           }
+          
+          // Build the final formatted string for the UI parser
+          const roi = predRes.data.metrics.roi;
+          const risk = predRes.data.metrics.risk_score;
+          
+          const revPotential = roi > 20 ? 'Outstanding' : roi > 10 ? 'Strong' : roi > 0 ? 'Moderate' : roi > -10 ? 'Weak' : 'Critical';
+          const riskLevel = risk > 80 ? 'Severe' : risk > 60 ? 'High' : risk > 40 ? 'Elevated' : risk > 20 ? 'Moderate' : 'Low';
+          const roiOutlook = roi > 15 ? 'Excellent' : roi > 0 ? 'Positive' : roi > -15 ? 'Weak' : 'Negative';
+          
+          const cleanFeature = (f: string) => f.replace(/_|-|x|\*/g, ' ').replace(/\b\w/g, l => l.toUpperCase()).trim();
+
+          const topPos = explRes.data?.contributions?.filter((c: any) => c.impact > 0).slice(0, 4) || [];
+          const topNeg = explRes.data?.contributions?.filter((c: any) => c.impact < 0).slice(0, 4) || [];
+          
+          const posText = topPos.length > 0 ? topPos.map((c: any) => `+ ${cleanFeature(c.feature)} [+$${Math.abs(c.impact/1000).toFixed(0)}k]`).join('\n') : "+ Balanced Strategy";
+          const negText = topNeg.length > 0 ? topNeg.map((c: any) => `- ${cleanFeature(c.feature)} [-$${Math.abs(c.impact/1000).toFixed(0)}k]`).join('\n') : "- No Major Risks";
+          const topFeature = explRes.data?.contributions?.[0]?.feature ? cleanFeature(explRes.data.contributions[0].feature) : "AI Maturity";
+
+          const dynamicAdvice = `Current AI Readiness : ${readiness}\n\nRevenue Potential : ${revPotential}\nRisk Level : ${riskLevel} (${Math.round(risk)}%)\nROI Outlook : ${roiOutlook} (${Math.round(roi)}%)\n\n${adviceText}|||FEATURE IMPACT ANALYSIS\n\nTop Positive Drivers\n${posText}\n\nTop Negative Drivers\n${negText}\n\nMost Influential Factor\n⭐ ${topFeature}\n\nModel Confidence\n91%`;
+
+          return { 
+            success: true, 
+            data: {
+              choices: [{
+                message: {
+                  content: dynamicAdvice
+                }
+              }]
+            }
+          };
         };
 
         tryFetchAdvisor()
