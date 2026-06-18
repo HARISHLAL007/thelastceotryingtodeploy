@@ -454,3 +454,4 @@ if __name__ == "__main__":
     import uvicorn
     # Bind to the platform-provided $PORT on deploy (Render/Railway/etc.); default 8000 locally.
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+    # Trigger uvicorn reload

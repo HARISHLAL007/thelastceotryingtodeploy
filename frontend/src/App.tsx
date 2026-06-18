@@ -8,6 +8,7 @@ import { Auth } from '@/pages/Auth';
 import { Engine } from '@/pages/Engine';
 import { Outcome } from '@/pages/Outcome';
 import { Database } from '@/pages/Database';
+import { Chatbot } from '@/components/Chatbot';
 
 const Layout = () => {
   const location = useLocation();
@@ -28,7 +29,7 @@ const Layout = () => {
           <PanelLeftOpen className="h-5 w-5" />
         </button>
       )}
-      <main className="flex-1 overflow-y-auto h-screen">
+      <main className="flex-1 overflow-y-auto h-screen relative">
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
@@ -38,6 +39,7 @@ const Layout = () => {
           <Route path="/database" element={<Database />} />
         </Routes>
       </main>
+      <Chatbot />
     </div>
   );
 };
