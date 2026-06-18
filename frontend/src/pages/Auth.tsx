@@ -20,7 +20,14 @@ export const Auth = () => {
   const [logs, setLogs] = useState<string[]>([]);
 
   // Auth logic states
-  const [registeredCredentials, setRegisteredCredentials] = useState({ identifier: '', password: '', name: '' });
+  const [registeredCredentials, setRegisteredCredentials] = useState(() => {
+    try {
+      const saved = localStorage.getItem('last_ceo_credentials');
+      return saved ? JSON.parse(saved) : { identifier: '', password: '', name: '' };
+    } catch {
+      return { identifier: '', password: '', name: '' };
+    }
+  });
   const [loginError, setLoginError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -38,7 +45,9 @@ export const Auth = () => {
     const country = "";
     const industry = "";
     
-    setRegisteredCredentials({ identifier: email, password, name });
+    const creds = { identifier: email, password, name };
+    setRegisteredCredentials(creds);
+    localStorage.setItem('last_ceo_credentials', JSON.stringify(creds));
     
     // Log to backend CSV
     api.logAuth({ action: "Register", name, email, company, country, industry }).catch(console.error);
